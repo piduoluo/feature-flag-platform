@@ -1,4 +1,11 @@
 import '@testing-library/jest-dom/vitest';
+import { configure } from '@testing-library/react';
+
+// The full suite runs 9 jsdom files in parallel and drives real antd forms.
+// antd validation re-renders can land later than the 1s default of waitFor,
+// which made CreateFlagDrawer's "blocks empty submit" case flake (~1 in 4
+// full runs). Wait longer per assertion; failures still surface, just later.
+configure({ asyncUtilTimeout: 5000 });
 
 // Mock window.matchMedia for Ant Design components in jsdom
 Object.defineProperty(window, 'matchMedia', {
