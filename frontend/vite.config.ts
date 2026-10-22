@@ -18,5 +18,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.ts',
+    // Page-level integration tests drive the real router and antd trees and
+    // take 4-10s; the 5s default makes them flaky on a loaded machine.
+    testTimeout: 20000,
   },
 });
