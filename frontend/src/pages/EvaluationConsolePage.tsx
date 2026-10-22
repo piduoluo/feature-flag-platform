@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   Card,
   Row,
   Col,
   Select,
   Input,
+  AutoComplete,
   Button,
   Typography,
   Space,
@@ -27,6 +29,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   FlagOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons';
 import { Environment, EvaluationResult, Flag } from '../types';
 import { api, ApiError } from '../api/client';
@@ -40,6 +43,29 @@ const ENV_LABELS: Record<Environment, string> = {
   production: 'Production (生产环境)',
 };
 
+function isEnvironment(value: string | null): value is Environment {
+  return value === 'development' || value === 'staging' || value === 'production';
+}
+
+/**
+ * Seeds the console from a deep link such as
+ * `/evaluations?flag_key=checkout_v2&environment=production&flag_id=1`.
+ * Unknown or malformed parameters are ignored instead of failing the page.
+ */
+function resolveEntryQuery(searchParams: URLSearchParams) {
+  const environmentParam = searchParams.get('environment');
+  const flagKey = (searchParams.get('flag_key') ?? '').trim();
+  const flagIdParam = searchParams.get('flag_id') ?? '';
+  const flagId = /^\d+$/.test(flagIdParam) ? Number(flagIdParam) : null;
+
+  return {
+    environment: isEnvironment(environmentParam) ? environmentParam : 'development',
+    flagKey,
+    flagId,
+    hasEntryContext: Boolean(flagKey) || isEnvironment(environmentParam),
+  };
+}
+
 const DEFAULT_SAMPLE_CONTEXT = JSON.stringify(
   {
     country: 'CN',
@@ -50,39 +76,122 @@ const DEFAULT_SAMPLE_CONTEXT = JSON.stringify(
   2
 );
 
-interface EvaluationConsolePageProps {
-  initialFlagKey?: string;
-  initialEnvironment?: Environment;
-  onNavigateToFlags?: () => void;
+interface ContextInputCheck {
+  isValid: boolean;
+  parsed: Record<string, unknown> | null;
+  reason: string | null;
+  line: number | null;
+  isEmpty: boolean;
 }
 
-export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
-  initialFlagKey = '',
-  initialEnvironment = 'development',
-  onNavigateToFlags,
-}) => {
-  const [environment, setEnvironment] = useState<Environment>(initialEnvironment);
-  const [flagKey, setFlagKey] = useState<string>(initialFlagKey);
-  const [contextText, setContextText] = useState<string>(DEFAULT_SAMPLE_CONTEXT);
+/** Line number of the first occurrence of a character outside a JSON string. */
+function lineOfFirstToken(source: string, token: string): number | null {
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+    if (char === token) {
+      return source.slice(0, index).split('\n').length;
+    }
+  }
+  return null;
+}
+
+/**
+ * Locates the offending line using the position V8 reports. Some syntax errors
+ * only name the offending token, and "Unexpected end of JSON input" belongs to
+ * the last line.
+ */
+function contextErrorLine(source: string, message: string): number | null {
+  const lineMatch = /line (\d+) column \d+/.exec(message);
+  if (lineMatch) {
+    return Number(lineMatch[1]);
+  }
+  const positionMatch = /at position (\d+)/.exec(message);
+  if (positionMatch) {
+    return source.slice(0, Number(positionMatch[1])).split('\n').length;
+  }
+  // Bare-word values (e.g. `CN` or `undefined`) are reported as a token but
+  // with no position; punctuation tokens are skipped because the first
+  // occurrence is not necessarily the offending one.
+  const tokenMatch = /Unexpected token '([A-Za-z_$])'/.exec(message);
+  if (tokenMatch) {
+    return lineOfFirstToken(source, tokenMatch[1]);
+  }
+  if (/end of (JSON )?input/i.test(message)) {
+    return source.split('\n').length;
+  }
+  return null;
+}
+
+/**
+ * Validates the context JSON on every keystroke so the submit button can be
+ * blocked before a malformed payload ever reaches the evaluation API.
+ */
+function parseContextInput(source: string): ContextInputCheck {
+  const trimmed = source.trim();
+  if (!trimmed) {
+    return { isValid: true, parsed: {}, reason: null, line: null, isEmpty: true };
+  }
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return {
+        isValid: false,
+        parsed: null,
+        reason: '上下文必须是一个 JSON 对象，例如 {"plan": "premium"}',
+        line: 1,
+        isEmpty: false,
+      };
+    }
+    return { isValid: true, parsed: parsed as Record<string, unknown>, reason: null, line: null, isEmpty: false };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      isValid: false,
+      parsed: null,
+      reason: message.replace(/ in JSON at position \d+( \(line \d+ column \d+\))?$/, ''),
+      line: contextErrorLine(trimmed, message),
+      isEmpty: false,
+    };
+  }
+}
+
+export const EvaluationConsolePage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [entry] = useState(() => resolveEntryQuery(searchParams));
+
+  const [environment, setEnvironment] = useState<Environment>(entry.environment);
+  const [flagKey, setFlagKey] = useState<string>(entry.flagKey);
+  const [contextText, setContextText] = useState<string>('');
   const [flags, setFlags] = useState<Flag[]>([]);
   const [loadingFlags, setLoadingFlags] = useState(false);
 
   const [evaluating, setEvaluating] = useState(false);
   const [evalResult, setEvalResult] = useState<EvaluationResult | null>(null);
   const [evalError, setEvalError] = useState<string | null>(null);
+  const evaluatingRef = useRef(false);
 
-  // Sync initial props if changed
-  useEffect(() => {
-    if (initialFlagKey) {
-      setFlagKey(initialFlagKey);
-    }
-  }, [initialFlagKey]);
-
-  useEffect(() => {
-    if (initialEnvironment) {
-      setEnvironment(initialEnvironment);
-    }
-  }, [initialEnvironment]);
+  // Prefer the id carried by the deep link, otherwise resolve it from the
+  // environment's flag list so the return link always points at the flag.
+  const resolvedFlagId =
+    entry.flagId ?? flags.find((flag) => flag.key === flagKey)?.id ?? null;
+  const backToFlagDetail = resolvedFlagId ? `/flags/${resolvedFlagId}` : '/flags';
 
   // Load flags for the current environment to assist input
   const loadFlags = useCallback(async (env: Environment) => {
@@ -102,43 +211,12 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
   }, [environment, loadFlags]);
 
   // Real-time JSON validation
-  const jsonValidation = useMemo(() => {
-    const trimmed = contextText.trim();
-    if (!trimmed) {
-      return {
-        isValid: false,
-        error: '上下文 JSON 不能为空',
-        parsed: null,
-      };
-    }
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-        return {
-          isValid: false,
-          error: '上下文必须是一个 JSON 对象 (如 {"key": "value"})',
-          parsed: null,
-        };
-      }
-      return {
-        isValid: true,
-        error: null,
-        parsed,
-      };
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      return {
-        isValid: false,
-        error: `JSON 语法错误: ${message}`,
-        parsed: null,
-      };
-    }
-  }, [contextText]);
+  const contextCheck = useMemo(() => parseContextInput(contextText), [contextText]);
 
   // Handle prettify
   const handleFormatJson = () => {
-    if (jsonValidation.isValid && jsonValidation.parsed) {
-      setContextText(JSON.stringify(jsonValidation.parsed, null, 2));
+    if (contextCheck.isValid && contextCheck.parsed) {
+      setContextText(JSON.stringify(contextCheck.parsed, null, 2));
     }
   };
 
@@ -152,17 +230,22 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
     setContextText('{}');
   };
 
-  // Run evaluation
+  // Run evaluation; the ref guard protects against a double click landing
+  // before the disabled button has re-rendered.
   const handleEvaluate = async () => {
+    if (evaluatingRef.current) {
+      return;
+    }
     if (!flagKey.trim()) {
       setEvalError('请先选择或输入 Flag Key');
       return;
     }
-    if (!jsonValidation.isValid || !jsonValidation.parsed) {
+    if (!contextCheck.isValid) {
       setEvalError('上下文 JSON 存在语法错误，无法发起评估');
       return;
     }
 
+    evaluatingRef.current = true;
     setEvaluating(true);
     setEvalError(null);
     setEvalResult(null);
@@ -171,7 +254,7 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
       const result = await api.evaluate({
         flag_key: flagKey.trim(),
         environment,
-        context: jsonValidation.parsed,
+        context: contextCheck.parsed ?? {},
       });
       setEvalResult(result);
     } catch (err) {
@@ -181,6 +264,7 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
         setEvalError('评估请求执行失败，请检查服务状态');
       }
     } finally {
+      evaluatingRef.current = false;
       setEvaluating(false);
     }
   };
@@ -255,7 +339,7 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
               </div>
 
               <Paragraph style={{ margin: '8px 0 16px', color: '#595959' }}>
-                当前 Feature Flag 处于停用状态。根据安全熔断机制，评估引擎强制拦截并直接返回 <Text code>false</Text>，未执行任何规则匹配。
+                特性开关已停用，评估引擎已熔断并强制返回 <Text code>false</Text>。当前 Feature Flag 的启停开关关闭，安全熔断机制会拦截所有规则匹配。
               </Paragraph>
 
               <div
@@ -384,60 +468,81 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
     }
 
     // State 3: DEFAULT_FALLBACK (Neutral Blue)
-    return (
-      <Card
-        data-testid="result-card-default-fallback"
-        style={{
-          background: '#f0f5ff',
-          borderColor: '#adc6ff',
-          boxShadow: '0 2px 8px rgba(47, 84, 235, 0.08)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-          <InfoCircleFilled style={{ fontSize: 32, color: '#2f54eb', marginTop: 4 }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Title level={4} style={{ margin: 0, color: '#1d39c4' }}>
-                回退至默认返回值 (DEFAULT_FALLBACK)
-              </Title>
-              <Tag color="processing" style={{ fontSize: 13, padding: '2px 8px' }}>
-                DEFAULT_FALLBACK
-              </Tag>
-            </div>
-
-            <Paragraph style={{ margin: '8px 0 16px', color: '#595959' }}>
-              用户属性上下文未能满足该 Flag 下配置的任何有序灰度规则。系统按照安全策略回退至 Flag 的全局默认返回值。
-            </Paragraph>
-
-            <div
-              style={{
-                background: '#ffffff',
-                padding: '16px 20px',
-                borderRadius: 6,
-                border: '1px solid #adc6ff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <Text type="secondary" style={{ fontSize: 12 }}>最终返回值 (默认值)</Text>
-                <div
-                  style={{
-                    fontSize: 24,
-                    fontWeight: 'bold',
-                    color: evalResult.result ? '#1677ff' : '#8c8c8c',
-                  }}
-                >
-                  {String(evalResult.result)}
-                </div>
+    if (evalResult.reason === 'DEFAULT_FALLBACK') {
+      return (
+        <Card
+          data-testid="result-card-default-fallback"
+          style={{
+            background: '#f0f5ff',
+            borderColor: '#adc6ff',
+            boxShadow: '0 2px 8px rgba(47, 84, 235, 0.08)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+            <InfoCircleFilled style={{ fontSize: 32, color: '#2f54eb', marginTop: 4 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Title level={4} style={{ margin: 0, color: '#1d39c4' }}>
+                  回退至默认返回值 (DEFAULT_FALLBACK)
+                </Title>
+                <Tag color="processing" style={{ fontSize: 13, padding: '2px 8px' }}>
+                  DEFAULT_FALLBACK
+                </Tag>
               </div>
-              <Tag color="blue" style={{ fontSize: 14, padding: '4px 12px' }}>
-                未命中规则 · 回退默认
-              </Tag>
+
+              <Paragraph style={{ margin: '8px 0 16px', color: '#595959' }}>
+                未命中任何规则，回退至 Flag 默认值。用户属性上下文未满足该 Flag 下配置的有序灰度规则，评估引擎按安全策略返回全局默认值。
+              </Paragraph>
+
+              <div
+                style={{
+                  background: '#ffffff',
+                  padding: '16px 20px',
+                  borderRadius: 6,
+                  border: '1px solid #adc6ff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>最终返回值 (默认值)</Text>
+                  <div
+                    style={{
+                      fontSize: 24,
+                      fontWeight: 'bold',
+                      color: evalResult.result ? '#1677ff' : '#8c8c8c',
+                    }}
+                  >
+                    {String(evalResult.result)}
+                  </div>
+                </div>
+                <Tag color="blue" style={{ fontSize: 14, padding: '4px 12px' }}>
+                  未命中规则 · 回退默认
+                </Tag>
+              </div>
             </div>
           </div>
-        </div>
+        </Card>
+      );
+    }
+
+    // Contract violation fallback: never label an unexplained reason as a
+    // default-value fallback.
+    return (
+      <Card data-testid="result-card-unknown" style={{ background: '#fafafa', borderColor: '#d9d9d9' }}>
+        <Space align="start">
+          <ExclamationCircleOutlined style={{ fontSize: 28, color: '#8c8c8c' }} />
+          <div>
+            <Title level={4} style={{ margin: 0 }}>
+              评估结果缺少可解释的决策依据
+            </Title>
+            <Paragraph style={{ margin: '8px 0 0', color: '#595959' }}>
+              后端返回原因 <Text code>{evalResult.reason}</Text>，最终返回值{' '}
+              <Text code>{String(evalResult.result)}</Text>，未包含命中的规则明细。
+            </Paragraph>
+          </div>
+        </Space>
       </Card>
     );
   };
@@ -461,13 +566,45 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
             基于纯内存评估引擎，模拟调用方传入用户属性上下文，实时观测优先级匹配短路、类型隔离判定及三态评估结果。
           </Text>
         </div>
-        {onNavigateToFlags && (
-          <Button icon={<FlagOutlined />} onClick={onNavigateToFlags}>
-            管理 Feature Flags
-          </Button>
-        )}
+        <Button icon={<FlagOutlined />} onClick={() => navigate('/flags')}>
+          管理 Feature Flags
+        </Button>
       </div>
 
+      {entry.hasEntryContext && (
+        <Card
+          data-testid="context-banner"
+          size="small"
+          style={{
+            marginBottom: 20,
+            background: '#e6f4ff',
+            borderColor: '#91caff',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 16,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Space size="middle" wrap>
+              <Tag color="blue" icon={<FlagOutlined />}>
+                来自 Flag 深层链接
+              </Tag>
+              <Text>
+                正在评估特性开关：<Text strong>{flagKey || '（未指定）'}</Text> [{environment}]
+              </Text>
+            </Space>
+            <Link to={backToFlagDetail}>
+              <ArrowLeftOutlined style={{ marginRight: 4 }} />
+              返回 Flag 详情
+            </Link>
+          </div>
+        </Card>
+      )}
       <Row gutter={[24, 24]}>
         {/* Left Form: Inputs */}
         <Col xs={24} lg={12}>
@@ -482,13 +619,17 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
             <Space direction="vertical" style={{ width: '100%' }} size="middle">
               {/* Environment Select */}
               <div>
-                <Text strong>生效环境 (Environment) *</Text>
+                <label htmlFor="environment-select">
+                  <Text strong>生效环境 (Environment) *</Text>
+                </label>
                 <Select<Environment>
+                  id="environment-select"
                   style={{ width: '100%', marginTop: 6 }}
                   value={environment}
                   onChange={(env) => {
                     setEnvironment(env);
                     setEvalResult(null);
+                    setEvalError(null);
                   }}
                   options={[
                     { label: ENV_LABELS.development, value: 'development' },
@@ -501,34 +642,41 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
               {/* Flag Key Input / Select */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text strong>特性开关标识 (Flag Key) *</Text>
+                  <label htmlFor="flag-key-input">
+                    <Text strong>特性开关标识 (Flag Key) *</Text>
+                  </label>
                   {flags.length > 0 && (
                     <Text type="secondary" style={{ fontSize: 12 }}>
                       已预载当前环境 {flags.length} 个 Flag
                     </Text>
                   )}
                 </div>
-                <Select
-                  showSearch
+                <AutoComplete
+                  id="flag-key-input"
                   style={{ width: '100%', marginTop: 6 }}
                   placeholder="选择或输入 Flag Key (例如 checkout_v2)"
-                  value={flagKey || undefined}
-                  onChange={(val) => {
+                  value={flagKey}
+                  onChange={(val: string) => {
                     setFlagKey(val);
                     setEvalResult(null);
+                    setEvalError(null);
                   }}
-                  onSearch={(val) => {
-                    setFlagKey(val);
-                  }}
-                  loading={loadingFlags}
-                  filterOption={(input, option) =>
-                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                  }
+                  allowClear
                   options={flags.map((f) => ({
                     label: `${f.key} (${f.name}) [${f.enabled ? '已启用' : '已停用'}]`,
                     value: f.key,
                   }))}
+                  filterOption={(input, option) =>
+                    `${option?.value ?? ''} ${option?.label ?? ''}`
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
                 />
+                {loadingFlags && (
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    正在加载当前环境 Flag...
+                  </Text>
+                )}
               </div>
 
               <Divider style={{ margin: '8px 0' }} />
@@ -545,7 +693,9 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
                 >
                   <Space align="center">
                     <Text strong>用户属性上下文 (Context JSON) *</Text>
-                    {jsonValidation.isValid ? (
+                    {contextCheck.isEmpty ? (
+                      <Tag>空上下文 · 将按 {} 提交</Tag>
+                    ) : contextCheck.isValid ? (
                       <Tag icon={<CheckCircleOutlined />} color="success">
                         JSON 格式有效
                       </Tag>
@@ -561,7 +711,7 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
                         size="small"
                         icon={<FormatPainterOutlined />}
                         onClick={handleFormatJson}
-                        disabled={!jsonValidation.isValid}
+                        disabled={!contextCheck.isValid}
                       >
                         格式化
                       </Button>
@@ -578,13 +728,17 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
                 </div>
 
                 <TextArea
+                  id="context-json"
+                  aria-label="用户属性上下文 Context JSON"
+                  aria-invalid={!contextCheck.isValid}
                   rows={9}
                   value={contextText}
                   onChange={(e) => {
                     setContextText(e.target.value);
                     setEvalResult(null);
+                    setEvalError(null);
                   }}
-                  status={!jsonValidation.isValid ? 'error' : ''}
+                  status={contextCheck.isValid ? '' : 'error'}
                   style={{
                     fontFamily: 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
                     fontSize: 13,
@@ -593,11 +747,13 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
                 />
 
                 {/* Real-time Validation Error Banner */}
-                {!jsonValidation.isValid && (
+                {!contextCheck.isValid && (
                   <Alert
+                    data-testid="context-json-error"
                     type="error"
                     showIcon
-                    message={jsonValidation.error}
+                    message={`JSON 语法错误${contextCheck.line ? `（第 ${contextCheck.line} 行）` : ''}`}
+                    description={contextCheck.reason}
                     style={{ marginTop: 8 }}
                   />
                 )}
@@ -610,7 +766,7 @@ export const EvaluationConsolePage: React.FC<EvaluationConsolePageProps> = ({
                 icon={<PlayCircleOutlined />}
                 block
                 loading={evaluating}
-                disabled={!flagKey.trim() || !jsonValidation.isValid}
+                disabled={!flagKey.trim() || !contextCheck.isValid || evaluating}
                 onClick={handleEvaluate}
                 style={{ height: 44, fontSize: 16 }}
               >
