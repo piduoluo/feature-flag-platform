@@ -51,7 +51,7 @@
   - Scope: 后端交付 `GET /api/v1/audit-logs`（支持 `action_type` 过滤与返回 `flag_id`）、前端全功能表格支持多维过滤、展开行查看变更 Diff、直达 `?tab=audit`。
 - **[10-legacy-flag-detail-drawer-cleanup.md](issues/10-legacy-flag-detail-drawer-cleanup.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: 06, 08A
   - Scope: 原 8 项关键测试迁移完整度核查、安全删除 `FlagDetailDrawer.tsx` 及其旧测试文件、清理死代码与旧引用、验证全套测试 100% 绿灯。
 - **[09-real-browser-e2e-smoke-verification.md](issues/09-real-browser-e2e-smoke-verification.md)**
@@ -78,3 +78,4 @@
 - [07-evaluation-console-context-continuity.md](issues/07-evaluation-console-context-continuity.md): URL Query 仅挂载时读取一次作为初始值（`environment` 白名单、`flag_key` 去空格、`flag_id` 仅数字），字段始终可编辑；返回链接优先 `flag_id`、否则按 Key 反查；原生 TextArea + `JSON.parse` 实时阻断并给出行号定位；`RULE_MATCH` 缺明细时降级为中性兜底而非误标默认；`EvaluationConsolePage.test.tsx` 13 项覆盖。
 - [08a-flag-audit-history-and-structured-diff.md](issues/08a-flag-audit-history-and-structured-diff.md): 新建共享契约 `frontend/src/utils/diffParser.ts` 的 `parseAuditDiff`（输入 `unknown`、永不抛错、畸形降级为可读摘要），`FlagAuditHistoryTab` 消费 `GET /flags/:id/audit-logs` 渲染垂直时间轴；兼容真实 `rules_synced` 三向 Diff、种子 `rules_seed_synced`、`before/after` 与 `old/new` 多种历史形状；`diffParser.test.ts` 19 项 + 组件 7 项 + 路由深链 3 项。
 - [08b-global-audit-api-and-operations-console.md](issues/08b-global-audit-api-and-operations-console.md): 后端 `GET /api/v1/audit-logs` 交付分页/环境/Key 模糊/`action_type` 过滤并显式返回 `flag_id`（`page_size` 上限 100，非法参数 `VALIDATION_ERROR`）；前端 `GlobalAuditLogsPage` 三筛选 + 服务端分页 + 行展开，`AuditDiffView` 与 08A 共用同一 Diff 渲染入口（仅当 `ruleDiff` 存在才渲染三向 Diff，种子记录走 `summary`，畸形走 `fallbackText`），Flag Key 直达 `/flags/:id?tab=audit`；页面测试 12 项。
+- [10-legacy-flag-detail-drawer-cleanup.md](issues/10-legacy-flag-detail-drawer-cleanup.md): 逐条核对原 8 项抽屉用例均已由 `FlagDetailPage` / `FlagAuditHistoryTab` / `ruleDraft` 套件承接，删除 1097 行 `FlagDetailDrawer.tsx` 与 347 行旧测试，`frontend/src` 零引用残留；`npm run build` 通过，全量 9 文件 / 91 项全绿。
