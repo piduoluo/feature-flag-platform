@@ -36,17 +36,17 @@
   - Scope: 全域真实深比对脏检查、Tab 切换静默保留草稿、离开 Flag 路由拦截、前往评估按照“先基本设置后规则”顺序执行与部分失败容错。
 - **[07-evaluation-console-context-continuity.md](issues/07-evaluation-console-context-continuity.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: 01
   - Scope: 控制台 Query 默认回填不锁定字段、上下文横幅与返回详情链接、原生 `JSON.parse` 实时语法阻断拦截、三态卡片呈现。
 - **[08a-flag-audit-history-and-structured-diff.md](issues/08a-flag-audit-history-and-structured-diff.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: 03
   - Scope: Tab 2 垂直时间轴展示真实操作人与时间、建立共享 `parseAuditDiff` 契约、`RULES_SYNCED` 增删改三向 Diff 结构化展开比对。
 - **[08b-global-audit-api-and-operations-console.md](issues/08b-global-audit-api-and-operations-console.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: claimed
   - Blocked by: 01
   - Scope: 后端交付 `GET /api/v1/audit-logs`（支持 `action_type` 过滤与返回 `flag_id`）、前端全功能表格支持多维过滤、展开行查看变更 Diff、直达 `?tab=audit`。
 - **[10-legacy-flag-detail-drawer-cleanup.md](issues/10-legacy-flag-detail-drawer-cleanup.md)**
@@ -75,3 +75,5 @@
 - [04-rule-card-stream-and-priority-sorting.md](issues/04-rule-card-stream-and-priority-sorting.md): 规则卡片流以草稿数组顺序为唯一优先级事实源，`moveRule`/`rulesEqual`/`parseExpected` 纯函数承载重排、深比对与严格标量/数组校验，`ruleDraft.test.ts` 3 项单测。
 - [05-rule-bulk-sync-and-floating-save-bar.md](issues/05-rule-bulk-sync-and-floating-save-bar.md): 悬浮保存栏纯绑定 `isRulesDirty`，保存时生成 `priority = index + 1` 全量同步；清空经危险确认后仍须统一保存；后端新增真实库事务回滚测试 `TestRuleService_SyncRules_AtomicRollback_OnAuditFailure`。
 - [06-unsaved-draft-state-machine-and-navigation-guards.md](issues/06-unsaved-draft-state-machine-and-navigation-guards.md): 全域脏检查 + 确定性「先基本设置后规则」保存 + 部分失败就地收敛与失败 Tab 聚焦 + `useBlocker`/`beforeunload` 守卫，并覆盖浏览器后退（POP）拦截。
+- [07-evaluation-console-context-continuity.md](issues/07-evaluation-console-context-continuity.md): URL Query 仅挂载时读取一次作为初始值（`environment` 白名单、`flag_key` 去空格、`flag_id` 仅数字），字段始终可编辑；返回链接优先 `flag_id`、否则按 Key 反查；原生 TextArea + `JSON.parse` 实时阻断并给出行号定位；`RULE_MATCH` 缺明细时降级为中性兜底而非误标默认；`EvaluationConsolePage.test.tsx` 13 项覆盖。
+- [08a-flag-audit-history-and-structured-diff.md](issues/08a-flag-audit-history-and-structured-diff.md): 新建共享契约 `frontend/src/utils/diffParser.ts` 的 `parseAuditDiff`（输入 `unknown`、永不抛错、畸形降级为可读摘要），`FlagAuditHistoryTab` 消费 `GET /flags/:id/audit-logs` 渲染垂直时间轴；兼容真实 `rules_synced` 三向 Diff、种子 `rules_seed_synced`、`before/after` 与 `old/new` 多种历史形状；`diffParser.test.ts` 19 项 + 组件 7 项 + 路由深链 3 项。
