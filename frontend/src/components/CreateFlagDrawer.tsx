@@ -8,7 +8,6 @@ interface CreateFlagDrawerProps {
   onClose: () => void;
   onSuccess: (flag: Flag) => void;
   initialEnvironment?: Environment;
-  existingKeys?: string[];
 }
 
 export const CreateFlagDrawer: React.FC<CreateFlagDrawerProps> = ({
@@ -16,7 +15,6 @@ export const CreateFlagDrawer: React.FC<CreateFlagDrawerProps> = ({
   onClose,
   onSuccess,
   initialEnvironment = 'development',
-  existingKeys = [],
 }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
@@ -134,16 +132,6 @@ export const CreateFlagDrawer: React.FC<CreateFlagDrawerProps> = ({
               message: 'Flag Key 只能包含字母、数字、下划线及连字符',
             },
             { max: 128, message: 'Flag Key 不能超过 128 个字符' },
-            {
-              validator: async (_, value) => {
-                if (value && existingKeys && existingKeys.includes(value.trim())) {
-                  return Promise.reject(
-                    new Error(`当前环境已存在 Flag Key "${value.trim()}"`)
-                  );
-                }
-                return Promise.resolve();
-              },
-            },
           ]}
           tooltip="全局功能标识，代码中调用的唯一 key，同一环境下必须唯一"
         >

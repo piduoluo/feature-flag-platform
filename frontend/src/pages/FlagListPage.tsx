@@ -3,7 +3,7 @@ import {
   Table,
   Button,
   Input,
-  Radio,
+  Segmented,
   Tag,
   Space,
   Card,
@@ -22,11 +22,11 @@ import {
   SettingOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import type { ColumnsType } from 'antd/es/table';
 import { Environment, Flag } from '../types';
 import { api, ApiError } from '../api/client';
 import { CreateFlagDrawer } from '../components/CreateFlagDrawer';
-import { FlagDetailDrawer } from '../components/FlagDetailDrawer';
 
 const { Text, Paragraph } = Typography;
 
@@ -43,22 +43,65 @@ const ENV_LABELS: Record<string, string> = {
   production: 'Production',
 };
 
+const ENV_OPTIONS = [
+  { label: '全部环境', value: 'all' },
+  { label: 'Development', value: 'development' },
+  { label: 'Staging', value: 'staging' },
+  { label: 'Production', value: 'production' },
+];
+
 interface FlagListPageProps {
   onNavigateToEval?: (flagKey: string, env: Environment) => void;
 }
 
 export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const envParam = searchParams.get('environment');
+  const selectedEnv =
+    envParam === 'development' || envParam === 'staging' || envParam === 'production'
+      ? envParam
+      : 'all';
+  const searchText = searchParams.get('search') || '';
+
+  const [searchInput, setSearchInput] = useState(searchText);
   const [flags, setFlags] = useState<Flag[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [selectedEnv, setSelectedEnv] = useState<string>('all');
-  const [searchText, setSearchText] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
-  const [selectedFlag, setSelectedFlag] = useState<Flag | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    setSearchInput(searchText);
+  }, [searchText]);
+
+  const handleEnvChange = (newEnv: string) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (newEnv && newEnv !== 'all') {
+      nextParams.set('environment', newEnv);
+    } else {
+      nextParams.delete('environment');
+    }
+    setCurrentPage(1);
+    setSearchParams(nextParams);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    const nextParams = new URLSearchParams(searchParams);
+    const trimmed = value.trim();
+    if (trimmed) {
+      nextParams.set('search', trimmed);
+    } else {
+      nextParams.delete('search');
+    }
+    setCurrentPage(1);
+    setSearchParams(nextParams, { replace: true });
+  };
 
   const handleInlineToggle = async (record: Flag, checked: boolean) => {
     setTogglingId(record.id);
@@ -66,9 +109,6 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       const updated = await api.toggleFlag(record.id, checked);
       message.success(`Flag [${record.key}] 已${checked ? '启用' : '停用'}`);
       setFlags((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
-      if (selectedFlag?.id === updated.id) {
-        setSelectedFlag(updated);
-      }
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : '切换启停状态失败';
       message.error(msg);
@@ -82,7 +122,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     setFetchError(null);
     try {
       const result = await api.getFlags({
-        environment: selectedEnv === 'all' ? undefined : selectedEnv,
+        environment: selectedEnv === 'all' ? undefined : (selectedEnv as Environment),
         search: searchText.trim() || undefined,
         page: currentPage,
         page_size: pageSize,
@@ -216,25 +256,32 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             type="link"
             size="small"
             icon={<SettingOutlined />}
-            onClick={() => setSelectedFlag(record)}
+            onClick={() => navigate(`/flags/${record.id}`)}
           >
-            详情与配置
+            详情
           </Button>
-          {onNavigateToEval && (
-            <Button
-              type="link"
-              size="small"
-              icon={<ThunderboltOutlined />}
-              onClick={() => onNavigateToEval(record.key, record.environment)}
-            >
-              在线评估
-            </Button>
-          )}
+          <Button
+            type="link"
+            size="small"
+            icon={<ThunderboltOutlined />}
+            onClick={() => {
+              if (onNavigateToEval) {
+                onNavigateToEval(record.key, record.environment);
+              } else {
+                navigate(
+                  `/evaluations?flag_key=${encodeURIComponent(record.key)}&environment=${record.environment}&flag_id=${record.id}`
+                );
+              }
+            }}
+          >
+            在线评估
+          </Button>
           <Tooltip title={record.enabled ? '点击停用' : '点击启用'}>
             <Switch
               size="small"
               checked={record.enabled}
               loading={togglingId === record.id}
+              disabled={togglingId === record.id}
               onChange={(checked) => handleInlineToggle(record, checked)}
             />
           </Tooltip>
@@ -248,7 +295,8 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       <Card
         variant="borderless"
         style={{
-          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)',
+          boxShadow:
+            '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)',
           borderRadius: 8,
         }}
       >
@@ -303,19 +351,11 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             gap: 12,
           }}
         >
-          <Radio.Group
+          <Segmented
             value={selectedEnv}
-            onChange={(e) => {
-              setSelectedEnv(e.target.value);
-              setCurrentPage(1);
-            }}
-            buttonStyle="solid"
-          >
-            <Radio.Button value="all">全部环境</Radio.Button>
-            <Radio.Button value="development">Development</Radio.Button>
-            <Radio.Button value="staging">Staging</Radio.Button>
-            <Radio.Button value="production">Production</Radio.Button>
-          </Radio.Group>
+            onChange={(val) => handleEnvChange(val as string)}
+            options={ENV_OPTIONS}
+          />
 
           <Space>
             <Input.Search
@@ -323,10 +363,9 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
               allowClear
               enterButton={<SearchOutlined />}
               style={{ width: 260 }}
-              onSearch={(value) => {
-                setSearchText(value);
-                setCurrentPage(1);
-              }}
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onSearch={(value) => handleSearchChange(value)}
             />
             <Tooltip title="刷新列表">
               <Button
@@ -344,6 +383,21 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
           columns={columns}
           dataSource={flags}
           loading={loading}
+          onRow={(record) => ({
+            onClick: (event) => {
+              const target = event.target as HTMLElement;
+              if (
+                target.closest('button') ||
+                target.closest('.ant-switch') ||
+                target.closest('a') ||
+                target.closest('.ant-typography-copy')
+              ) {
+                return;
+              }
+              navigate(`/flags/${record.id}`);
+            },
+            style: { cursor: 'pointer' },
+          })}
           locale={{
             emptyText: (
               <Empty
@@ -375,23 +429,9 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
         open={createDrawerOpen}
         onClose={() => setCreateDrawerOpen(false)}
         initialEnvironment={selectedEnv === 'all' ? 'development' : (selectedEnv as Environment)}
-        existingKeys={flags
-          .filter((f) => selectedEnv === 'all' || f.environment === selectedEnv)
-          .map((f) => f.key)}
         onSuccess={() => {
           fetchFlags();
         }}
-      />
-
-      <FlagDetailDrawer
-        flag={selectedFlag}
-        open={!!selectedFlag}
-        onClose={() => setSelectedFlag(null)}
-        onFlagUpdated={(updated) => {
-          setFlags((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
-          setSelectedFlag(updated);
-        }}
-        onNavigateToEval={onNavigateToEval}
       />
     </div>
   );
