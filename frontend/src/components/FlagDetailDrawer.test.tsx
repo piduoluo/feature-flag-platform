@@ -10,6 +10,7 @@ vi.mock('../api/client', () => ({
     updateFlag: vi.fn(),
     toggleFlag: vi.fn(),
     getAuditLogs: vi.fn(),
+    syncRules: vi.fn(),
   },
   ApiError: class ApiError extends Error {
     code: string;
@@ -78,6 +79,9 @@ describe('FlagDetailDrawer', () => {
     await waitFor(() => {
       expect(api.getFlag).toHaveBeenCalledWith(1);
     });
+
+    const settingsTab = screen.getByRole('tab', { name: /基本信息修改/i });
+    fireEvent.click(settingsTab);
 
     const nameInput = screen.getByDisplayValue('Detail Test Flag');
     fireEvent.change(nameInput, { target: { value: 'New Modified Name' } });
@@ -155,7 +159,7 @@ describe('FlagDetailDrawer', () => {
       />
     );
 
-    const auditTab = screen.getByText(/操作历史/i);
+    const auditTab = screen.getByRole('tab', { name: /操作历史/i });
     fireEvent.click(auditTab);
 
     await waitFor(() => {
@@ -180,11 +184,164 @@ describe('FlagDetailDrawer', () => {
       />
     );
 
-    const auditTab = screen.getByText(/操作历史/i);
+    const auditTab = screen.getByRole('tab', { name: /操作历史/i });
     fireEvent.click(auditTab);
 
     await waitFor(() => {
       expect(screen.getByText('网络超时，无法获取操作历史')).toBeInTheDocument();
+    });
+  });
+
+  it('renders rules in table with priority ordering', async () => {
+    const flagWithRules: Flag = {
+      ...mockFlag,
+      rules: [
+        {
+          id: 101,
+          flag_id: 1,
+          priority: 1,
+          attribute_name: 'country',
+          operator: 'equals',
+          expected_value: 'CN',
+          return_value: true,
+        },
+        {
+          id: 102,
+          flag_id: 1,
+          priority: 2,
+          attribute_name: 'plan',
+          operator: 'in',
+          expected_value: ['vip', 'pro'],
+          return_value: false,
+        },
+      ],
+    };
+    vi.mocked(api.getFlag).mockResolvedValueOnce(flagWithRules);
+
+    render(
+      <FlagDetailDrawer
+        flag={flagWithRules}
+        open={true}
+        onClose={vi.fn()}
+        onFlagUpdated={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('#1')).toBeInTheDocument();
+      expect(screen.getByText('#2')).toBeInTheDocument();
+      expect(screen.getByText('country')).toBeInTheDocument();
+      expect(screen.getByText('plan')).toBeInTheDocument();
+      expect(screen.getByText('"CN"')).toBeInTheDocument();
+      expect(screen.getByText('["vip","pro"]')).toBeInTheDocument();
+    });
+  });
+
+  it('swaps priority between rules and saves via api.syncRules', async () => {
+    const flagWithRules: Flag = {
+      ...mockFlag,
+      rules: [
+        {
+          id: 101,
+          flag_id: 1,
+          priority: 1,
+          attribute_name: 'country',
+          operator: 'equals',
+          expected_value: 'CN',
+          return_value: true,
+        },
+        {
+          id: 102,
+          flag_id: 1,
+          priority: 2,
+          attribute_name: 'plan',
+          operator: 'equals',
+          expected_value: 'vip',
+          return_value: false,
+        },
+      ],
+    };
+    vi.mocked(api.getFlag).mockResolvedValueOnce(flagWithRules);
+    vi.mocked(api.syncRules).mockResolvedValueOnce([
+      { ...flagWithRules.rules![1], priority: 1 },
+      { ...flagWithRules.rules![0], priority: 2 },
+    ]);
+
+    render(
+      <FlagDetailDrawer
+        flag={flagWithRules}
+        open={true}
+        onClose={vi.fn()}
+        onFlagUpdated={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('country')).toBeInTheDocument();
+    });
+
+    const downBtns = screen.getAllByLabelText('下移规则');
+    fireEvent.click(downBtns[0]);
+
+    const saveBtn = screen.getByRole('button', { name: /批量保存规则/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(api.syncRules).toHaveBeenCalledWith(1, [
+        expect.objectContaining({
+          id: 102,
+          attribute_name: 'plan',
+          priority: 1,
+        }),
+        expect.objectContaining({
+          id: 101,
+          attribute_name: 'country',
+          priority: 2,
+        }),
+      ]);
+    });
+  });
+
+  it('clears all rules with popconfirm confirmation', async () => {
+    const flagWithRules: Flag = {
+      ...mockFlag,
+      rules: [
+        {
+          id: 101,
+          flag_id: 1,
+          priority: 1,
+          attribute_name: 'country',
+          operator: 'equals',
+          expected_value: 'CN',
+          return_value: true,
+        },
+      ],
+    };
+    vi.mocked(api.getFlag).mockResolvedValueOnce(flagWithRules);
+    vi.mocked(api.syncRules).mockResolvedValueOnce([]);
+
+    render(
+      <FlagDetailDrawer
+        flag={flagWithRules}
+        open={true}
+        onClose={vi.fn()}
+        onFlagUpdated={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('country')).toBeInTheDocument();
+    });
+
+    const clearBtn = screen.getByRole('button', { name: /清空全部规则/i });
+    fireEvent.click(clearBtn);
+
+    const confirmBtn = await screen.findByRole('button', { name: '确定清空' });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(api.syncRules).toHaveBeenCalledWith(1, []);
+      expect(screen.getByText(/暂无规则配置/i)).toBeInTheDocument();
     });
   });
 });

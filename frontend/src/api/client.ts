@@ -5,6 +5,7 @@ import {
   Flag,
   FlagListQuery,
   FlagListResult,
+  Rule,
   UpdateFlagPayload,
 } from '../types';
 
@@ -86,5 +87,21 @@ export const api = {
 
   getAuditLogs: async (id: number): Promise<AuditLog[]> => {
     return request<AuditLog[]>(`/api/v1/flags/${id}/audit-logs`);
+  },
+
+  syncRules: async (flagId: number, rules: Rule[]): Promise<Rule[]> => {
+    return request<Rule[]>(`/api/v1/flags/${flagId}/rules`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        rules: rules.map((r) => ({
+          ...(r.id ? { id: r.id } : {}),
+          attribute_name: r.attribute_name,
+          operator: r.operator,
+          expected_value: r.expected_value,
+          return_value: r.return_value,
+          priority: r.priority,
+        })),
+      }),
+    });
   },
 };

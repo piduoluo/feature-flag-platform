@@ -111,3 +111,18 @@ type FlagListResult struct {
 	Items []*Flag `json:"items"`
 	Total int64   `json:"total"`
 }
+
+// RuleItemPayload represents a single rule definition in sync request.
+type RuleItemPayload struct {
+	ID            *int64          `json:"id"`
+	AttributeName string          `json:"attribute_name"`
+	Operator      string          `json:"operator"`
+	ExpectedValue json.RawMessage `json:"expected_value"`
+	ReturnValue   bool            `json:"return_value"`
+	Priority      int             `json:"priority"`
+}
+
+// SyncRulesRequest payload for bulk updating Flag rules.
+type SyncRulesRequest struct {
+	Rules *[]RuleItemPayload `json:"rules"`
+}

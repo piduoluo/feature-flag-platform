@@ -1,5 +1,19 @@
 export type Environment = 'development' | 'staging' | 'production';
 
+export type RuleOperator = 'equals' | 'in';
+
+export interface Rule {
+  id?: number;
+  flag_id?: number;
+  attribute_name: string;
+  operator: RuleOperator;
+  expected_value: unknown;
+  return_value: boolean;
+  priority: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Flag {
   id: number;
   key: string;
@@ -8,6 +22,7 @@ export interface Flag {
   environment: Environment;
   enabled: boolean;
   default_value: boolean;
+  rules?: Rule[];
   created_at: string;
   updated_at: string;
 }
@@ -41,6 +56,17 @@ export interface UpdateFlagPayload {
   name: string;
   description?: string;
   default_value: boolean;
+}
+
+export interface SyncRulesPayload {
+  rules: {
+    id?: number;
+    attribute_name: string;
+    operator: RuleOperator;
+    expected_value: unknown;
+    return_value: boolean;
+    priority: number;
+  }[];
 }
 
 export interface FlagListQuery {

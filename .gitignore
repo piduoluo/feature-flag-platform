@@ -7,7 +7,7 @@
 
 # Go
 bin/
-server
+/server
 backend/server
 *.exe
 *.test

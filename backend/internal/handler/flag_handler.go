@@ -11,10 +11,14 @@ import (
 
 type FlagHandler struct {
 	flagService service.FlagService
+	ruleService service.RuleService
 }
 
-func NewFlagHandler(flagService service.FlagService) *FlagHandler {
-	return &FlagHandler{flagService: flagService}
+func NewFlagHandler(flagService service.FlagService, ruleService service.RuleService) *FlagHandler {
+	return &FlagHandler{
+		flagService: flagService,
+		ruleService: ruleService,
+	}
 }
 
 func (h *FlagHandler) RegisterRoutes(rg *gin.RouterGroup) {
@@ -26,6 +30,7 @@ func (h *FlagHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		flags.PUT("/:id", h.UpdateFlag)
 		flags.PATCH("/:id/toggle", h.ToggleFlag)
 		flags.GET("/:id/audit-logs", h.GetAuditLogs)
+		flags.PUT("/:id/rules", h.SyncRules)
 	}
 }
 
@@ -144,4 +149,26 @@ func (h *FlagHandler) GetAuditLogs(c *gin.Context) {
 	}
 
 	Success(c, logs)
+}
+
+func (h *FlagHandler) SyncRules(c *gin.Context) {
+	id, err := parseFlagID(c)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+
+	var req domain.SyncRulesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		Error(c, domain.NewValidationError("invalid request body: "+err.Error()))
+		return
+	}
+
+	rules, err := h.ruleService.SyncRules(c.Request.Context(), id, &req)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+
+	Success(c, rules)
 }

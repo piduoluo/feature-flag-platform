@@ -33,8 +33,10 @@ func setupTestServer(t *testing.T) *gin.Engine {
 
 	flagRepo := repository.NewFlagRepository(db)
 	auditRepo := repository.NewAuditRepository(db)
+	ruleRepo := repository.NewRuleRepository(db)
 	flagService := service.NewFlagService(flagRepo, auditRepo)
-	flagHandler := handler.NewFlagHandler(flagService)
+	ruleService := service.NewRuleService(flagRepo, ruleRepo, auditRepo)
+	flagHandler := handler.NewFlagHandler(flagService, ruleService)
 
 	router := gin.New()
 	router.Use(gin.Recovery())
@@ -279,4 +281,74 @@ func TestFlagHandler_GetAuditLogs(t *testing.T) {
 	assert.GreaterOrEqual(t, len(logs), 1)
 	firstLog := logs[0].(map[string]interface{})
 	assert.Equal(t, domain.ActionFlagCreated, firstLog["action_type"])
+}
+
+func TestFlagHandler_SyncRules(t *testing.T) {
+	router := setupTestServer(t)
+
+	key := fmt.Sprintf("h_rule_flag_%d", time.Now().UnixNano())
+	createBody, _ := json.Marshal(domain.CreateFlagRequest{
+		Key:         key,
+		Name:        "Rules Target",
+		Environment: domain.EnvDevelopment,
+	})
+	createReq, _ := http.NewRequest(http.MethodPost, "/api/v1/flags", bytes.NewBuffer(createBody))
+	createReq.Header.Set("Content-Type", "application/json")
+	createW := httptest.NewRecorder()
+	router.ServeHTTP(createW, createReq)
+
+	var createResp handler.Response
+	_ = json.Unmarshal(createW.Body.Bytes(), &createResp)
+	flagData := createResp.Data.(map[string]interface{})
+	id := int64(flagData["id"].(float64))
+
+	// 1. Valid Sync
+	syncBody := `{"rules":[{"attribute_name":"country","operator":"equals","expected_value":"CN","return_value":true,"priority":1},{"attribute_name":"plan","operator":"in","expected_value":["vip","pro"],"return_value":false,"priority":2}]}`
+	req, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/api/v1/flags/%d/rules", id), bytes.NewBufferString(syncBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var syncResp handler.Response
+	_ = json.Unmarshal(w.Body.Bytes(), &syncResp)
+	rules := syncResp.Data.([]interface{})
+	assert.Len(t, rules, 2)
+
+	// 2. Priority Conflict (duplicate priority)
+	dupBody := `{"rules":[{"attribute_name":"country","operator":"equals","expected_value":"CN","return_value":true,"priority":1},{"attribute_name":"plan","operator":"equals","expected_value":"pro","return_value":false,"priority":1}]}`
+	reqDup, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/api/v1/flags/%d/rules", id), bytes.NewBufferString(dupBody))
+	reqDup.Header.Set("Content-Type", "application/json")
+	wDup := httptest.NewRecorder()
+	router.ServeHTTP(wDup, reqDup)
+
+	assert.Equal(t, http.StatusConflict, wDup.Code)
+	var dupResp handler.Response
+	_ = json.Unmarshal(wDup.Body.Bytes(), &dupResp)
+	assert.Equal(t, "PRIORITY_CONFLICT", dupResp.Code)
+
+	// 3. Validation Error (missing rules field)
+	badBody := `{}`
+	reqBad, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/api/v1/flags/%d/rules", id), bytes.NewBufferString(badBody))
+	reqBad.Header.Set("Content-Type", "application/json")
+	wBad := httptest.NewRecorder()
+	router.ServeHTTP(wBad, reqBad)
+
+	assert.Equal(t, http.StatusBadRequest, wBad.Code)
+	var badResp handler.Response
+	_ = json.Unmarshal(wBad.Body.Bytes(), &badResp)
+	assert.Equal(t, "VALIDATION_ERROR", badResp.Code)
+
+	// 4. Clear Rules with empty array
+	clearBody := `{"rules":[]}`
+	reqClear, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/api/v1/flags/%d/rules", id), bytes.NewBufferString(clearBody))
+	reqClear.Header.Set("Content-Type", "application/json")
+	wClear := httptest.NewRecorder()
+	router.ServeHTTP(wClear, reqClear)
+
+	assert.Equal(t, http.StatusOK, wClear.Code)
+	var clearResp handler.Response
+	_ = json.Unmarshal(wClear.Body.Bytes(), &clearResp)
+	clearedRules := clearResp.Data.([]interface{})
+	assert.Len(t, clearedRules, 0)
 }
