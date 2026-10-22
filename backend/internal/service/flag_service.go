@@ -15,6 +15,49 @@ import (
 
 var keyPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
+// maxAuditLogPageSize caps a single page of the global audit log listing so a
+// client cannot force an unbounded query.
+const maxAuditLogPageSize = 100
+
+// validateEnvironment rejects any value outside the three supported environments.
+func validateEnvironment(env domain.Environment) error {
+	switch env {
+	case domain.EnvDevelopment, domain.EnvStaging, domain.EnvProduction:
+		return nil
+	default:
+		return domain.NewValidationError(fmt.Sprintf("invalid environment '%s', must be one of: %s, %s, %s",
+			env, domain.EnvDevelopment, domain.EnvStaging, domain.EnvProduction))
+	}
+}
+
+func validateAuditLogListQuery(query *domain.AuditLogListQuery) error {
+	query.Environment = domain.Environment(strings.TrimSpace(string(query.Environment)))
+	// An empty environment means "all environments", so only non-empty values are validated.
+	if query.Environment != "" {
+		if err := validateEnvironment(query.Environment); err != nil {
+			return err
+		}
+	}
+
+	query.ActionType = strings.TrimSpace(query.ActionType)
+	switch query.ActionType {
+	case "", domain.ActionFlagCreated, domain.ActionFlagUpdated, domain.ActionFlagToggled, domain.ActionRulesSynced:
+		// Valid, empty means no action_type filter.
+	default:
+		return domain.NewValidationError(fmt.Sprintf("invalid action_type '%s', must be one of: %s, %s, %s, %s",
+			query.ActionType, domain.ActionFlagCreated, domain.ActionFlagUpdated, domain.ActionFlagToggled, domain.ActionRulesSynced))
+	}
+
+	if query.Page < 1 {
+		return domain.NewValidationError("page must be greater than or equal to 1")
+	}
+	if query.PageSize < 1 || query.PageSize > maxAuditLogPageSize {
+		return domain.NewValidationError(fmt.Sprintf("page_size must be between 1 and %d", maxAuditLogPageSize))
+	}
+
+	return nil
+}
+
 type FlagService interface {
 	CreateFlag(ctx context.Context, req *domain.CreateFlagRequest) (*domain.Flag, error)
 	ListFlags(ctx context.Context, query domain.FlagListQuery) (*domain.FlagListResult, error)
@@ -22,6 +65,7 @@ type FlagService interface {
 	UpdateFlag(ctx context.Context, id int64, req *domain.UpdateFlagRequest) (*domain.Flag, error)
 	ToggleFlag(ctx context.Context, id int64, req *domain.ToggleFlagRequest) (*domain.Flag, error)
 	GetAuditLogs(ctx context.Context, flagID int64) ([]*domain.AuditLog, error)
+	ListAllAuditLogs(ctx context.Context, query domain.AuditLogListQuery) (*domain.AuditLogListResult, error)
 }
 
 type flagService struct {
@@ -61,12 +105,8 @@ func (s *flagService) CreateFlag(ctx context.Context, req *domain.CreateFlagRequ
 	}
 
 	env := domain.Environment(strings.TrimSpace(string(req.Environment)))
-	switch env {
-	case domain.EnvDevelopment, domain.EnvStaging, domain.EnvProduction:
-		// Valid
-	default:
-		return nil, domain.NewValidationError(fmt.Sprintf("invalid environment '%s', must be one of: %s, %s, %s",
-			env, domain.EnvDevelopment, domain.EnvStaging, domain.EnvProduction))
+	if err := validateEnvironment(env); err != nil {
+		return nil, err
 	}
 
 	// Check if (key, environment) already exists
@@ -303,4 +343,25 @@ func (s *flagService) GetAuditLogs(ctx context.Context, flagID int64) ([]*domain
 		logs = make([]*domain.AuditLog, 0)
 	}
 	return logs, nil
+}
+
+func (s *flagService) ListAllAuditLogs(ctx context.Context, query domain.AuditLogListQuery) (*domain.AuditLogListResult, error) {
+	if err := validateAuditLogListQuery(&query); err != nil {
+		return nil, err
+	}
+
+	logs, total, err := s.auditRepo.ListAll(ctx, query)
+	if err != nil {
+		return nil, domain.NewInternalError(fmt.Sprintf("failed to list audit logs: %v", err))
+	}
+	if logs == nil {
+		logs = make([]*domain.AuditLog, 0)
+	}
+
+	return &domain.AuditLogListResult{
+		Items:    logs,
+		Total:    total,
+		Page:     query.Page,
+		PageSize: query.PageSize,
+	}, nil
 }

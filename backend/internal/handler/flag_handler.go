@@ -22,6 +22,8 @@ func NewFlagHandler(flagService service.FlagService, ruleService service.RuleSer
 }
 
 func (h *FlagHandler) RegisterRoutes(rg *gin.RouterGroup) {
+	rg.GET("/audit-logs", h.ListAuditLogs)
+
 	flags := rg.Group("/flags")
 	{
 		flags.POST("", h.CreateFlag)
@@ -149,6 +151,22 @@ func (h *FlagHandler) GetAuditLogs(c *gin.Context) {
 	}
 
 	Success(c, logs)
+}
+
+func (h *FlagHandler) ListAuditLogs(c *gin.Context) {
+	var query domain.AuditLogListQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		Error(c, domain.NewValidationError("invalid query parameters: "+err.Error()))
+		return
+	}
+
+	result, err := h.flagService.ListAllAuditLogs(c.Request.Context(), query)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+
+	Success(c, result)
 }
 
 func (h *FlagHandler) SyncRules(c *gin.Context) {

@@ -77,6 +77,25 @@ func (AuditLog) TableName() string {
 	return "audit_logs"
 }
 
+// AuditLogListQuery query parameters for the global audit log listing.
+type AuditLogListQuery struct {
+	Environment Environment `form:"environment"`
+	FlagKey     string      `form:"flag_key"`
+	ActionType  string      `form:"action_type"`
+	Page        int         `form:"page,default=1"`
+	PageSize    int         `form:"page_size,default=20"`
+}
+
+// AuditLogListResult paginated list of audit logs across all flags.
+// Each item is a domain.AuditLog, which explicitly carries flag_id so the
+// frontend can navigate to /flags/:id?tab=audit.
+type AuditLogListResult struct {
+	Items    []*AuditLog `json:"items"`
+	Total    int64       `json:"total"`
+	Page     int         `json:"page"`
+	PageSize int         `json:"page_size"`
+}
+
 // CreateFlagRequest payload for creating a new Flag.
 type CreateFlagRequest struct {
 	Key          string      `json:"key"`
