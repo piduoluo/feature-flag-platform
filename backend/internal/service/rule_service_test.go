@@ -416,3 +416,50 @@ func TestRuleService_SyncRules_UnchangedRulesPreservePriority(t *testing.T) {
 	assert.Len(t, updated, 0)
 	assert.Len(t, deleted, 0)
 }
+
+func TestRuleService_SyncRules_AtomicRollback_OnAuditFailure(t *testing.T) {
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		dsn = "host=localhost port=5432 user=" + os.Getenv("USER") + " dbname=feature_flag_test sslmode=disable"
+	}
+	db, err := repository.InitDB(dsn)
+	require.NoError(t, err)
+	flagRepo := repository.NewFlagRepository(db)
+	auditRepo := repository.NewAuditRepository(db)
+	ruleRepo := repository.NewRuleRepository(db)
+	flags := service.NewFlagService(flagRepo, auditRepo)
+	rules := service.NewRuleService(flagRepo, ruleRepo, auditRepo)
+	ctx := context.Background()
+	flag, err := flags.CreateFlag(ctx, &domain.CreateFlagRequest{Key: fmt.Sprintf("rule_rollback_%d", time.Now().UnixNano()), Name: "Rollback", Environment: domain.EnvDevelopment})
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		db.Where("flag_id = ?", flag.ID).Delete(&domain.AuditLog{})
+		db.Where("flag_id = ?", flag.ID).Delete(&domain.Rule{})
+		db.Delete(&domain.Flag{}, flag.ID)
+	})
+	initial := []domain.RuleItemPayload{
+		{AttributeName: "country", Operator: "equals", ExpectedValue: json.RawMessage(`"CN"`), Priority: 1, ReturnValue: true},
+		{AttributeName: "plan", Operator: "equals", ExpectedValue: json.RawMessage(`"pro"`), Priority: 2},
+		{AttributeName: "age", Operator: "equals", ExpectedValue: json.RawMessage(`18`), Priority: 3},
+	}
+	saved, err := rules.SyncRules(ctx, flag.ID, &domain.SyncRulesRequest{Rules: &initial})
+	require.NoError(t, err)
+	before, err := flags.GetFlagByID(ctx, flag.ID)
+	require.NoError(t, err)
+	logsBefore, err := flags.GetAuditLogs(ctx, flag.ID)
+	require.NoError(t, err)
+	changed := []domain.RuleItemPayload{
+		{ID: &saved[0].ID, AttributeName: "country", Operator: "equals", ExpectedValue: json.RawMessage(`"US"`), Priority: 2},
+		{ID: &saved[1].ID, AttributeName: "plan", Operator: "equals", ExpectedValue: json.RawMessage(`"pro"`), Priority: 1},
+		{AttributeName: "device", Operator: "equals", ExpectedValue: json.RawMessage(`"ios"`), Priority: 3},
+	}
+	broken := service.NewRuleService(flagRepo, ruleRepo, &failingAuditRepo{AuditRepository: auditRepo})
+	_, err = broken.SyncRules(ctx, flag.ID, &domain.SyncRulesRequest{Rules: &changed})
+	require.ErrorContains(t, err, "audit")
+	after, err := flags.GetFlagByID(ctx, flag.ID)
+	require.NoError(t, err)
+	assert.Equal(t, before.Rules, after.Rules, "failed audit must roll back creation, deletion, updates and shifted priorities")
+	logsAfter, err := flags.GetAuditLogs(ctx, flag.ID)
+	require.NoError(t, err)
+	assert.Equal(t, logsBefore, logsAfter)
+}

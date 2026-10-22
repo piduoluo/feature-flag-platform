@@ -16,22 +16,22 @@
   - Scope: Flag 列表环境/搜索 Query 双向同步、Flag 创建生命周期（冲突拦截与跨环境复用）、行内启停防重与单向状态同步、详情跳转。
 - **[03-flag-detail-workspace-and-basic-settings.md](issues/03-flag-detail-workspace-and-basic-settings.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: 01
   - Scope: `/flags/:id` 全屏工作台、Header 启停防重、`?tab=rules|audit|settings` 状态与 URL 双向绑定、Tab 3 基本设置独立表单与提交。
 - **[04-rule-card-stream-and-priority-sorting.md](issues/04-rule-card-stream-and-priority-sorting.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: 03
   - Scope: Tab 1 规则卡片流、内存数组顺序即执行优先级、首尾越界禁用、调回原状脏状态自动复原、只读兜底卡片草稿警告。
 - **[05-rule-bulk-sync-and-floating-save-bar.md](issues/05-rule-bulk-sync-and-floating-save-bar.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: 04
   - Scope: 悬浮保存栏显示纯粹绑定 `isRulesDirty`、调回原状自动收起、空变更不发请求、清空经危险确认仅入草稿统一提交、保存时根据数组顺序生成连续优先级、补充后端规则事务回滚测试。
 - **[06-unsaved-draft-state-machine-and-navigation-guards.md](issues/06-unsaved-draft-state-machine-and-navigation-guards.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: 05, 03
   - Scope: 全域真实深比对脏检查、Tab 切换静默保留草稿、离开 Flag 路由拦截、前往评估按照“先基本设置后规则”顺序执行与部分失败容错。
 - **[07-evaluation-console-context-continuity.md](issues/07-evaluation-console-context-continuity.md)**
@@ -70,3 +70,7 @@
 - Ticket 08A 与 08B 通过 `frontend/src/utils/diffParser.ts` 共享接口契约，保持并行开发并在 Ticket 09 最终集成闭环。
 - 真实浏览器端到端测试禁止硬编码 `/flags/1`，采用动态创建测试 Flag 与随机 Key。
 - [01-routing-foundation-and-appshell-layout.md](issues/01-routing-foundation-and-appshell-layout.md): 声明式路由与 AppShell 全局骨架落地，以 `react-router-dom` 搭建包含 `/flags`、`/flags/:id`、`/evaluations`、`/audit-logs` 的完整路由树，固定左侧 Sider 导航与顶部动态 Breadcrumb，根路径 `/` 自动重定向至 `/flags`，Node undici Request 与 jsdom 信号对齐并通过 7 组路由集成测试。
+- [03-flag-detail-workspace-and-basic-settings.md](issues/03-flag-detail-workspace-and-basic-settings.md): 全屏详情工作台落地，Header（名称/环境/等宽 Key 复制/最后更新时间/启停防重）、SummaryBar 与 `?tab=` 双向绑定；基本设置以独立 `basicDraft` 提交 `PUT /flags/:id` 并复用单事务审计，`FlagDetailPage.test.tsx` 12 项覆盖。
+- [04-rule-card-stream-and-priority-sorting.md](issues/04-rule-card-stream-and-priority-sorting.md): 规则卡片流以草稿数组顺序为唯一优先级事实源，`moveRule`/`rulesEqual`/`parseExpected` 纯函数承载重排、深比对与严格标量/数组校验，`ruleDraft.test.ts` 3 项单测。
+- [05-rule-bulk-sync-and-floating-save-bar.md](issues/05-rule-bulk-sync-and-floating-save-bar.md): 悬浮保存栏纯绑定 `isRulesDirty`，保存时生成 `priority = index + 1` 全量同步；清空经危险确认后仍须统一保存；后端新增真实库事务回滚测试 `TestRuleService_SyncRules_AtomicRollback_OnAuditFailure`。
+- [06-unsaved-draft-state-machine-and-navigation-guards.md](issues/06-unsaved-draft-state-machine-and-navigation-guards.md): 全域脏检查 + 确定性「先基本设置后规则」保存 + 部分失败就地收敛与失败 Tab 聚焦 + `useBlocker`/`beforeunload` 守卫，并覆盖浏览器后退（POP）拦截。
