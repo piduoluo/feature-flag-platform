@@ -11,7 +11,7 @@
   - Scope: 声明式客户端路由 (`createBrowserRouter`)、AppShell 全局骨架、面包屑、根路径重定向、Nginx SPA `try_files` 及路由树测试脚手架。
 - **[02-flag-list-query-sync-and-creation-lifecycle.md](issues/02-flag-list-query-sync-and-creation-lifecycle.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: 01
   - Scope: Flag 列表环境/搜索 Query 双向同步、Flag 创建生命周期（冲突拦截与跨环境复用）、行内启停防重与单向状态同步、详情跳转。
 - **[03-flag-detail-workspace-and-basic-settings.md](issues/03-flag-detail-workspace-and-basic-settings.md)**
@@ -70,6 +70,7 @@
 - Ticket 08A 与 08B 通过 `frontend/src/utils/diffParser.ts` 共享接口契约，保持并行开发并在 Ticket 09 最终集成闭环。
 - 真实浏览器端到端测试禁止硬编码 `/flags/1`，采用动态创建测试 Flag 与随机 Key。
 - [01-routing-foundation-and-appshell-layout.md](issues/01-routing-foundation-and-appshell-layout.md): 声明式路由与 AppShell 全局骨架落地，以 `react-router-dom` 搭建包含 `/flags`、`/flags/:id`、`/evaluations`、`/audit-logs` 的完整路由树，固定左侧 Sider 导航与顶部动态 Breadcrumb，根路径 `/` 自动重定向至 `/flags`，Node undici Request 与 jsdom 信号对齐并通过 7 组路由集成测试。
+- [02-flag-list-query-sync-and-creation-lifecycle.md](issues/02-flag-list-query-sync-and-creation-lifecycle.md): 列表过滤态与 URL Query 双向同步（`?environment=&search=`，深链与刷新自动还原），创建生命周期拦截同环境 `FLAG_KEY_CONFLICT` 并允许跨环境复用同一 Key，行内启停以服务端返回实体单向回写且失败回滚，`FlagListPage.test.tsx` 11 项覆盖 Query 同步、创建冲突与详情跳转。
 - [03-flag-detail-workspace-and-basic-settings.md](issues/03-flag-detail-workspace-and-basic-settings.md): 全屏详情工作台落地，Header（名称/环境/等宽 Key 复制/最后更新时间/启停防重）、SummaryBar 与 `?tab=` 双向绑定；基本设置以独立 `basicDraft` 提交 `PUT /flags/:id` 并复用单事务审计，`FlagDetailPage.test.tsx` 12 项覆盖。
 - [04-rule-card-stream-and-priority-sorting.md](issues/04-rule-card-stream-and-priority-sorting.md): 规则卡片流以草稿数组顺序为唯一优先级事实源，`moveRule`/`rulesEqual`/`parseExpected` 纯函数承载重排、深比对与严格标量/数组校验，`ruleDraft.test.ts` 3 项单测。
 - [05-rule-bulk-sync-and-floating-save-bar.md](issues/05-rule-bulk-sync-and-floating-save-bar.md): 悬浮保存栏纯绑定 `isRulesDirty`，保存时生成 `priority = index + 1` 全量同步；清空经危险确认后仍须统一保存；后端新增真实库事务回滚测试 `TestRuleService_SyncRules_AtomicRollback_OnAuditFailure`。
