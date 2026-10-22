@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { createMemoryRouter, RouterProvider, useParams } from 'react-router-dom';
 import { EvaluationConsolePage } from './EvaluationConsolePage';
 import { api, ApiError } from '../api/client';
+import { EvaluationResult, Flag } from '../types';
 
 vi.mock('../api/client', () => ({
   api: {
@@ -20,187 +22,263 @@ vi.mock('../api/client', () => ({
   },
 }));
 
+const evaluation = (overrides: Partial<EvaluationResult> = {}): EvaluationResult => ({
+  flag_key: 'checkout_v2',
+  environment: 'production',
+  enabled: true,
+  result: false,
+  reason: 'DEFAULT_FALLBACK',
+  matched_rule: null,
+  ...overrides,
+});
+
+const checkoutFlag: Flag = {
+  id: 1,
+  key: 'checkout_v2',
+  name: '新版结算页',
+  description: '灰度测试中',
+  environment: 'production',
+  enabled: true,
+  default_value: false,
+  created_at: '2026-10-22T10:00:00Z',
+  updated_at: '2026-10-22T10:00:00Z',
+};
+
+const FlagDetailStub = () => {
+  const { id } = useParams();
+  return <div data-testid="flag-detail-stub">Flag 详情 {id}</div>;
+};
+
+function renderConsole(initialEntry: string) {
+  const router = createMemoryRouter(
+    [
+      { path: '/evaluations', element: <EvaluationConsolePage /> },
+      { path: '/flags/:id', element: <FlagDetailStub /> },
+    ],
+    { initialEntries: [initialEntry] }
+  );
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
 describe('EvaluationConsolePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(api.getFlags).mockResolvedValue({
-      items: [
-        {
-          id: 1,
-          key: 'checkout_v2',
-          name: '新版结算页',
-          description: '灰度测试中',
-          environment: 'production',
-          enabled: true,
-          default_value: false,
-          created_at: '2026-10-22T10:00:00Z',
-          updated_at: '2026-10-22T10:00:00Z',
+    vi.mocked(api.getFlags).mockResolvedValue({ items: [checkoutFlag], total: 1 });
+  });
+
+  it('回填深层链接中的环境与 Flag Key，并可从横幅返回 Flag 详情', async () => {
+    renderConsole('/evaluations?flag_key=checkout_v2&environment=production');
+
+    expect(screen.getByTestId('context-banner')).toHaveTextContent(
+      '正在评估特性开关：checkout_v2 [production]'
+    );
+    expect(screen.getByLabelText(/Flag Key/)).toHaveValue('checkout_v2');
+    expect(screen.getByText('Production (生产环境)')).toBeInTheDocument();
+
+    const backLink = screen.getByRole('link', { name: /返回 Flag 详情/ });
+    await waitFor(() => expect(backLink).toHaveAttribute('href', '/flags/1'));
+
+    fireEvent.click(backLink);
+    const detailStub = await screen.findByTestId('flag-detail-stub');
+    expect(detailStub).toHaveTextContent('1');
+  });
+
+  it('回填的字段保持可编辑且横幅跟随当前输入', async () => {
+    renderConsole('/evaluations?flag_key=checkout_v2&environment=production');
+
+    const flagKeyInput = screen.getByLabelText(/Flag Key/);
+    fireEvent.change(flagKeyInput, { target: { value: 'other_flag' } });
+    expect(flagKeyInput).toHaveValue('other_flag');
+
+    fireEvent.mouseDown(screen.getByLabelText(/Environment/));
+    fireEvent.click(await screen.findByText('Staging (预发环境)'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('context-banner')).toHaveTextContent(
+        '正在评估特性开关：other_flag [staging]'
+      );
+    });
+  });
+
+  it('无参从侧栏进入时展示空白就绪表单', () => {
+    renderConsole('/evaluations');
+
+    expect(screen.queryByTestId('context-banner')).not.toBeInTheDocument();
+    expect(screen.getByText('Development (开发环境)')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Flag Key/)).toHaveValue('');
+    expect(screen.getByLabelText(/Context JSON/)).toHaveValue('');
+    expect(screen.queryByText(/JSON 语法错误/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /发起在线评估/ })).toBeDisabled();
+  });
+
+  it('Context JSON 语法错误时即时标红、给出行号并禁用提交，修正后恢复', () => {
+    renderConsole('/evaluations?flag_key=checkout_v2&environment=production');
+    const textarea = screen.getByLabelText(/Context JSON/);
+    const evaluateButton = screen.getByRole('button', { name: /发起在线评估/ });
+
+    fireEvent.change(textarea, { target: { value: '{\n  "a": 1\n  "b": 2\n}' } });
+
+    expect(textarea).toHaveAttribute('aria-invalid', 'true');
+    expect(textarea.className).toContain('ant-input-status-error');
+    const errorAlert = screen.getByTestId('context-json-error');
+    expect(errorAlert).toHaveTextContent('JSON 语法错误（第 3 行）');
+    expect(errorAlert).toHaveTextContent("Expected ',' or '}'");
+    expect(evaluateButton).toBeDisabled();
+
+    fireEvent.change(textarea, { target: { value: '{\n  "a": 1,\n  "b": 2\n}' } });
+
+    expect(textarea).toHaveAttribute('aria-invalid', 'false');
+    expect(textarea.className).not.toContain('ant-input-status-error');
+    expect(screen.queryByTestId('context-json-error')).not.toBeInTheDocument();
+    expect(evaluateButton).toBeEnabled();
+  });
+
+  it('非法 token 错误同样给出所在行号', () => {
+    renderConsole('/evaluations?flag_key=checkout_v2&environment=production');
+    const textarea = screen.getByLabelText(/Context JSON/);
+
+    fireEvent.change(textarea, { target: { value: '{\n  "country": CN\n}' } });
+
+    expect(screen.getByTestId('context-json-error')).toHaveTextContent('JSON 语法错误（第 2 行）');
+    expect(textarea).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('自由输入后可发起评估，请求期间展示 loading 且不重复提交', async () => {
+    renderConsole('/evaluations');
+    fireEvent.change(screen.getByLabelText(/Flag Key/), { target: { value: 'checkout_v2' } });
+    fireEvent.change(screen.getByLabelText(/Context JSON/), {
+      target: { value: '{"country":"CN"}' },
+    });
+
+    let resolveEvaluation!: (value: EvaluationResult) => void;
+    vi.mocked(api.evaluate).mockReturnValue(
+      new Promise<EvaluationResult>((resolve) => {
+        resolveEvaluation = resolve;
+      })
+    );
+
+    const evaluateButton = screen.getByRole('button', { name: /发起在线评估/ });
+    fireEvent.click(evaluateButton);
+    fireEvent.click(evaluateButton);
+
+    await waitFor(() => expect(api.evaluate).toHaveBeenCalledTimes(1));
+    expect(evaluateButton).toBeDisabled();
+    expect(evaluateButton.className).toContain('ant-btn-loading');
+    expect(api.evaluate).toHaveBeenCalledWith({
+      flag_key: 'checkout_v2',
+      environment: 'development',
+      context: { country: 'CN' },
+    });
+
+    resolveEvaluation(evaluation({ environment: 'development' }));
+
+    expect(await screen.findByTestId('result-card-default-fallback')).toBeInTheDocument();
+    expect(evaluateButton).toBeEnabled();
+  });
+
+  it('规则命中时展示绿色卡片、命中原因与规则明细', async () => {
+    vi.mocked(api.evaluate).mockResolvedValue(
+      evaluation({
+        result: true,
+        reason: 'RULE_MATCH',
+        matched_rule: {
+          id: 10,
+          priority: 1,
+          attribute_name: 'country',
+          operator: 'equals',
+          expected_value: 'CN',
+          return_value: true,
         },
-      ],
-      total: 1,
-    });
+      })
+    );
+    renderConsole('/evaluations?flag_key=checkout_v2&environment=production');
+
+    fireEvent.click(screen.getByRole('button', { name: /发起在线评估/ }));
+
+    const card = await screen.findByTestId('result-card-rule-match');
+    expect(card).toHaveTextContent('命中灰度规则 (RULE_MATCH)');
+    expect(card).toHaveTextContent('功能放量开放 (true)');
+    expect(card).toHaveTextContent('#1');
+    expect(card).toHaveTextContent('country');
+    expect(card).toHaveTextContent('equals');
+    expect(card).toHaveTextContent('CN');
   });
 
-  it('renders evaluation form controls and loads environment flags', async () => {
-    render(<EvaluationConsolePage initialFlagKey="checkout_v2" initialEnvironment="production" />);
+  it('未命中规则时展示中性卡片并说明回退默认值', async () => {
+    vi.mocked(api.evaluate).mockResolvedValue(evaluation());
+    renderConsole('/evaluations?flag_key=checkout_v2&environment=production');
 
-    expect(screen.getByText('确定性规则在线评估控制台')).toBeInTheDocument();
-    expect(screen.getByText(/用户属性上下文 \(Context JSON\)/i)).toBeInTheDocument();
-    expect(screen.getByText('JSON 格式有效')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /发起在线评估/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /发起在线评估/ }));
 
-    await waitFor(() => {
-      expect(api.getFlags).toHaveBeenCalledWith({
-        environment: 'production',
-        page_size: 100,
-      });
-    });
+    const card = await screen.findByTestId('result-card-default-fallback');
+    expect(card).toHaveTextContent('回退至默认返回值 (DEFAULT_FALLBACK)');
+    expect(card).toHaveTextContent('未命中任何规则，回退至 Flag 默认值');
+    expect(card).toHaveTextContent('false');
   });
 
-  it('performs real-time JSON syntax validation and blocks evaluation when syntax is broken', async () => {
-    render(<EvaluationConsolePage initialFlagKey="checkout_v2" />);
+  it('开关停用时展示橙色警示卡片并说明熔断求值', async () => {
+    vi.mocked(api.evaluate).mockResolvedValue(evaluation({ enabled: false, reason: 'FLAG_DISABLED' }));
+    renderConsole('/evaluations?flag_key=checkout_v2&environment=production');
 
-    const textarea = screen.getByPlaceholderText(/country/i);
+    fireEvent.click(screen.getByRole('button', { name: /发起在线评估/ }));
 
-    // Enter broken JSON
-    fireEvent.change(textarea, { target: { value: '{\n  "country": "CN"' } });
-
-    // Expect invalid format tag and error banner
-    expect(screen.getByText('JSON 格式错误')).toBeInTheDocument();
-    expect(screen.getByText(/JSON 语法错误/i)).toBeInTheDocument();
-
-    const evaluateBtn = screen.getByRole('button', { name: /发起在线评估/i });
-    expect(evaluateBtn).toBeDisabled();
-
-    // Fix JSON
-    fireEvent.change(textarea, { target: { value: '{\n  "country": "CN"\n}' } });
-
-    expect(screen.getByText('JSON 格式有效')).toBeInTheDocument();
-    expect(screen.queryByText(/JSON 语法错误/i)).not.toBeInTheDocument();
-    expect(evaluateBtn).not.toBeDisabled();
+    const card = await screen.findByTestId('result-card-disabled');
+    expect(card).toHaveTextContent('特性开关已停用 (FLAG_DISABLED)');
+    expect(card).toHaveTextContent('特性开关已停用，评估引擎已熔断并强制返回 false');
+    expect(card).toHaveTextContent('已熔断 / 强制关闭');
+    expect(card).toHaveTextContent('false');
   });
 
-  it('handles RULE_MATCH evaluation and displays green card with rule breakdown', async () => {
-    vi.mocked(api.evaluate).mockResolvedValue({
-      flag_key: 'checkout_v2',
-      environment: 'production',
-      enabled: true,
-      result: true,
-      reason: 'RULE_MATCH',
-      matched_rule: {
-        id: 10,
-        priority: 1,
-        attribute_name: 'country',
-        operator: 'equals',
-        expected_value: 'CN',
-        return_value: true,
-      },
-    });
+  it('规则命中却缺少明细时不误判为回退默认', async () => {
+    vi.mocked(api.evaluate).mockResolvedValue(evaluation({ result: true, reason: 'RULE_MATCH' }));
+    renderConsole('/evaluations?flag_key=checkout_v2&environment=production');
 
-    render(<EvaluationConsolePage initialFlagKey="checkout_v2" initialEnvironment="production" />);
+    fireEvent.click(screen.getByRole('button', { name: /发起在线评估/ }));
 
-    const evaluateBtn = screen.getByRole('button', { name: /发起在线评估/i });
-    fireEvent.click(evaluateBtn);
-
-    await waitFor(() => {
-      expect(api.evaluate).toHaveBeenCalledWith({
-        flag_key: 'checkout_v2',
-        environment: 'production',
-        context: expect.any(Object),
-      });
-    });
-
-    // Check green success card rendering
-    await waitFor(() => {
-      expect(screen.getByTestId('result-card-rule-match')).toBeInTheDocument();
-      expect(screen.getByText('命中灰度规则 (RULE_MATCH)')).toBeInTheDocument();
-      expect(screen.getByText('功能放量开放 (true)')).toBeInTheDocument();
-      expect(screen.getByText('#1')).toBeInTheDocument();
-      expect(screen.getByText('country')).toBeInTheDocument();
-      expect(screen.getByText('equals')).toBeInTheDocument();
-      expect(screen.getByText('CN')).toBeInTheDocument();
-    });
+    const card = await screen.findByTestId('result-card-unknown');
+    expect(card).toHaveTextContent('RULE_MATCH');
+    expect(screen.queryByTestId('result-card-default-fallback')).not.toBeInTheDocument();
   });
 
-  it('handles DEFAULT_FALLBACK evaluation and displays neutral blue card', async () => {
-    vi.mocked(api.evaluate).mockResolvedValue({
-      flag_key: 'checkout_v2',
-      environment: 'production',
-      enabled: true,
-      result: false,
-      reason: 'DEFAULT_FALLBACK',
-      matched_rule: null,
-    });
+  it('忽略未知 Query 参数并优先使用旗标 id 生成返回链接', () => {
+    renderConsole(
+      '/evaluations?flag_key=checkout_v2&environment=production&flag_id=42&utm_source=sidebar'
+    );
 
-    render(<EvaluationConsolePage initialFlagKey="checkout_v2" initialEnvironment="production" />);
-
-    const evaluateBtn = screen.getByRole('button', { name: /发起在线评估/i });
-    fireEvent.click(evaluateBtn);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('result-card-default-fallback')).toBeInTheDocument();
-      expect(screen.getByText('回退至默认返回值 (DEFAULT_FALLBACK)')).toBeInTheDocument();
-      expect(screen.getByText(/未命中规则 · 回退默认/i)).toBeInTheDocument();
-    });
+    expect(screen.getByTestId('context-banner')).toHaveTextContent(
+      '正在评估特性开关：checkout_v2 [production]'
+    );
+    expect(screen.getByRole('link', { name: /返回 Flag 详情/ })).toHaveAttribute(
+      'href',
+      '/flags/42'
+    );
   });
 
-  it('handles FLAG_DISABLED evaluation and displays warning card', async () => {
-    vi.mocked(api.evaluate).mockResolvedValue({
-      flag_key: 'checkout_v2',
-      environment: 'production',
-      enabled: false,
-      result: false,
-      reason: 'FLAG_DISABLED',
-      matched_rule: null,
-    });
-
-    render(<EvaluationConsolePage initialFlagKey="checkout_v2" initialEnvironment="production" />);
-
-    const evaluateBtn = screen.getByRole('button', { name: /发起在线评估/i });
-    fireEvent.click(evaluateBtn);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('result-card-disabled')).toBeInTheDocument();
-      expect(screen.getByText('特性开关已停用 (FLAG_DISABLED)')).toBeInTheDocument();
-      expect(screen.getByText(/已熔断 \/ 强制关闭/i)).toBeInTheDocument();
-    });
-  });
-
-  it('displays API error alert when flag is not found or API fails', async () => {
+  it('评估调用失败时展示后端错误码与原因', async () => {
     vi.mocked(api.evaluate).mockRejectedValue(
       new ApiError('FLAG_NOT_FOUND', "Flag 'unknown_flag' not found", 404)
     );
+    renderConsole('/evaluations?flag_key=unknown_flag&environment=production');
 
-    render(<EvaluationConsolePage initialFlagKey="unknown_flag" initialEnvironment="production" />);
+    fireEvent.click(screen.getByRole('button', { name: /发起在线评估/ }));
 
-    const evaluateBtn = screen.getByRole('button', { name: /发起在线评估/i });
-    fireEvent.click(evaluateBtn);
-
-    await waitFor(() => {
-      expect(screen.getByText('评估调用失败')).toBeInTheDocument();
-      expect(screen.getByText(/\[FLAG_NOT_FOUND\]/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByText('评估调用失败')).toBeInTheDocument();
+    expect(screen.getByText(/\[FLAG_NOT_FOUND\]/)).toBeInTheDocument();
   });
 
-  it('supports format, sample and clear buttons for context JSON', async () => {
-    render(<EvaluationConsolePage initialFlagKey="checkout_v2" />);
+  it('提供示例、清空与格式化 JSON 的辅助操作', () => {
+    renderConsole('/evaluations');
+    const textarea = screen.getByLabelText(/Context JSON/);
 
-    const textarea = screen.getByPlaceholderText(/country/i) as HTMLTextAreaElement;
+    fireEvent.click(screen.getByRole('button', { name: /清\s*空/ }));
+    expect(textarea).toHaveValue('{}');
 
-    // Click clear
-    const clearBtn = screen.getByRole('button', { name: /清\s*空/i });
-    fireEvent.click(clearBtn);
-    expect(textarea.value).toBe('{}');
+    fireEvent.click(screen.getByRole('button', { name: /示\s*例/ }));
+    expect((textarea as HTMLTextAreaElement).value).toContain('country');
 
-    // Click sample
-    const sampleBtn = screen.getByRole('button', { name: /示\s*例/i });
-    fireEvent.click(sampleBtn);
-    expect(textarea.value).toContain('country');
-
-    // Enter unformatted JSON and click format
     fireEvent.change(textarea, { target: { value: '{"a":1,"b":2}' } });
-    const formatBtn = screen.getByRole('button', { name: /格\s*式\s*化/i });
-    fireEvent.click(formatBtn);
-    expect(textarea.value).toBe(JSON.stringify({ a: 1, b: 2 }, null, 2));
+    fireEvent.click(screen.getByRole('button', { name: /格\s*式\s*化/ }));
+    expect(textarea).toHaveValue(JSON.stringify({ a: 1, b: 2 }, null, 2));
   });
 });
