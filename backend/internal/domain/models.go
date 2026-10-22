@@ -23,6 +23,9 @@ const (
 	ActionRulesSynced = "RULES_SYNCED"
 )
 
+// DefaultOperator system default operator name for audit tracking
+const DefaultOperator = "admin"
+
 // Flag represents a feature flag entity in a specific environment.
 type Flag struct {
 	ID           int64       `json:"id" gorm:"primaryKey;autoIncrement"`
@@ -92,7 +95,7 @@ type UpdateFlagRequest struct {
 
 // ToggleFlagRequest payload for enabling/disabling a Flag.
 type ToggleFlagRequest struct {
-	Enabled bool `json:"enabled"`
+	Enabled *bool `json:"enabled"`
 }
 
 // FlagListQuery query parameters for filtering flags.

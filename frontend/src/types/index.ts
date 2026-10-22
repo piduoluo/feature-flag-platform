@@ -12,6 +12,17 @@ export interface Flag {
   updated_at: string;
 }
 
+export interface AuditLog {
+  id: number;
+  flag_id: number;
+  flag_key: string;
+  environment: Environment;
+  action_type: 'FLAG_CREATED' | 'FLAG_UPDATED' | 'FLAG_TOGGLED' | 'RULES_SYNCED' | string;
+  operator: string;
+  diff_summary: Record<string, unknown>;
+  created_at: string;
+}
+
 export interface ApiResponse<T> {
   code: string;
   message: string;
@@ -24,6 +35,12 @@ export interface CreateFlagPayload {
   description?: string;
   environment: Environment;
   default_value?: boolean;
+}
+
+export interface UpdateFlagPayload {
+  name: string;
+  description?: string;
+  default_value: boolean;
 }
 
 export interface FlagListQuery {

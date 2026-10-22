@@ -23,6 +23,9 @@ func (h *FlagHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		flags.POST("", h.CreateFlag)
 		flags.GET("", h.ListFlags)
 		flags.GET("/:id", h.GetFlag)
+		flags.PUT("/:id", h.UpdateFlag)
+		flags.PATCH("/:id/toggle", h.ToggleFlag)
+		flags.GET("/:id/audit-logs", h.GetAuditLogs)
 	}
 }
 
@@ -58,11 +61,19 @@ func (h *FlagHandler) ListFlags(c *gin.Context) {
 	Success(c, result)
 }
 
-func (h *FlagHandler) GetFlag(c *gin.Context) {
+func parseFlagID(c *gin.Context) (int64, error) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		Error(c, domain.NewValidationError("invalid flag id: must be an integer"))
+		return 0, domain.NewValidationError("invalid flag id: must be an integer")
+	}
+	return id, nil
+}
+
+func (h *FlagHandler) GetFlag(c *gin.Context) {
+	id, err := parseFlagID(c)
+	if err != nil {
+		Error(c, err)
 		return
 	}
 
@@ -73,4 +84,64 @@ func (h *FlagHandler) GetFlag(c *gin.Context) {
 	}
 
 	Success(c, flag)
+}
+
+func (h *FlagHandler) UpdateFlag(c *gin.Context) {
+	id, err := parseFlagID(c)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+
+	var req domain.UpdateFlagRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		Error(c, domain.NewValidationError("invalid request body: "+err.Error()))
+		return
+	}
+
+	flag, err := h.flagService.UpdateFlag(c.Request.Context(), id, &req)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+
+	Success(c, flag)
+}
+
+func (h *FlagHandler) ToggleFlag(c *gin.Context) {
+	id, err := parseFlagID(c)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+
+	var req domain.ToggleFlagRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		Error(c, domain.NewValidationError("invalid request body: "+err.Error()))
+		return
+	}
+
+	flag, err := h.flagService.ToggleFlag(c.Request.Context(), id, &req)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+
+	Success(c, flag)
+}
+
+func (h *FlagHandler) GetAuditLogs(c *gin.Context) {
+	id, err := parseFlagID(c)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+
+	logs, err := h.flagService.GetAuditLogs(c.Request.Context(), id)
+	if err != nil {
+		Error(c, err)
+		return
+	}
+
+	Success(c, logs)
 }

@@ -1,4 +1,12 @@
-import { ApiResponse, CreateFlagPayload, Flag, FlagListQuery, FlagListResult } from '../types';
+import {
+  ApiResponse,
+  AuditLog,
+  CreateFlagPayload,
+  Flag,
+  FlagListQuery,
+  FlagListResult,
+  UpdateFlagPayload,
+} from '../types';
 
 export class ApiError extends Error {
   code: string;
@@ -60,5 +68,23 @@ export const api = {
 
   getFlag: async (id: number): Promise<Flag> => {
     return request<Flag>(`/api/v1/flags/${id}`);
+  },
+
+  updateFlag: async (id: number, payload: UpdateFlagPayload): Promise<Flag> => {
+    return request<Flag>(`/api/v1/flags/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  toggleFlag: async (id: number, enabled: boolean): Promise<Flag> => {
+    return request<Flag>(`/api/v1/flags/${id}/toggle`, {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled }),
+    });
+  },
+
+  getAuditLogs: async (id: number): Promise<AuditLog[]> => {
+    return request<AuditLog[]>(`/api/v1/flags/${id}/audit-logs`);
   },
 };

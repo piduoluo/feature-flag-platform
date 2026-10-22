@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 
 	"feature-flag-platform/internal/domain"
 	"feature-flag-platform/internal/repository"
@@ -184,4 +185,173 @@ func TestFlagService_ListFlags_FilterAndSearch(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, searchList.Total, int64(2))
+}
+
+func TestFlagService_UpdateFlag_Success(t *testing.T) {
+	_, _, flagService := setupTestDB(t)
+	ctx := context.Background()
+
+	key := fmt.Sprintf("upd_flag_%d", time.Now().UnixNano())
+	created, err := flagService.CreateFlag(ctx, &domain.CreateFlagRequest{
+		Key:          key,
+		Name:         "Original Name",
+		Description:  "Original Desc",
+		Environment:  domain.EnvStaging,
+		DefaultValue: false,
+	})
+	require.NoError(t, err)
+
+	updated, err := flagService.UpdateFlag(ctx, created.ID, &domain.UpdateFlagRequest{
+		Name:         "Updated Name",
+		Description:  "Updated Desc",
+		DefaultValue: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "Updated Name", updated.Name)
+	assert.Equal(t, "Updated Desc", updated.Description)
+	assert.True(t, updated.DefaultValue)
+
+	// Verify AuditLog was recorded
+	logs, err := flagService.GetAuditLogs(ctx, created.ID)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(logs), 2)
+	assert.Equal(t, domain.ActionFlagUpdated, logs[0].ActionType)
+	assert.Equal(t, "admin", logs[0].Operator)
+}
+
+func boolPtr(b bool) *bool {
+	return &b
+}
+
+func TestFlagService_ToggleFlag_Success(t *testing.T) {
+	_, _, flagService := setupTestDB(t)
+	ctx := context.Background()
+
+	key := fmt.Sprintf("toggle_flag_%d", time.Now().UnixNano())
+	created, err := flagService.CreateFlag(ctx, &domain.CreateFlagRequest{
+		Key:         key,
+		Name:        "Toggle Test",
+		Environment: domain.EnvProduction,
+	})
+	require.NoError(t, err)
+	assert.False(t, created.Enabled)
+
+	// Turn ON
+	toggledOn, err := flagService.ToggleFlag(ctx, created.ID, &domain.ToggleFlagRequest{Enabled: boolPtr(true)})
+	require.NoError(t, err)
+	assert.True(t, toggledOn.Enabled)
+
+	// Turn OFF
+	toggledOff, err := flagService.ToggleFlag(ctx, created.ID, &domain.ToggleFlagRequest{Enabled: boolPtr(false)})
+	require.NoError(t, err)
+	assert.False(t, toggledOff.Enabled)
+
+	// Verify AuditLog
+	logs, err := flagService.GetAuditLogs(ctx, created.ID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.ActionFlagToggled, logs[0].ActionType)
+}
+
+func TestFlagService_UpdateAndToggle_NotFound(t *testing.T) {
+	_, _, flagService := setupTestDB(t)
+	ctx := context.Background()
+
+	_, err := flagService.UpdateFlag(ctx, 99999999, &domain.UpdateFlagRequest{
+		Name: "Non Existent",
+	})
+	require.Error(t, err)
+	assert.Equal(t, domain.ErrCodeFlagNotFound, err.(*domain.AppError).Code)
+
+	_, err = flagService.ToggleFlag(ctx, 99999999, &domain.ToggleFlagRequest{
+		Enabled: boolPtr(true),
+	})
+	require.Error(t, err)
+	assert.Equal(t, domain.ErrCodeFlagNotFound, err.(*domain.AppError).Code)
+}
+
+func TestFlagService_AuditSuppression_NoOp(t *testing.T) {
+	_, _, flagService := setupTestDB(t)
+	ctx := context.Background()
+
+	key := fmt.Sprintf("noop_audit_%d", time.Now().UnixNano())
+	created, err := flagService.CreateFlag(ctx, &domain.CreateFlagRequest{
+		Key:          key,
+		Name:         "Stable Name",
+		Description:  "Stable Desc",
+		Environment:  domain.EnvDevelopment,
+		DefaultValue: false,
+	})
+	require.NoError(t, err)
+
+	initialLogs, err := flagService.GetAuditLogs(ctx, created.ID)
+	require.NoError(t, err)
+	initialCount := len(initialLogs)
+
+	// No-op update with identical name, description, default_value
+	_, err = flagService.UpdateFlag(ctx, created.ID, &domain.UpdateFlagRequest{
+		Name:         "Stable Name",
+		Description:  "Stable Desc",
+		DefaultValue: false,
+	})
+	require.NoError(t, err)
+
+	// Audit count must NOT increase
+	logsAfterUpdate, err := flagService.GetAuditLogs(ctx, created.ID)
+	require.NoError(t, err)
+	assert.Equal(t, initialCount, len(logsAfterUpdate), "No-op update must suppress empty audit log")
+
+	// No-op toggle with identical enabled status (already false)
+	_, err = flagService.ToggleFlag(ctx, created.ID, &domain.ToggleFlagRequest{
+		Enabled: boolPtr(false),
+	})
+	require.NoError(t, err)
+
+	// Audit count must still NOT increase
+	logsAfterToggle, err := flagService.GetAuditLogs(ctx, created.ID)
+	require.NoError(t, err)
+	assert.Equal(t, initialCount, len(logsAfterToggle), "No-op toggle must suppress empty audit log")
+}
+
+type failingAuditRepo struct {
+	repository.AuditRepository
+}
+
+func (f *failingAuditRepo) Create(ctx context.Context, tx *gorm.DB, log *domain.AuditLog) error {
+	return fmt.Errorf("simulated audit log failure for atomicity test")
+}
+
+func TestFlagService_AtomicRollback_OnAuditFailure(t *testing.T) {
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		dsn = "host=localhost port=5432 user=" + os.Getenv("USER") + " dbname=feature_flag_test sslmode=disable"
+	}
+	db, err := repository.InitDB(dsn)
+	require.NoError(t, err)
+
+	flagRepo := repository.NewFlagRepository(db)
+	realAuditRepo := repository.NewAuditRepository(db)
+	normalService := service.NewFlagService(flagRepo, realAuditRepo)
+	ctx := context.Background()
+
+	key := fmt.Sprintf("rollback_%d", time.Now().UnixNano())
+	created, err := normalService.CreateFlag(ctx, &domain.CreateFlagRequest{
+		Key:         key,
+		Name:        "Original Before Failure",
+		Environment: domain.EnvDevelopment,
+	})
+	require.NoError(t, err)
+
+	// Inject failing audit repository to test transaction rollback
+	brokenService := service.NewFlagService(flagRepo, &failingAuditRepo{AuditRepository: realAuditRepo})
+
+	// Attempt update - must fail because audit log creation fails
+	_, err = brokenService.UpdateFlag(ctx, created.ID, &domain.UpdateFlagRequest{
+		Name: "New Name That Must Rollback",
+	})
+	require.Error(t, err)
+
+	// Fetch from DB using normal service to verify rollback
+	reloaded, err := normalService.GetFlagByID(ctx, created.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "Original Before Failure", reloaded.Name, "Flag name must remain unchanged after transaction rollback")
 }

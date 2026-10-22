@@ -19,6 +19,9 @@ type FlagService interface {
 	CreateFlag(ctx context.Context, req *domain.CreateFlagRequest) (*domain.Flag, error)
 	ListFlags(ctx context.Context, query domain.FlagListQuery) (*domain.FlagListResult, error)
 	GetFlagByID(ctx context.Context, id int64) (*domain.Flag, error)
+	UpdateFlag(ctx context.Context, id int64, req *domain.UpdateFlagRequest) (*domain.Flag, error)
+	ToggleFlag(ctx context.Context, id int64, req *domain.ToggleFlagRequest) (*domain.Flag, error)
+	GetAuditLogs(ctx context.Context, flagID int64) ([]*domain.AuditLog, error)
 }
 
 type flagService struct {
@@ -111,7 +114,7 @@ func (s *flagService) CreateFlag(ctx context.Context, req *domain.CreateFlagRequ
 			FlagKey:     flag.Key,
 			Environment: flag.Environment,
 			ActionType:  domain.ActionFlagCreated,
-			Operator:    "admin",
+			Operator:    domain.DefaultOperator,
 			DiffSummary: diffBytes,
 		}
 
@@ -150,4 +153,154 @@ func (s *flagService) GetFlagByID(ctx context.Context, id int64) (*domain.Flag, 
 		return nil, domain.NewFlagNotFoundError(id)
 	}
 	return flag, nil
+}
+
+func (s *flagService) UpdateFlag(ctx context.Context, id int64, req *domain.UpdateFlagRequest) (*domain.Flag, error) {
+	if req == nil {
+		return nil, domain.NewValidationError("request body cannot be nil")
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return nil, domain.NewValidationError("flag name is required")
+	}
+	if len(name) > 255 {
+		return nil, domain.NewValidationError("flag name cannot exceed 255 characters")
+	}
+
+	flag, err := s.flagRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, domain.NewInternalError(fmt.Sprintf("failed to get flag: %v", err))
+	}
+	if flag == nil {
+		return nil, domain.NewFlagNotFoundError(id)
+	}
+
+	if flag.Name == name && flag.Description == req.Description && flag.DefaultValue == req.DefaultValue {
+		// Suppress redundant audit log when no attributes changed (per GLOSSARY & ADR 0005)
+		return flag, nil
+	}
+
+	oldValues := map[string]interface{}{
+		"name":          flag.Name,
+		"description":   flag.Description,
+		"default_value": flag.DefaultValue,
+	}
+
+	flag.Name = name
+	flag.Description = req.Description
+	flag.DefaultValue = req.DefaultValue
+
+	err = s.flagRepo.WithTransaction(ctx, func(tx *gorm.DB) error {
+		if err := s.flagRepo.Update(ctx, tx, flag); err != nil {
+			return domain.NewInternalError(fmt.Sprintf("failed to update flag: %v", err))
+		}
+
+		diffMap := map[string]interface{}{
+			"action": "updated",
+			"before": oldValues,
+			"after": map[string]interface{}{
+				"name":          flag.Name,
+				"description":   flag.Description,
+				"default_value": flag.DefaultValue,
+			},
+		}
+		diffBytes, _ := json.Marshal(diffMap)
+
+		auditLog := &domain.AuditLog{
+			FlagID:      flag.ID,
+			FlagKey:     flag.Key,
+			Environment: flag.Environment,
+			ActionType:  domain.ActionFlagUpdated,
+			Operator:    domain.DefaultOperator,
+			DiffSummary: diffBytes,
+		}
+
+		if err := s.auditRepo.Create(ctx, tx, auditLog); err != nil {
+			return domain.NewInternalError(fmt.Sprintf("failed to record audit log: %v", err))
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return flag, nil
+}
+
+func (s *flagService) ToggleFlag(ctx context.Context, id int64, req *domain.ToggleFlagRequest) (*domain.Flag, error) {
+	if req == nil || req.Enabled == nil {
+		return nil, domain.NewValidationError("field 'enabled' is required")
+	}
+
+	flag, err := s.flagRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, domain.NewInternalError(fmt.Sprintf("failed to get flag: %v", err))
+	}
+	if flag == nil {
+		return nil, domain.NewFlagNotFoundError(id)
+	}
+
+	if flag.Enabled == *req.Enabled {
+		// Suppress redundant audit log when enabled status has not changed
+		return flag, nil
+	}
+
+	oldEnabled := flag.Enabled
+	flag.Enabled = *req.Enabled
+
+	err = s.flagRepo.WithTransaction(ctx, func(tx *gorm.DB) error {
+		if err := s.flagRepo.Update(ctx, tx, flag); err != nil {
+			return domain.NewInternalError(fmt.Sprintf("failed to update flag status: %v", err))
+		}
+
+		diffMap := map[string]interface{}{
+			"action":      "toggled",
+			"old_enabled": oldEnabled,
+			"new_enabled": flag.Enabled,
+		}
+		diffBytes, _ := json.Marshal(diffMap)
+
+		auditLog := &domain.AuditLog{
+			FlagID:      flag.ID,
+			FlagKey:     flag.Key,
+			Environment: flag.Environment,
+			ActionType:  domain.ActionFlagToggled,
+			Operator:    domain.DefaultOperator,
+			DiffSummary: diffBytes,
+		}
+
+		if err := s.auditRepo.Create(ctx, tx, auditLog); err != nil {
+			return domain.NewInternalError(fmt.Sprintf("failed to record audit log: %v", err))
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return flag, nil
+}
+
+func (s *flagService) GetAuditLogs(ctx context.Context, flagID int64) ([]*domain.AuditLog, error) {
+	flag, err := s.flagRepo.GetByID(ctx, flagID)
+	if err != nil {
+		return nil, domain.NewInternalError(fmt.Sprintf("failed to check flag: %v", err))
+	}
+	if flag == nil {
+		return nil, domain.NewFlagNotFoundError(flagID)
+	}
+
+	logs, err := s.auditRepo.ListByFlagID(ctx, flagID)
+	if err != nil {
+		return nil, domain.NewInternalError(fmt.Sprintf("failed to list audit logs: %v", err))
+	}
+	if logs == nil {
+		logs = make([]*domain.AuditLog, 0)
+	}
+	return logs, nil
 }

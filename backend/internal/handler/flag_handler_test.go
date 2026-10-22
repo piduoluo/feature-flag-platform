@@ -45,6 +45,10 @@ func setupTestServer(t *testing.T) *gin.Engine {
 	return router
 }
 
+func boolPtr(b bool) *bool {
+	return &b
+}
+
 func TestFlagHandler_CreateFlag_Success(t *testing.T) {
 	router := setupTestServer(t)
 
@@ -167,4 +171,112 @@ func TestFlagHandler_GetFlag_NotFound(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, domain.ErrCodeFlagNotFound, resp.Code)
+}
+
+func TestFlagHandler_UpdateFlag(t *testing.T) {
+	router := setupTestServer(t)
+
+	// Create a flag first
+	key := fmt.Sprintf("h_upd_flag_%d", time.Now().UnixNano())
+	createBody, _ := json.Marshal(domain.CreateFlagRequest{
+		Key:         key,
+		Name:        "Before Update",
+		Environment: domain.EnvDevelopment,
+	})
+	createReq, _ := http.NewRequest(http.MethodPost, "/api/v1/flags", bytes.NewBuffer(createBody))
+	createReq.Header.Set("Content-Type", "application/json")
+	createW := httptest.NewRecorder()
+	router.ServeHTTP(createW, createReq)
+	assert.Equal(t, http.StatusCreated, createW.Code)
+
+	var createResp handler.Response
+	_ = json.Unmarshal(createW.Body.Bytes(), &createResp)
+	flagData := createResp.Data.(map[string]interface{})
+	id := int64(flagData["id"].(float64))
+
+	// Update the flag
+	updBody, _ := json.Marshal(domain.UpdateFlagRequest{
+		Name:         "After Update",
+		Description:  "Updated description",
+		DefaultValue: true,
+	})
+	updReq, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/api/v1/flags/%d", id), bytes.NewBuffer(updBody))
+	updReq.Header.Set("Content-Type", "application/json")
+	updW := httptest.NewRecorder()
+	router.ServeHTTP(updW, updReq)
+
+	assert.Equal(t, http.StatusOK, updW.Code)
+	var updResp handler.Response
+	_ = json.Unmarshal(updW.Body.Bytes(), &updResp)
+	updData := updResp.Data.(map[string]interface{})
+	assert.Equal(t, "After Update", updData["name"])
+	assert.Equal(t, "Updated description", updData["description"])
+	assert.Equal(t, true, updData["default_value"])
+}
+
+func TestFlagHandler_ToggleFlag(t *testing.T) {
+	router := setupTestServer(t)
+
+	key := fmt.Sprintf("h_toggle_flag_%d", time.Now().UnixNano())
+	createBody, _ := json.Marshal(domain.CreateFlagRequest{
+		Key:         key,
+		Name:        "Toggle Target",
+		Environment: domain.EnvStaging,
+	})
+	createReq, _ := http.NewRequest(http.MethodPost, "/api/v1/flags", bytes.NewBuffer(createBody))
+	createReq.Header.Set("Content-Type", "application/json")
+	createW := httptest.NewRecorder()
+	router.ServeHTTP(createW, createReq)
+	assert.Equal(t, http.StatusCreated, createW.Code)
+
+	var createResp handler.Response
+	_ = json.Unmarshal(createW.Body.Bytes(), &createResp)
+	flagData := createResp.Data.(map[string]interface{})
+	id := int64(flagData["id"].(float64))
+
+	// Toggle ON
+	toggleBody, _ := json.Marshal(domain.ToggleFlagRequest{Enabled: boolPtr(true)})
+	toggleReq, _ := http.NewRequest(http.MethodPatch, fmt.Sprintf("/api/v1/flags/%d/toggle", id), bytes.NewBuffer(toggleBody))
+	toggleReq.Header.Set("Content-Type", "application/json")
+	toggleW := httptest.NewRecorder()
+	router.ServeHTTP(toggleW, toggleReq)
+
+	assert.Equal(t, http.StatusOK, toggleW.Code)
+	var toggleResp handler.Response
+	_ = json.Unmarshal(toggleW.Body.Bytes(), &toggleResp)
+	toggledData := toggleResp.Data.(map[string]interface{})
+	assert.Equal(t, true, toggledData["enabled"])
+}
+
+func TestFlagHandler_GetAuditLogs(t *testing.T) {
+	router := setupTestServer(t)
+
+	key := fmt.Sprintf("h_audit_flag_%d", time.Now().UnixNano())
+	createBody, _ := json.Marshal(domain.CreateFlagRequest{
+		Key:         key,
+		Name:        "Audit Target",
+		Environment: domain.EnvProduction,
+	})
+	createReq, _ := http.NewRequest(http.MethodPost, "/api/v1/flags", bytes.NewBuffer(createBody))
+	createReq.Header.Set("Content-Type", "application/json")
+	createW := httptest.NewRecorder()
+	router.ServeHTTP(createW, createReq)
+
+	var createResp handler.Response
+	_ = json.Unmarshal(createW.Body.Bytes(), &createResp)
+	flagData := createResp.Data.(map[string]interface{})
+	id := int64(flagData["id"].(float64))
+
+	// Fetch audit logs
+	auditReq, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/flags/%d/audit-logs", id), nil)
+	auditW := httptest.NewRecorder()
+	router.ServeHTTP(auditW, auditReq)
+
+	assert.Equal(t, http.StatusOK, auditW.Code)
+	var auditResp handler.Response
+	_ = json.Unmarshal(auditW.Body.Bytes(), &auditResp)
+	logs := auditResp.Data.([]interface{})
+	assert.GreaterOrEqual(t, len(logs), 1)
+	firstLog := logs[0].(map[string]interface{})
+	assert.Equal(t, domain.ActionFlagCreated, firstLog["action_type"])
 }

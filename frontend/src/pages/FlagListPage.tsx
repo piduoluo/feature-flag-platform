@@ -12,16 +12,20 @@ import {
   Badge,
   Tooltip,
   Alert,
+  Switch,
+  message,
 } from 'antd';
 import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { Environment, Flag } from '../types';
-import { api } from '../api/client';
+import { api, ApiError } from '../api/client';
 import { CreateFlagDrawer } from '../components/CreateFlagDrawer';
+import { FlagDetailDrawer } from '../components/FlagDetailDrawer';
 
 const { Text, Paragraph } = Typography;
 
@@ -48,6 +52,25 @@ export const FlagListPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
+  const [selectedFlag, setSelectedFlag] = useState<Flag | null>(null);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
+
+  const handleInlineToggle = async (record: Flag, checked: boolean) => {
+    setTogglingId(record.id);
+    try {
+      const updated = await api.toggleFlag(record.id, checked);
+      message.success(`Flag [${record.key}] 已${checked ? '启用' : '停用'}`);
+      setFlags((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+      if (selectedFlag?.id === updated.id) {
+        setSelectedFlag(updated);
+      }
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : '切换启停状态失败';
+      message.error(msg);
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   const fetchFlags = useCallback(async () => {
     setLoading(true);
@@ -177,6 +200,31 @@ export const FlagListPage: React.FC = () => {
           return timeStr;
         }
       },
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 180,
+      render: (_, record) => (
+        <Space size="middle">
+          <Button
+            type="link"
+            size="small"
+            icon={<SettingOutlined />}
+            onClick={() => setSelectedFlag(record)}
+          >
+            详情与配置
+          </Button>
+          <Tooltip title={record.enabled ? '点击停用' : '点击启用'}>
+            <Switch
+              size="small"
+              checked={record.enabled}
+              loading={togglingId === record.id}
+              onChange={(checked) => handleInlineToggle(record, checked)}
+            />
+          </Tooltip>
+        </Space>
+      ),
     },
   ];
 
@@ -317,6 +365,16 @@ export const FlagListPage: React.FC = () => {
           .map((f) => f.key)}
         onSuccess={() => {
           fetchFlags();
+        }}
+      />
+
+      <FlagDetailDrawer
+        flag={selectedFlag}
+        open={!!selectedFlag}
+        onClose={() => setSelectedFlag(null)}
+        onFlagUpdated={(updated) => {
+          setFlags((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+          setSelectedFlag(updated);
         }}
       />
     </div>
