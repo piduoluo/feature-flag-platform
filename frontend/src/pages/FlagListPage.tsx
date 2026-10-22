@@ -20,6 +20,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
   SettingOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { Environment, Flag } from '../types';
@@ -42,7 +43,11 @@ const ENV_LABELS: Record<string, string> = {
   production: 'Production',
 };
 
-export const FlagListPage: React.FC = () => {
+interface FlagListPageProps {
+  onNavigateToEval?: (flagKey: string, env: Environment) => void;
+}
+
+export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) => {
   const [flags, setFlags] = useState<Flag[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -204,7 +209,7 @@ export const FlagListPage: React.FC = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 180,
+      width: 240,
       render: (_, record) => (
         <Space size="middle">
           <Button
@@ -215,6 +220,16 @@ export const FlagListPage: React.FC = () => {
           >
             详情与配置
           </Button>
+          {onNavigateToEval && (
+            <Button
+              type="link"
+              size="small"
+              icon={<ThunderboltOutlined />}
+              onClick={() => onNavigateToEval(record.key, record.environment)}
+            >
+              在线评估
+            </Button>
+          )}
           <Tooltip title={record.enabled ? '点击停用' : '点击启用'}>
             <Switch
               size="small"
@@ -376,6 +391,7 @@ export const FlagListPage: React.FC = () => {
           setFlags((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
           setSelectedFlag(updated);
         }}
+        onNavigateToEval={onNavigateToEval}
       />
     </div>
   );

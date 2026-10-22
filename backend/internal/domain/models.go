@@ -126,3 +126,39 @@ type RuleItemPayload struct {
 type SyncRulesRequest struct {
 	Rules *[]RuleItemPayload `json:"rules"`
 }
+
+// EvaluationReason represents the explanation for an evaluation result.
+type EvaluationReason string
+
+const (
+	ReasonRuleMatch       EvaluationReason = "RULE_MATCH"
+	ReasonDefaultFallback EvaluationReason = "DEFAULT_FALLBACK"
+	ReasonFlagDisabled    EvaluationReason = "FLAG_DISABLED"
+)
+
+// MatchedRuleInfo holds metadata about the rule that triggered a match.
+type MatchedRuleInfo struct {
+	ID            int64           `json:"id"`
+	Priority      int             `json:"priority"`
+	AttributeName string          `json:"attribute_name"`
+	Operator      string          `json:"operator"`
+	ExpectedValue json.RawMessage `json:"expected_value"`
+	ReturnValue   bool            `json:"return_value"`
+}
+
+// EvaluationRequest payload for evaluating a feature flag with user context.
+type EvaluationRequest struct {
+	FlagKey     string                 `json:"flag_key"`
+	Environment Environment            `json:"environment"`
+	Context     map[string]interface{} `json:"context"`
+}
+
+// EvaluationResponse standard payload returned by evaluation endpoint.
+type EvaluationResponse struct {
+	FlagKey     string           `json:"flag_key"`
+	Environment Environment      `json:"environment"`
+	Enabled     bool             `json:"enabled"`
+	Result      bool             `json:"result"`
+	Reason      EvaluationReason `json:"reason"`
+	MatchedRule *MatchedRuleInfo `json:"matched_rule"`
+}

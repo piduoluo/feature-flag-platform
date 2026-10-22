@@ -2,6 +2,8 @@ import {
   ApiResponse,
   AuditLog,
   CreateFlagPayload,
+  EvaluationPayload,
+  EvaluationResult,
   Flag,
   FlagListQuery,
   FlagListResult,
@@ -102,6 +104,13 @@ export const api = {
           priority: r.priority,
         })),
       }),
+    });
+  },
+
+  evaluate: async (payload: EvaluationPayload): Promise<EvaluationResult> => {
+    return request<EvaluationResult>('/api/v1/evaluations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 };

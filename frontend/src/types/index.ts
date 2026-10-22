@@ -80,3 +80,30 @@ export interface FlagListResult {
   items: Flag[];
   total: number;
 }
+
+export type EvaluationReason = 'RULE_MATCH' | 'DEFAULT_FALLBACK' | 'FLAG_DISABLED';
+
+export interface MatchedRuleInfo {
+  id: number;
+  priority: number;
+  attribute_name: string;
+  operator: RuleOperator;
+  expected_value: unknown;
+  return_value: boolean;
+}
+
+export interface EvaluationPayload {
+  flag_key: string;
+  environment: Environment;
+  context: Record<string, unknown>;
+}
+
+export interface EvaluationResult {
+  flag_key: string;
+  environment: Environment;
+  enabled: boolean;
+  result: boolean;
+  reason: EvaluationReason;
+  matched_rule: MatchedRuleInfo | null;
+}
+

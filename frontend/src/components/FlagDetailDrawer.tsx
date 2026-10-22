@@ -33,6 +33,7 @@ import {
   ArrowDownOutlined,
   DeleteOutlined,
   SaveOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { AuditLog, Environment, Flag, Rule, RuleOperator, UpdateFlagPayload } from '../types';
 import { api, ApiError } from '../api/client';
@@ -64,6 +65,7 @@ interface FlagDetailDrawerProps {
   open: boolean;
   onClose: () => void;
   onFlagUpdated: (updated: Flag) => void;
+  onNavigateToEval?: (flagKey: string, env: Environment) => void;
 }
 
 export const FlagDetailDrawer: React.FC<FlagDetailDrawerProps> = ({
@@ -71,6 +73,7 @@ export const FlagDetailDrawer: React.FC<FlagDetailDrawerProps> = ({
   open,
   onClose,
   onFlagUpdated,
+  onNavigateToEval,
 }) => {
   const [form] = Form.useForm();
   const [ruleForm] = Form.useForm();
@@ -654,6 +657,18 @@ export const FlagDetailDrawer: React.FC<FlagDetailDrawerProps> = ({
             <Tag color={ENV_COLORS[currentFlag.environment]}>{currentFlag.environment}</Tag>
           </Space>
           <Space>
+            {onNavigateToEval && (
+              <Button
+                size="small"
+                icon={<ThunderboltOutlined />}
+                onClick={() => {
+                  onClose();
+                  onNavigateToEval(currentFlag.key, currentFlag.environment);
+                }}
+              >
+                去评估
+              </Button>
+            )}
             <Text type="secondary" style={{ fontSize: 13 }}>启停控制:</Text>
             <Switch
               checked={currentFlag.enabled}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"feature-flag-platform/internal/engine"
 	"feature-flag-platform/internal/handler"
 	"feature-flag-platform/internal/repository"
 	"feature-flag-platform/internal/service"
@@ -27,9 +28,14 @@ func main() {
 	flagRepo := repository.NewFlagRepository(db)
 	auditRepo := repository.NewAuditRepository(db)
 	ruleRepo := repository.NewRuleRepository(db)
+
 	flagService := service.NewFlagService(flagRepo, auditRepo)
 	ruleService := service.NewRuleService(flagRepo, ruleRepo, auditRepo)
+	evalEngine := engine.NewEvaluationEngine()
+	evalService := service.NewEvaluationService(flagRepo, evalEngine)
+
 	flagHandler := handler.NewFlagHandler(flagService, ruleService)
+	evalHandler := handler.NewEvaluationHandler(evalService)
 
 	router := gin.Default()
 
@@ -54,6 +60,7 @@ func main() {
 
 	apiGroup := router.Group("/api/v1")
 	flagHandler.RegisterRoutes(apiGroup)
+	evalHandler.RegisterRoutes(apiGroup)
 
 	log.Printf("Server listening on port %s...", port)
 	if err := router.Run(":" + port); err != nil {
