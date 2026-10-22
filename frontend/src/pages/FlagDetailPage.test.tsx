@@ -5,8 +5,6 @@ import { routeConfig } from '../router';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { AuditLog, Flag } from '../types';
-// Full AppShell + Ant Design modal flows can exceed Vitest's 5s default.
-vi.setConfig({ testTimeout: 20000 });
 let flag: Flag;
 let requests: { url: string; method: string; body: any }[];
 let fail = '';

@@ -5,9 +5,6 @@ import { setupServer } from 'msw/node';
 import { FlagAuditHistoryTab } from './FlagAuditHistoryTab';
 import { AuditLog } from '../types';
 
-// Timeline cards are heavy antd trees; keep the same headroom as page tests.
-vi.setConfig({ testTimeout: 20000 });
-
 const server = setupServer();
 let networkFetch: typeof fetch;
 const AUDIT_URL = '*/api/v1/flags/42/audit-logs';
