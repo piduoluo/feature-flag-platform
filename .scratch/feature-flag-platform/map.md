@@ -16,7 +16,7 @@
   - Scope: Flag 详情、启停状态切换、基本信息修改与单事务原子审计日志。
 - **[03-rule-batch-sync-atomic-diff-and-workbench.md](issues/03-rule-batch-sync-atomic-diff-and-workbench.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: 02
   - Scope: 规则配置工作台、拖拽/数字优先级排序、原子批量同步（Diff 计算与审计）。
 - **[04-evaluation-engine-and-online-console.md](issues/04-evaluation-engine-and-online-console.md)**
@@ -35,3 +35,4 @@
 - 架构采用 `Handler -> Service -> Repository -> Database` 单向流，纯内存 `Engine`。
 - [Ticket 01 完成](issues/01-monorepo-scaffold-and-flag-crud-list-create.md)：打通 Monorepo 骨架、Postgres 物理唯一索引 `(key, environment)`、Flag 创建/检索接口与前端列表及防重新建抽屉，测试全绿。
 - [Ticket 02 完成](issues/02-flag-detail-toggle-and-atomic-audit-log.md)：打通 Flag 详情卡片、在线编辑与一键 Switch 启停控制，实现单事务原子审计流水（FLAG_CREATED、FLAG_UPDATED、FLAG_TOGGLED）及空变更抑制与失败原子回滚验证。
+- [Ticket 03 完成](issues/03-rule-batch-sync-atomic-diff-and-workbench.md)：完成规则配置工作台、原子优先级互换（ShiftPriorities 彻底规避物理唯一索引瞬时冲突）、三向精确 Diff 审计与 RULES_SYNCED、清空规则二次确认防护与空白审计抑制。
