@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Logs & temp
+*.log
+.scratch/tmp
+
+# Go
+bin/
+*.exe
+*.test
+*.out
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+.env.local
+.env.*.local
