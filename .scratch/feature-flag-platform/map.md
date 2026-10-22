@@ -21,7 +21,7 @@
   - Scope: 规则配置工作台、拖拽/数字优先级排序、原子批量同步（Diff 计算与审计）。
 - **[04-evaluation-engine-and-online-console.md](issues/04-evaluation-engine-and-online-console.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: 03
   - Scope: 纯内存规则评估引擎、严格类型比对、在线控制台与三态原因反馈。
 - **[05-demo-seed-docker-compose-and-verification.md](issues/05-demo-seed-docker-compose-and-verification.md)**
@@ -36,3 +36,4 @@
 - [Ticket 01 完成](issues/01-monorepo-scaffold-and-flag-crud-list-create.md)：打通 Monorepo 骨架、Postgres 物理唯一索引 `(key, environment)`、Flag 创建/检索接口与前端列表及防重新建抽屉，测试全绿。
 - [Ticket 02 完成](issues/02-flag-detail-toggle-and-atomic-audit-log.md)：打通 Flag 详情卡片、在线编辑与一键 Switch 启停控制，实现单事务原子审计流水（FLAG_CREATED、FLAG_UPDATED、FLAG_TOGGLED）及空变更抑制与失败原子回滚验证。
 - [Ticket 03 完成](issues/03-rule-batch-sync-atomic-diff-and-workbench.md)：完成规则配置工作台、原子优先级互换（ShiftPriorities 彻底规避物理唯一索引瞬时冲突）、三向精确 Diff 审计与 RULES_SYNCED、清空规则二次确认防护与空白审计抑制。
+- [Ticket 04 完成](issues/04-evaluation-engine-and-online-console.md)：实现纯内存规则评估引擎（零 I/O 依赖）、优先级升序短路求值、严格 JSON 类型隔离（string/number/bool 严禁互通）、精确任意精度数值比较（1 等于 1.0、大整数 2^53+1 无精度损失比对、缺失/null 安全跳过），并在前端搭建具备实时 JSON 语法高亮校验拦截与鲜明三态视觉反馈卡片（RULE_MATCH / DEFAULT_FALLBACK / FLAG_DISABLED）的在线评估控制台。
