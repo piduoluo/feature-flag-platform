@@ -7,6 +7,7 @@ import { api } from './api/client';
 vi.mock('./api/client', () => ({
   api: {
     getFlags: vi.fn(),
+    getFlag: vi.fn(),
     createFlag: vi.fn(),
     updateFlag: vi.fn(),
     toggleFlag: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock('./api/client', () => ({
 describe('Router & AppShell Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(api.getFlag).mockResolvedValue({ id: 42, key: 'checkout', name: 'Checkout', description: '', environment: 'production', enabled: false, default_value: false, rules: [], created_at: '2026-01-01', updated_at: '2026-01-01' });
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [],
       total: 0,
@@ -99,8 +101,9 @@ describe('Router & AppShell Integration', () => {
     expect(flagLink).toBeInTheDocument();
     expect(flagLink).toHaveAttribute('href', '/flags');
 
-    // Detail page placeholder rendered with ID
-    expect(screen.getByTestId('flag-detail-page')).toHaveTextContent('ID: 42');
+    // The deep link loads the requested Flag.
+    await screen.findByRole('heading', { name: 'Checkout' });
+    expect(api.getFlag).toHaveBeenCalledWith(42);
 
     // Clicking breadcrumb link navigates back to /flags
     fireEvent.click(flagLink);
