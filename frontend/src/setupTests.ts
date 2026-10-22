@@ -38,3 +38,23 @@ window.getComputedStyle = function (elt: Element, _pseudoElt?: string | null) {
     } as unknown as CSSStyleDeclaration;
   }
 };
+
+// Align Node undici Request with JSDOM AbortSignal for React Router v7 in jsdom
+if (typeof globalThis.Request !== 'undefined') {
+  const OriginalRequest = globalThis.Request;
+  globalThis.Request = class extends OriginalRequest {
+    constructor(input: RequestInfo | URL, init?: RequestInit) {
+      if (init && init.signal) {
+        try {
+          super(input, init);
+          return;
+        } catch {
+          const { signal: _, ...rest } = init;
+          super(input, rest);
+          return;
+        }
+      }
+      super(input, init);
+    }
+  } as typeof Request;
+}

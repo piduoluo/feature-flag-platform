@@ -1,0 +1,146 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { routeConfig } from './router';
+import { api } from './api/client';
+
+vi.mock('./api/client', () => ({
+  api: {
+    getFlags: vi.fn(),
+    createFlag: vi.fn(),
+    updateFlag: vi.fn(),
+    toggleFlag: vi.fn(),
+    evaluate: vi.fn(),
+    getAuditLogs: vi.fn(),
+    syncRules: vi.fn(),
+  },
+}));
+
+describe('Router & AppShell Integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.getFlags).mockResolvedValue({
+      items: [],
+      total: 0,
+    });
+  });
+
+  const renderRoute = (initialEntries: string[] = ['/']) => {
+    const router = createMemoryRouter(routeConfig, {
+      initialEntries,
+    });
+    const result = render(<RouterProvider router={router} />);
+    return { router, ...result };
+  };
+
+  it('redirects root path "/" to "/flags"', async () => {
+    const { router } = renderRoute(['/']);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/flags');
+    });
+    expect(screen.getByText('Feature Flag 特性开关管理')).toBeInTheDocument();
+  });
+
+  it('renders sidebar navigation with correct active state and dynamic breadcrumb for "/flags"', async () => {
+    renderRoute(['/flags']);
+
+    // Check AppShell branding
+    expect(screen.getByText('Feature Flag')).toBeInTheDocument();
+    expect(screen.getByText('灰度规则平台')).toBeInTheDocument();
+
+    // Check sidebar navigation menu items
+    const flagsMenuItem = screen.getByRole('menuitem', { name: /功能开关/i });
+    expect(flagsMenuItem).toBeInTheDocument();
+    expect(flagsMenuItem).toHaveClass('ant-menu-item-selected');
+
+    expect(screen.getByRole('menuitem', { name: /规则评估/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /全局操作历史/i })).toBeInTheDocument();
+
+    // Check dynamic breadcrumb
+    const breadcrumb = screen.getByTestId('app-breadcrumb');
+    expect(breadcrumb).toHaveTextContent('功能开关');
+  });
+
+  it('renders dynamic breadcrumb and active sidebar state for "/evaluations"', async () => {
+    renderRoute(['/evaluations']);
+
+    const evalMenuItem = screen.getByRole('menuitem', { name: /规则评估/i });
+    expect(evalMenuItem).toHaveClass('ant-menu-item-selected');
+
+    const breadcrumb = screen.getByTestId('app-breadcrumb');
+    expect(breadcrumb).toHaveTextContent('规则评估');
+    expect(screen.getByText('确定性规则在线评估控制台')).toBeInTheDocument();
+  });
+
+  it('renders dynamic breadcrumb and active sidebar state for "/audit-logs"', async () => {
+    renderRoute(['/audit-logs']);
+
+    const auditMenuItem = screen.getByRole('menuitem', { name: /全局操作历史/i });
+    expect(auditMenuItem).toHaveClass('ant-menu-item-selected');
+
+    const breadcrumb = screen.getByTestId('app-breadcrumb');
+    expect(breadcrumb).toHaveTextContent('全局操作历史');
+    expect(screen.getByTestId('global-audit-logs-page')).toBeInTheDocument();
+  });
+
+  it('renders dynamic multi-level breadcrumb with clickable link for "/flags/:id"', async () => {
+    const { router } = renderRoute(['/flags/42']);
+
+    // Sidebar should keep "功能开关" selected
+    const flagsMenuItem = screen.getByRole('menuitem', { name: /功能开关/i });
+    expect(flagsMenuItem).toHaveClass('ant-menu-item-selected');
+
+    // Breadcrumb should have link to "功能开关" and leaf "详情"
+    const breadcrumb = screen.getByTestId('app-breadcrumb');
+    expect(breadcrumb).toHaveTextContent('功能开关');
+    expect(breadcrumb).toHaveTextContent('详情');
+
+    const flagLink = screen.getByRole('link', { name: '功能开关' });
+    expect(flagLink).toBeInTheDocument();
+    expect(flagLink).toHaveAttribute('href', '/flags');
+
+    // Detail page placeholder rendered with ID
+    expect(screen.getByTestId('flag-detail-page')).toHaveTextContent('ID: 42');
+
+    // Clicking breadcrumb link navigates back to /flags
+    fireEvent.click(flagLink);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/flags');
+    });
+  });
+
+  it('navigates cleanly between routes via sidebar menu clicks', async () => {
+    const { router } = renderRoute(['/flags']);
+
+    // Click "规则评估"
+    const evalMenuItem = screen.getByRole('menuitem', { name: /规则评估/i });
+    fireEvent.click(evalMenuItem);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/evaluations');
+    });
+    expect(screen.getByTestId('app-breadcrumb')).toHaveTextContent('规则评估');
+
+    // Click "全局操作历史"
+    const auditMenuItem = screen.getByRole('menuitem', { name: /全局操作历史/i });
+    fireEvent.click(auditMenuItem);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/audit-logs');
+    });
+    expect(screen.getByTestId('app-breadcrumb')).toHaveTextContent('全局操作历史');
+
+    // Click "功能开关"
+    const flagsMenuItem = screen.getByRole('menuitem', { name: /功能开关/i });
+    fireEvent.click(flagsMenuItem);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/flags');
+    });
+    expect(screen.getByTestId('app-breadcrumb')).toHaveTextContent('功能开关');
+  });
+
+  it('redirects unknown path to "/flags"', async () => {
+    const { router } = renderRoute(['/unknown-sub-route-path']);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/flags');
+    });
+  });
+});
