@@ -25,6 +25,11 @@ func main() {
 		log.Fatalf("Database initialization failed: %v", err)
 	}
 
+	// Seed initial demo data idempotently
+	if err := repository.SeedDemoData(db); err != nil {
+		log.Printf("Warning: SeedDemoData failed: %v", err)
+	}
+
 	flagRepo := repository.NewFlagRepository(db)
 	auditRepo := repository.NewAuditRepository(db)
 	ruleRepo := repository.NewRuleRepository(db)
