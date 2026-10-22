@@ -5,6 +5,7 @@ import { api } from '../api/client';
 import { Flag, Rule, UpdateFlagPayload } from '../types';
 
 import { RuleWorkspace } from '../components/RuleWorkspace';
+import { FlagAuditHistoryTab } from '../components/FlagAuditHistoryTab';
 import { rulesEqual, rulePayload } from './ruleDraft';
 
 const basicValues = (flag: Flag): UpdateFlagPayload => ({ name: flag.name, description: flag.description, default_value: flag.default_value });
@@ -101,7 +102,7 @@ const FlagWorkspace: React.FC<{ id: number }> = ({ id }) => {
     </Card>
     <Tabs activeKey={tab} onChange={changeTab} items={[
       { key: 'rules', label: `规则配置${isRulesDirty ? ' *' : ''}`, children: <RuleWorkspace rules={rules} onChange={setRulesDraft} defaultValue={savedFlag.default_value} defaultDirty={basic?.default_value !== savedFlag.default_value} disabled={busy} /> },
-      { key: 'audit', label: '变更历史', children: <Card>变更历史暂未开放。</Card> },
+      { key: 'audit', label: '变更历史', children: <FlagAuditHistoryTab flagId={id} /> },
       { key: 'settings', label: `基本设置${isBasicDirty ? ' *' : ''}`, forceRender: true, children:
         <Form form={form} layout="vertical" disabled={busy} onValuesChange={(_, values) => setBasicDraft(values)}>
           <Form.Item name="name" label="Flag 名称" rules={[{ required: true, whitespace: true, message: '请输入 Flag 名称' }, { max: 255 }]}><Input /></Form.Item>

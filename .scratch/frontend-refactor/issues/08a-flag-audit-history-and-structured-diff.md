@@ -5,13 +5,13 @@
 
 **Blocked by:** 03: Flag 详情全屏工作台框架、Tab-Query 双向同步与基本设置域
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] 访问 `/flags/:id?tab=audit` 正常拉取服务端单 Flag 审计日志，并在 Tab 2 渲染垂直时间轴列表
-- [ ] 在 `frontend/src/utils/diffParser.ts` 中建立标准的 `parseAuditDiff` 纯函数与数据类型契约，导出供当前组件与 Ticket 08B 全局审计复用
-- [ ] 编写 `diffParser.test.ts` 单元测试，覆盖 `RULES_SYNCED`（增删改三向 Diff）、`FLAG_UPDATED` 与 `FLAG_TOGGLED` 的解析逻辑
-- [ ] 时间轴卡片中真实展示服务端返回的操作人标识（`operator`）与发生时间
-- [ ] `RULES_SYNCED` 卡片结构化展开 Diff 摘要：新增规则显示条件属性与返回值；修改规则显示各字段 before 与 after 的并排比对；删除规则展示快照
-- [ ] `FLAG_UPDATED` 卡片比对展示名称、描述、默认返回值变更前后取值
-- [ ] `FLAG_TOGGLED` 卡片展示启用/停用状态流转
-- [ ] 路由集成测试覆盖 Tab 2 时间轴加载、空状态占位、异常 Alert 提示及结构化 Diff 呈现
+- [x] 访问 `/flags/:id?tab=audit` 正常拉取服务端单 Flag 审计日志，并在 Tab 2 渲染垂直时间轴列表
+- [x] 在 `frontend/src/utils/diffParser.ts` 中建立标准的 `parseAuditDiff` 纯函数与数据类型契约，导出供当前组件与 Ticket 08B 全局审计复用
+- [x] 编写 `diffParser.test.ts` 单元测试，覆盖 `RULES_SYNCED`（增删改三向 Diff）、`FLAG_UPDATED` 与 `FLAG_TOGGLED` 的解析逻辑
+- [x] 时间轴卡片中真实展示服务端返回的操作人标识（`operator`）与发生时间
+- [x] `RULES_SYNCED` 卡片结构化展开 Diff 摘要：新增规则显示条件属性与返回值；修改规则显示各字段 before 与 after 的并排比对；删除规则展示快照
+- [x] `FLAG_UPDATED` 卡片比对展示名称、描述、默认返回值变更前后取值
+- [x] `FLAG_TOGGLED` 卡片展示启用/停用状态流转
+- [x] 路由集成测试覆盖 Tab 2 时间轴加载、空状态占位、异常 Alert 提示及结构化 Diff 呈现

@@ -4,7 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routeConfig } from '../router';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { Flag } from '../types';
+import { AuditLog, Flag } from '../types';
 // Full AppShell + Ant Design modal flows can exceed Vitest's 5s default.
 vi.setConfig({ testTimeout: 20000 });
 let flag: Flag;
@@ -38,6 +38,7 @@ beforeEach(() => {
     http.put('*/api/v1/flags/42', respond),
     http.patch('*/api/v1/flags/42/toggle', respond),
     http.put('*/api/v1/flags/42/rules', respond),
+    http.get('*/api/v1/flags/42/audit-logs', respond),
     http.get('*/api/v1/flags', respond),
   );
   // Node fetch needs an absolute URL; requests still pass through MSW and the real API client.
@@ -194,4 +195,68 @@ it('intercepts browser back navigation away from a dirty flag', async () => {
   await act(async () => { await router.navigate(-1); });
   fireEvent.click(await screen.findByRole('button', { name: '放弃修改并离开' }));
   await waitFor(() => expect(router.state.location.pathname).toBe('/flags'));
+});
+
+const auditRecords: AuditLog[] = [
+  {
+    id: 2,
+    flag_id: 42,
+    flag_key: 'checkout',
+    environment: 'production',
+    action_type: 'RULES_SYNCED',
+    operator: 'admin',
+    created_at: '2026-01-02T03:04:05Z',
+    diff_summary: {
+      action: 'rules_synced',
+      added: [{ priority: 3, attribute_name: 'beta_user', operator: 'equals', expected_value: true, return_value: true }],
+      updated: [],
+      deleted: [],
+    },
+  },
+  {
+    id: 1,
+    flag_id: 42,
+    flag_key: 'checkout',
+    environment: 'production',
+    action_type: 'FLAG_TOGGLED',
+    operator: 'admin',
+    created_at: '2026-01-01T09:00:00Z',
+    diff_summary: { action: 'toggled', old_enabled: false, new_enabled: true },
+  },
+];
+
+it('deep links to the audit tab and renders the structured timeline from the server', async () => {
+  server.use(http.get('*/api/v1/flags/42/audit-logs', ({ request }) => {
+    requests.push({ url: new URL(request.url).pathname, method: request.method, body: null });
+    return HttpResponse.json({ code: 'SUCCESS', data: auditRecords });
+  }));
+
+  const router = await open('/flags/42?tab=audit');
+
+  expect(router.state.location.search).toBe('?tab=audit');
+  expect(screen.getByRole('tab', { name: '变更历史' })).toHaveAttribute('aria-selected', 'true');
+  await screen.findByText('规则批量同步');
+  expect(screen.getAllByText('操作人：admin')).toHaveLength(2);
+  expect(screen.getByText(new Date(auditRecords[0].created_at).toLocaleString('zh-CN'))).toBeInTheDocument();
+  expect(screen.getByText('beta_user')).toBeInTheDocument();
+  expect(screen.getByText('已停用 → 已启用')).toBeInTheDocument();
+  expect(requests.some(request => request.method === 'GET' && request.url.endsWith('/audit-logs'))).toBe(true);
+});
+
+it('shows an empty placeholder when the audit endpoint has no records', async () => {
+  await open('/flags/42?tab=audit');
+
+  expect(await screen.findByText('暂无变更记录')).toBeInTheDocument();
+  expect(screen.queryByText('变更历史暂未开放。')).not.toBeInTheDocument();
+});
+
+it('shows an error alert when the audit request fails', async () => {
+  server.use(http.get('*/api/v1/flags/42/audit-logs', () =>
+    HttpResponse.json({ code: 'INTERNAL_ERROR', message: '审计日志服务不可用' }, { status: 500 }),
+  ));
+
+  await open('/flags/42?tab=audit');
+
+  expect(await screen.findByText('变更历史加载失败')).toBeInTheDocument();
+  expect(screen.getByText('审计日志服务不可用')).toBeInTheDocument();
 });
