@@ -59,6 +59,8 @@ describe('FlagListPage (Ticket 02)', () => {
       items: [],
       total: 0,
     });
+    // Detail navigation tests mount FlagDetailPage, which immediately calls getFlag(id).
+    vi.mocked(api.getFlag).mockResolvedValue(demoFlag);
   });
 
   const renderWithRouter = (initialEntries: string[] = ['/flags']) => {
