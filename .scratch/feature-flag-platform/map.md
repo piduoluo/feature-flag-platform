@@ -6,7 +6,7 @@
 ## Tickets
 - **[01-monorepo-scaffold-and-flag-crud-list-create.md](issues/01-monorepo-scaffold-and-flag-crud-list-create.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: None
   - Scope: Monorepo 基础脚手架、PostgreSQL 迁移、Flag 列表、环境筛选与创建抽屉。
 - **[02-flag-detail-toggle-and-atomic-audit-log.md](issues/02-flag-detail-toggle-and-atomic-audit-log.md)**
@@ -33,3 +33,4 @@
 ## Decisions-so-far
 - 遵循 [docs/SPEC.md](../../docs/SPEC.md) 与 [docs/adr/](../../docs/adr/) 中的 ADR 0001~0006。
 - 架构采用 `Handler -> Service -> Repository -> Database` 单向流，纯内存 `Engine`。
+- [Ticket 01 完成](issues/01-monorepo-scaffold-and-flag-crud-list-create.md)：打通 Monorepo 骨架、Postgres 物理唯一索引 `(key, environment)`、Flag 创建/检索接口与前端列表及防重新建抽屉，测试全绿。

@@ -7,6 +7,8 @@
 
 # Go
 bin/
+server
+backend/server
 *.exe
 *.test
 *.out

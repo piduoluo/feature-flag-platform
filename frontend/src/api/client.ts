@@ -1,0 +1,64 @@
+import { ApiResponse, CreateFlagPayload, Flag, FlagListQuery, FlagListResult } from '../types';
+
+export class ApiError extends Error {
+  code: string;
+  status: number;
+
+  constructor(code: string, message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+    ...options,
+  });
+
+  let jsonResult: ApiResponse<T>;
+  try {
+    jsonResult = await response.json();
+  } catch (err) {
+    throw new ApiError('NETWORK_ERROR', '服务器响应异常，无法解析 JSON', response.status);
+  }
+
+  if (!response.ok || jsonResult.code !== 'SUCCESS') {
+    throw new ApiError(
+      jsonResult.code || 'UNKNOWN_ERROR',
+      jsonResult.message || '请求执行失败',
+      response.status
+    );
+  }
+
+  return jsonResult.data;
+}
+
+export const api = {
+  getFlags: async (query?: FlagListQuery): Promise<FlagListResult> => {
+    const params = new URLSearchParams();
+    if (query?.environment) params.append('environment', query.environment);
+    if (query?.search) params.append('search', query.search);
+    if (query?.page) params.append('page', String(query.page));
+    if (query?.page_size) params.append('page_size', String(query.page_size));
+
+    const qs = params.toString();
+    return request<FlagListResult>(`/api/v1/flags${qs ? `?${qs}` : ''}`);
+  },
+
+  createFlag: async (payload: CreateFlagPayload): Promise<Flag> => {
+    return request<Flag>('/api/v1/flags', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getFlag: async (id: number): Promise<Flag> => {
+    return request<Flag>(`/api/v1/flags/${id}`);
+  },
+};

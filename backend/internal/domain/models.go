@@ -1,0 +1,110 @@
+package domain
+
+import (
+	"encoding/json"
+	"time"
+)
+
+// Environment represents isolated context
+type Environment string
+
+// Environment types
+const (
+	EnvDevelopment Environment = "development"
+	EnvStaging     Environment = "staging"
+	EnvProduction  Environment = "production"
+)
+
+// Audit action types
+const (
+	ActionFlagCreated = "FLAG_CREATED"
+	ActionFlagUpdated = "FLAG_UPDATED"
+	ActionFlagToggled = "FLAG_TOGGLED"
+	ActionRulesSynced = "RULES_SYNCED"
+)
+
+// Flag represents a feature flag entity in a specific environment.
+type Flag struct {
+	ID           int64       `json:"id" gorm:"primaryKey;autoIncrement"`
+	Key          string      `json:"key" gorm:"column:key;not null;size:128;uniqueIndex:idx_flags_key_env,priority:1"`
+	Name         string      `json:"name" gorm:"column:name;not null;size:255"`
+	Description  string      `json:"description" gorm:"column:description;not null;default:''"`
+	Environment  Environment `json:"environment" gorm:"column:environment;not null;size:32;uniqueIndex:idx_flags_key_env,priority:2"`
+	Enabled      bool        `json:"enabled" gorm:"column:enabled;not null;default:false"`
+	DefaultValue bool        `json:"default_value" gorm:"column:default_value;not null;default:false"`
+	CreatedAt    time.Time   `json:"created_at" gorm:"column:created_at;autoCreateTime"`
+	UpdatedAt    time.Time   `json:"updated_at" gorm:"column:updated_at;autoUpdateTime"`
+	Rules        []Rule      `json:"rules" gorm:"foreignKey:FlagID"`
+}
+
+func (Flag) TableName() string {
+	return "flags"
+}
+
+// Rule represents a matching condition associated with a Flag.
+type Rule struct {
+	ID            int64           `json:"id" gorm:"primaryKey;autoIncrement"`
+	FlagID        int64           `json:"flag_id" gorm:"column:flag_id;not null;uniqueIndex:idx_rules_flag_priority,priority:1"`
+	AttributeName string          `json:"attribute_name" gorm:"column:attribute_name;not null;size:128"`
+	Operator      string          `json:"operator" gorm:"column:operator;not null;size:32"`
+	ExpectedValue json.RawMessage `json:"expected_value" gorm:"column:expected_value;type:jsonb;not null"`
+	ReturnValue   bool            `json:"return_value" gorm:"column:return_value;not null;default:false"`
+	Priority      int             `json:"priority" gorm:"column:priority;not null;uniqueIndex:idx_rules_flag_priority,priority:2"`
+	CreatedAt     time.Time       `json:"created_at" gorm:"column:created_at;autoCreateTime"`
+	UpdatedAt     time.Time       `json:"updated_at" gorm:"column:updated_at;autoUpdateTime"`
+}
+
+func (Rule) TableName() string {
+	return "rules"
+}
+
+// AuditLog tracks configuration modifications atomically.
+type AuditLog struct {
+	ID          int64           `json:"id" gorm:"primaryKey;autoIncrement"`
+	FlagID      int64           `json:"flag_id" gorm:"column:flag_id;not null"`
+	FlagKey     string          `json:"flag_key" gorm:"column:flag_key;not null;size:128"`
+	Environment Environment     `json:"environment" gorm:"column:environment;not null;size:32"`
+	ActionType  string          `json:"action_type" gorm:"column:action_type;not null;size:64"`
+	Operator    string          `json:"operator" gorm:"column:operator;not null;size:64;default:'admin'"`
+	DiffSummary json.RawMessage `json:"diff_summary" gorm:"column:diff_summary;type:jsonb;not null;default:'{}'"`
+	CreatedAt   time.Time       `json:"created_at" gorm:"column:created_at;autoCreateTime"`
+}
+
+func (AuditLog) TableName() string {
+	return "audit_logs"
+}
+
+// CreateFlagRequest payload for creating a new Flag.
+type CreateFlagRequest struct {
+	Key          string      `json:"key"`
+	Name         string      `json:"name"`
+	Description  string      `json:"description"`
+	Environment  Environment `json:"environment"`
+	DefaultValue bool        `json:"default_value"`
+}
+
+// UpdateFlagRequest payload for editing Flag basic details.
+type UpdateFlagRequest struct {
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	DefaultValue bool   `json:"default_value"`
+}
+
+// ToggleFlagRequest payload for enabling/disabling a Flag.
+type ToggleFlagRequest struct {
+	Enabled bool `json:"enabled"`
+}
+
+// FlagListQuery query parameters for filtering flags.
+type FlagListQuery struct {
+	Environment Environment `form:"environment"`
+	Search      string      `form:"search"`
+	Page        int         `form:"page,default=1"`
+	PageSize    int         `form:"page_size,default=20"`
+}
+
+// FlagListResult paginated list of flags.
+type FlagListResult struct {
+	Items []*Flag `json:"items"`
+	Total int64   `json:"total"`
+}
