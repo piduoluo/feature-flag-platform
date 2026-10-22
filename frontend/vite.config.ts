@@ -18,8 +18,10 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.ts',
-    // Page-level integration tests drive the real router and antd trees and
-    // take 4-10s; the 5s default makes them flaky on a loaded machine.
-    testTimeout: 20000,
+    // Page-level integration tests drive the real router and antd trees; they
+    // take 4-10s on an idle machine and several times longer when the suite or
+    // the machine is busy. Assertion-level races are covered by
+    // asyncUtilTimeout in setupTests.ts; this bounds the whole test.
+    testTimeout: 60000,
   },
 });
