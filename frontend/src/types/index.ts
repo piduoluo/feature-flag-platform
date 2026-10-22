@@ -81,6 +81,26 @@ export interface FlagListResult {
   total: number;
 }
 
+/** 全局审计接口支持的 action_type 过滤值（SPEC 第 9 条）。 */
+export type AuditActionType = 'FLAG_CREATED' | 'FLAG_UPDATED' | 'FLAG_TOGGLED' | 'RULES_SYNCED';
+
+/** GET /api/v1/audit-logs 的查询参数；未设置的过滤条件不出现在 URL 上。 */
+export interface GlobalAuditLogQuery {
+  page?: number;
+  page_size?: number;
+  environment?: Environment;
+  flag_key?: string;
+  action_type?: AuditActionType;
+}
+
+/** GET /api/v1/audit-logs 的响应体，分页信息以服务端返回为准。 */
+export interface GlobalAuditLogResult {
+  items: AuditLog[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 export type EvaluationReason = 'RULE_MATCH' | 'DEFAULT_FALLBACK' | 'FLAG_DISABLED';
 
 export interface MatchedRuleInfo {

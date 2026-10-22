@@ -13,6 +13,7 @@ vi.mock('./api/client', () => ({
     toggleFlag: vi.fn(),
     evaluate: vi.fn(),
     getAuditLogs: vi.fn(),
+    getGlobalAuditLogs: vi.fn(),
     syncRules: vi.fn(),
   },
 }));
@@ -24,6 +25,12 @@ describe('Router & AppShell Integration', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [],
       total: 0,
+    });
+    vi.mocked(api.getGlobalAuditLogs).mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      page_size: 20,
     });
   });
 

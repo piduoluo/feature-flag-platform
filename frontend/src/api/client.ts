@@ -7,6 +7,8 @@ import {
   Flag,
   FlagListQuery,
   FlagListResult,
+  GlobalAuditLogQuery,
+  GlobalAuditLogResult,
   Rule,
   UpdateFlagPayload,
 } from '../types';
@@ -89,6 +91,18 @@ export const api = {
 
   getAuditLogs: async (id: number): Promise<AuditLog[]> => {
     return request<AuditLog[]>(`/api/v1/flags/${id}/audit-logs`);
+  },
+
+  getGlobalAuditLogs: async (query?: GlobalAuditLogQuery): Promise<GlobalAuditLogResult> => {
+    const params = new URLSearchParams();
+    if (query?.page !== undefined) params.append('page', String(query.page));
+    if (query?.page_size !== undefined) params.append('page_size', String(query.page_size));
+    if (query?.environment) params.append('environment', query.environment);
+    if (query?.flag_key) params.append('flag_key', query.flag_key);
+    if (query?.action_type) params.append('action_type', query.action_type);
+
+    const qs = params.toString();
+    return request<GlobalAuditLogResult>(`/api/v1/audit-logs${qs ? `?${qs}` : ''}`);
   },
 
   syncRules: async (flagId: number, rules: Rule[]): Promise<Rule[]> => {
