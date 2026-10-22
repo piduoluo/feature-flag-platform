@@ -242,6 +242,10 @@
        *(注：当 `reason` 为 `DEFAULT_FALLBACK` 或 `FLAG_DISABLED` 时，`matched_rule` 为 `null`；若停用则 `enabled: false, result: false`)*
   8. `GET /api/v1/flags/:id/audit-logs`
      - Data: `[AuditLog]` 列表（按 `created_at DESC` 排序）
+  9. `GET /api/v1/audit-logs?page=1&page_size=20&environment=&flag_key=&action_type=`
+     - 跨 Flag 全局审计分页查询；`environment`、`flag_key`（大小写不敏感子串）、`action_type`（`FLAG_CREATED` / `FLAG_UPDATED` / `FLAG_TOGGLED` / `RULES_SYNCED`）均为可选过滤条件
+     - Data: `{ "items": [AuditLog], "total": 12, "page": 1, "page_size": 20 }`，按 `created_at DESC, id DESC` 排序；`items` 每项显式包含 `flag_id`，供前端跳转 `/flags/:id?tab=audit`
+     - 非法参数（`page < 1`、`page_size` 不在 `1..100`、未知 `environment` 或 `action_type`）返回 `VALIDATION_ERROR`
 
 ### 6. 前端状态与交互验收标准 (Frontend Acceptance Criteria)
 原题明确要求“清晰的信息层级、表单校验、加载状态、空状态、成功或失败反馈”，具体验收基准如下：
