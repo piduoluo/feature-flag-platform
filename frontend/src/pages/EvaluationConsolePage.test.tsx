@@ -123,7 +123,7 @@ describe('EvaluationConsolePage', () => {
     fireEvent.change(textarea, { target: { value: '{\n  "a": 1\n  "b": 2\n}' } });
 
     expect(textarea).toHaveAttribute('aria-invalid', 'true');
-    expect(textarea.className).toContain('ant-input-status-error');
+    expect(textarea.closest('.ctx-editor')).toHaveClass('is-invalid');
     const errorAlert = screen.getByTestId('context-json-error');
     expect(errorAlert).toHaveTextContent('JSON 语法错误（第 3 行）');
     expect(errorAlert).toHaveTextContent("Comma ',' expected after value");
@@ -132,7 +132,7 @@ describe('EvaluationConsolePage', () => {
     fireEvent.change(textarea, { target: { value: '{\n  "a": 1,\n  "b": 2\n}' } });
 
     expect(textarea).toHaveAttribute('aria-invalid', 'false');
-    expect(textarea.className).not.toContain('ant-input-status-error');
+    expect(textarea.closest('.ctx-editor')).not.toHaveClass('is-invalid');
     expect(screen.queryByTestId('context-json-error')).not.toBeInTheDocument();
     expect(evaluateButton).toBeEnabled();
   });

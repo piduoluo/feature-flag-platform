@@ -1,41 +1,23 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useLocation, Link } from 'react-router-dom';
+import { Select, AutoComplete, Button } from 'antd';
 import {
-  Card,
-  Row,
-  Col,
-  Select,
-  Input,
-  AutoComplete,
-  Button,
-  Typography,
-  Space,
-  Tag,
-  Alert,
-  Spin,
-  Descriptions,
-  Divider,
-  Empty,
-  Tooltip,
-} from 'antd';
-import {
+  ArrowLeftOutlined,
   CheckCircleFilled,
-  InfoCircleFilled,
-  StopOutlined,
-  PlayCircleOutlined,
-  FormatPainterOutlined,
-  ClearOutlined,
-  CheckCircleOutlined,
+  CloseOutlined,
+  ExclamationCircleFilled,
   ExclamationCircleOutlined,
   FlagOutlined,
-  ArrowLeftOutlined,
+  InfoCircleFilled,
+  PlayCircleOutlined,
+  SearchOutlined,
+  StopOutlined,
 } from '@ant-design/icons';
 import { Environment, EvaluationResult, Flag } from '../types';
 import { api, ApiError } from '../api/client';
 import { parseJson, stringifyJson } from '../utils/json';
-
-const { Title, Text, Paragraph } = Typography;
-const { TextArea } = Input;
+import { JsonContextEditor } from '../components/JsonContextEditor';
+import './EvaluationConsolePage.css';
 
 const ENV_LABELS: Record<Environment, string> = {
   development: 'Development (开发环境)',
@@ -171,6 +153,81 @@ function parseContextInput(source: string): ContextInputCheck {
   }
 }
 
+type VerdictTone = 'green' | 'amber' | 'blue' | 'neutral';
+
+interface VerdictProps {
+  tone: VerdictTone;
+  testId: string;
+  icon: React.ReactNode;
+  title: string;
+  tag: string;
+  description: React.ReactNode;
+  children?: React.ReactNode;
+}
+
+/** Shared decision panel: icon, verdict title + reason tag, copy and payload. */
+const Verdict: React.FC<VerdictProps> = ({
+  tone,
+  testId,
+  icon,
+  title,
+  tag,
+  description,
+  children,
+}) => (
+  <section className={`evalc-verdict evalc-verdict--${tone}`} data-testid={testId}>
+    <span className="evalc-verdict-icon" aria-hidden="true">
+      {icon}
+    </span>
+    <div className="evalc-verdict-main">
+      <div className="evalc-verdict-head">
+        <h3 className="evalc-verdict-title">{title}</h3>
+        <span className="evalc-verdict-tag">{tag}</span>
+      </div>
+      <p className="evalc-verdict-desc">{description}</p>
+      {children}
+    </div>
+  </section>
+);
+
+interface ValueCardProps {
+  label: string;
+  value: string;
+  tone: 'green' | 'red' | 'muted';
+  pill: string;
+  dangerPill?: boolean;
+}
+
+const ValueCard: React.FC<ValueCardProps> = ({ label, value, tone, pill, dangerPill }) => (
+  <div className="evalc-value-card">
+    <div>
+      <div className="evalc-value-label">{label}</div>
+      <div className={`evalc-value evalc-value--${tone}`}>{value}</div>
+    </div>
+    <span className={`evalc-value-pill${dangerPill ? ' evalc-value-pill--danger' : ''}`}>{pill}</span>
+  </div>
+);
+
+/** Empty inbox illustration from the mock: tray, lid notch and sun rays. */
+const InboxIllustration: React.FC = () => (
+  <svg
+    className="evalc-empty-icon"
+    viewBox="0 0 120 120"
+    fill="none"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <ellipse cx="60" cy="99" rx="33" ry="4.5" fill="#e7edf6" />
+    <g stroke="currentColor" strokeWidth="2.9" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M60 8v13" opacity=".92" />
+      <path d="M42.5 13.5 36 23" opacity=".62" />
+      <path d="M77.5 13.5 84 23" opacity=".62" />
+      <path d="M26 50 44 34h32l18 16" />
+      <path d="M26 50h22l4 7h16l4-7h22v38a8 8 0 0 1-8 8H34a8 8 0 0 1-8-8V50Z" />
+    </g>
+  </svg>
+);
+
 export const EvaluationConsolePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -277,105 +334,59 @@ export const EvaluationConsolePage: React.FC = () => {
     }
   };
 
-  // Render Result Card based on 3 distinct visual states
-  const renderResultCard = () => {
+  const contextError = contextCheck.isValid
+    ? null
+    : {
+        title: `JSON 语法错误${contextCheck.line ? `（第 ${contextCheck.line} 行）` : ''}`,
+        message: contextCheck.reason ?? '无法解析该 JSON',
+      };
+
+  // Render Result Card based on the 3 contract reasons (plus loading / empty).
+  const renderResult = () => {
     if (evaluating) {
       return (
-        <Card
-          variant="borderless"
-          style={{
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: 380,
-            background: '#fafafa',
-          }}
-        >
-          <div style={{ textAlign: 'center' }}>
-            <Spin size="large" />
-            <div style={{ marginTop: 16, color: '#8c8c8c' }}>
-              正在执行领域评估引擎规则匹配...
-            </div>
-          </div>
-        </Card>
+        <div className="evalc-result-inset evalc-result-loading" role="status" aria-live="polite">
+          <span className="evalc-spinner" aria-hidden="true" />
+          <span className="evalc-loading-text">正在执行领域评估引擎规则匹配...</span>
+        </div>
       );
     }
 
     if (!evalResult) {
       return (
-        <Card
-          variant="borderless"
-          style={{
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: 380,
-            background: '#fafafa',
-          }}
-        >
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="在左侧选择环境、Flag 并输入用户上下文，点击「发起评估」实时验证"
-          />
-        </Card>
+        <div className="evalc-result-inset">
+          <div className="evalc-empty-art">
+            <InboxIllustration />
+          </div>
+          <p className="evalc-empty-text">选择环境和 Flag，填写用户属性后开始评估</p>
+        </div>
       );
     }
 
     // State 1: FLAG_DISABLED
     if (evalResult.reason === 'FLAG_DISABLED') {
       return (
-        <Card
-          data-testid="result-card-disabled"
-          style={{
-            background: '#fffbe6',
-            borderColor: '#ffe58f',
-            boxShadow: '0 2px 8px rgba(250, 140, 22, 0.08)',
-          }}
+        <Verdict
+          tone="amber"
+          testId="result-card-disabled"
+          icon={<StopOutlined />}
+          title="特性开关已停用 (FLAG_DISABLED)"
+          tag="FLAG_DISABLED"
+          description={
+            <>
+              特性开关已停用，评估引擎已熔断并强制返回 <code>false</code>。当前 Feature Flag
+              的启停开关关闭，安全熔断机制会拦截所有规则匹配。
+            </>
+          }
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-            <StopOutlined style={{ fontSize: 32, color: '#fa8c16', marginTop: 4 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                <Title level={4} style={{ margin: 0, color: '#d46b08' }}>
-                  特性开关已停用 (FLAG_DISABLED)
-                </Title>
-                <Tag color="warning" style={{ fontSize: 13, padding: '2px 8px' }}>
-                  FLAG_DISABLED
-                </Tag>
-              </div>
-
-              <Paragraph style={{ margin: '8px 0 16px', color: '#595959' }}>
-                特性开关已停用，评估引擎已熔断并强制返回 <Text code>false</Text>。当前 Feature Flag 的启停开关关闭，安全熔断机制会拦截所有规则匹配。
-              </Paragraph>
-
-              <div
-                style={{
-                  background: '#ffffff',
-                  padding: '16px 20px',
-                  borderRadius: 6,
-                  border: '1px solid #ffe58f',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                }}
-              >
-                <div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>最终返回值 (Result)</Text>
-                  <div style={{ fontSize: 24, fontWeight: 'bold', color: '#cf1322' }}>
-                    false
-                  </div>
-                </div>
-                <Tag color="error" style={{ fontSize: 14, padding: '4px 12px' }}>
-                  已熔断 / 强制关闭
-                </Tag>
-              </div>
-            </div>
-          </div>
-        </Card>
+          <ValueCard
+            label="最终返回值 (Result)"
+            value="false"
+            tone="red"
+            pill="已熔断 / 强制关闭"
+            dangerPill
+          />
+        </Verdict>
       );
     }
 
@@ -385,241 +396,146 @@ export const EvaluationConsolePage: React.FC = () => {
       const isPositive = evalResult.result;
 
       return (
-        <Card
-          data-testid="result-card-rule-match"
-          style={{
-            background: '#f6ffed',
-            borderColor: '#b7eb8f',
-            boxShadow: '0 2px 8px rgba(82, 196, 26, 0.08)',
-          }}
+        <Verdict
+          tone="green"
+          testId="result-card-rule-match"
+          icon={<CheckCircleFilled />}
+          title="命中灰度规则 (RULE_MATCH)"
+          tag="RULE_MATCH"
+          description="用户属性上下文成功命中优先级最高的一条灰度规则，触发短路求值并直接返回该规则预设值。"
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-            <CheckCircleFilled style={{ fontSize: 32, color: '#52c41a', marginTop: 4 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                <Title level={4} style={{ margin: 0, color: '#389e0d' }}>
-                  命中灰度规则 (RULE_MATCH)
-                </Title>
-                <Tag color="success" style={{ fontSize: 13, padding: '2px 8px' }}>
-                  RULE_MATCH
-                </Tag>
-              </div>
-
-              <Paragraph style={{ margin: '8px 0 16px', color: '#595959' }}>
-                用户属性上下文成功命中优先级最高的一条灰度规则，触发短路求值并直接返回该规则预设值。
-              </Paragraph>
-
-              {/* Large Result Bar */}
-              <div
-                style={{
-                  background: '#ffffff',
-                  padding: '16px 20px',
-                  borderRadius: 6,
-                  border: '1px solid #b7eb8f',
-                  marginBottom: 16,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                }}
-              >
-                <div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>最终返回值 (Result)</Text>
-                  <div
-                    style={{
-                      fontSize: 24,
-                      fontWeight: 'bold',
-                      color: isPositive ? '#389e0d' : '#cf1322',
-                    }}
-                  >
-                    {String(evalResult.result)}
-                  </div>
-                </div>
-                <Tag color={isPositive ? 'green' : 'red'} style={{ fontSize: 14, padding: '4px 12px' }}>
-                  {isPositive ? '返回 true' : '返回 false'}
-                </Tag>
-              </div>
-
-              {/* Matched Rule Breakdown */}
-              <Card
-                size="small"
-                title={<span style={{ color: '#237804', fontWeight: 600 }}>命中规则明细</span>}
-                style={{ background: '#ffffff', borderColor: '#d9f7be' }}
-              >
-                <Descriptions column={{ xs: 1, md: 2 }} size="small" bordered>
-                  <Descriptions.Item label="规则优先级 (Priority)">
-                    <Tag color="blue" style={{ fontWeight: 'bold' }}>
-                      #{rule.priority}
-                    </Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="规则返回值">
-                    <Text strong style={{ color: rule.return_value ? '#52c41a' : '#ff4d4f' }}>
+          <ValueCard
+            label="最终返回值 (Result)"
+            value={String(evalResult.result)}
+            tone={isPositive ? 'green' : 'red'}
+            pill={isPositive ? '返回 true' : '返回 false'}
+          />
+          <div className="evalc-rule-detail">
+            <div className="evalc-rule-detail-head">命中规则明细</div>
+            <table className="evalc-rule-table">
+              <tbody>
+                <tr>
+                  <th>规则优先级 (Priority)</th>
+                  <td>
+                    <span className="evalc-rule-pill">#{rule.priority}</span>
+                  </td>
+                  <th>规则返回值</th>
+                  <td>
+                    <span className={`evalc-rule-bool evalc-rule-bool--${rule.return_value}`}>
                       {String(rule.return_value)}
-                    </Text>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="匹配属性名 (Attribute)">
-                    <Text code copyable>{rule.attribute_name}</Text>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="操作符 (Operator)">
-                    <Tag color="geekblue">{rule.operator}</Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="规则期望值 (Expected Value)" span={{ xs: 1, md: 2 }}>
-                    <Text code style={{ wordBreak: 'break-all' }}>
-                      {stringifyJson(rule.expected_value)}
-                    </Text>
-                  </Descriptions.Item>
-                </Descriptions>
-              </Card>
-            </div>
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <th>匹配属性名 (Attribute)</th>
+                  <td>
+                    <code>{rule.attribute_name}</code>
+                  </td>
+                  <th>操作符 (Operator)</th>
+                  <td>
+                    <span className="evalc-rule-op">{rule.operator}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <th>规则期望值 (Expected Value)</th>
+                  <td colSpan={3}>
+                    <code>{stringifyJson(rule.expected_value)}</code>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-        </Card>
+        </Verdict>
       );
     }
 
-    // State 3: DEFAULT_FALLBACK (Neutral Blue)
+    // State 3: DEFAULT_FALLBACK
     if (evalResult.reason === 'DEFAULT_FALLBACK') {
       return (
-        <Card
-          data-testid="result-card-default-fallback"
-          style={{
-            background: '#f0f5ff',
-            borderColor: '#adc6ff',
-            boxShadow: '0 2px 8px rgba(47, 84, 235, 0.08)',
-          }}
+        <Verdict
+          tone="blue"
+          testId="result-card-default-fallback"
+          icon={<InfoCircleFilled />}
+          title="回退至默认返回值 (DEFAULT_FALLBACK)"
+          tag="DEFAULT_FALLBACK"
+          description="未命中任何规则，回退至当前 Flag 的默认返回值。用户属性上下文未满足该 Flag 下配置的有序灰度规则。"
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-            <InfoCircleFilled style={{ fontSize: 32, color: '#2f54eb', marginTop: 4 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                <Title level={4} style={{ margin: 0, color: '#1d39c4' }}>
-                  回退至默认返回值 (DEFAULT_FALLBACK)
-                </Title>
-                <Tag color="processing" style={{ fontSize: 13, padding: '2px 8px' }}>
-                  DEFAULT_FALLBACK
-                </Tag>
-              </div>
-
-              <Paragraph style={{ margin: '8px 0 16px', color: '#595959' }}>
-                未命中任何规则，回退至当前 Flag 的默认返回值。用户属性上下文未满足该 Flag 下配置的有序灰度规则。
-              </Paragraph>
-
-              <div
-                style={{
-                  background: '#ffffff',
-                  padding: '16px 20px',
-                  borderRadius: 6,
-                  border: '1px solid #adc6ff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                }}
-              >
-                <div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>最终返回值 (默认值)</Text>
-                  <div
-                    style={{
-                      fontSize: 24,
-                      fontWeight: 'bold',
-                      color: evalResult.result ? '#1677ff' : '#8c8c8c',
-                    }}
-                  >
-                    {String(evalResult.result)}
-                  </div>
-                </div>
-                <Tag color="blue" style={{ fontSize: 14, padding: '4px 12px' }}>
-                  未命中规则 · 回退默认
-                </Tag>
-              </div>
-            </div>
-          </div>
-        </Card>
+          <ValueCard
+            label="最终返回值 (默认值)"
+            value={String(evalResult.result)}
+            tone={evalResult.result ? 'green' : 'muted'}
+            pill="未命中规则 · 回退默认"
+          />
+        </Verdict>
       );
     }
 
     // Contract violation fallback: never label an unexplained reason as a
     // default-value fallback.
     return (
-      <Card data-testid="result-card-unknown" style={{ background: '#fafafa', borderColor: '#d9d9d9' }}>
-        <Space align="start">
-          <ExclamationCircleOutlined style={{ fontSize: 28, color: '#8c8c8c' }} />
-          <div>
-            <Title level={4} style={{ margin: 0 }}>
-              评估结果缺少可解释的决策依据
-            </Title>
-            <Paragraph style={{ margin: '8px 0 0', color: '#595959' }}>
-              后端返回原因 <Text code>{evalResult.reason}</Text>，最终返回值{' '}
-              <Text code>{String(evalResult.result)}</Text>，未包含命中的规则明细。
-            </Paragraph>
-          </div>
-        </Space>
-      </Card>
+      <Verdict
+        tone="neutral"
+        testId="result-card-unknown"
+        icon={<ExclamationCircleOutlined />}
+        title="评估结果缺少可解释的决策依据"
+        tag="UNKNOWN"
+        description={
+          <>
+            后端返回原因 <code>{evalResult.reason}</code>，最终返回值{' '}
+            <code>{String(evalResult.result)}</code>，未包含命中的规则明细。
+          </>
+        }
+      />
     );
   };
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+    <div className="evalc-page">
       {entry.hasEntryContext && (
-        <Card
-          data-testid="context-banner"
-          size="small"
-          style={{
-            marginBottom: 20,
-            background: '#e6f4ff',
-            borderColor: '#91caff',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 16,
-              flexWrap: 'wrap',
-            }}
-          >
-            <Space size="middle" wrap>
-              <Tag color="blue" icon={<FlagOutlined />}>
-                来自 Flag 深层链接
-              </Tag>
-              <Text>
-                正在评估特性开关：<Text strong>{flagKey || '（未指定）'}</Text> [{environment}]
-              </Text>
-            </Space>
-            <Link
-              to={backToFlagDetail}
-              state={resolvedFlagId
-                ? { from: `${location.pathname}${location.search}`, fromLabel: '规则评估' }
-                : undefined}
-            >
-              <ArrowLeftOutlined style={{ marginRight: 4 }} />
-              {resolvedFlagId ? '返回 Flag 详情' : '返回 Flag 列表'}
-            </Link>
+        <div className="evalc-banner" data-testid="context-banner">
+          <div className="evalc-banner-main">
+            <span className="evalc-banner-badge">
+              <FlagOutlined aria-hidden="true" />
+              来自 Flag 深层链接
+            </span>
+            <span className="evalc-banner-text">
+              正在评估特性开关：<strong>{flagKey || '（未指定）'}</strong>{' '}
+              <span className="evalc-banner-env">[{environment}]</span>
+            </span>
           </div>
-        </Card>
-      )}
-      <Row gutter={[24, 24]}>
-        {/* Left Form: Inputs */}
-        <Col xs={24} xl={12}>
-          <Card
-            title="评估输入配置"
-            variant="borderless"
-            style={{
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02)',
-              borderRadius: 8,
-            }}
+          <Link
+            to={backToFlagDetail}
+            className="evalc-banner-link"
+            state={
+              resolvedFlagId
+                ? { from: `${location.pathname}${location.search}`, fromLabel: '规则评估' }
+                : undefined
+            }
           >
-            <Space direction="vertical" style={{ width: '100%' }} size="middle">
-              {/* Environment Select */}
+            <ArrowLeftOutlined aria-hidden="true" />
+            {resolvedFlagId ? '返回 Flag 详情' : '返回 Flag 列表'}
+          </Link>
+        </div>
+      )}
+
+      <div className="evalc-grid">
+        {/* Left: evaluation inputs */}
+        <section className="evalc-card" aria-labelledby="eval-input-title">
+          <header className="evalc-card-head">
+            <h2 id="eval-input-title" className="evalc-card-title">
+              评估输入配置
+            </h2>
+          </header>
+          <div className="evalc-card-body">
+            <div className="evalc-form">
               <div>
-                <label htmlFor="environment-select">
-                  <Text strong>生效环境 (Environment) *</Text>
+                <label className="evalc-label" htmlFor="environment-select">
+                  生效环境 (Environment)
+                  <span className="evalc-req" aria-hidden="true">*</span>
                 </label>
                 <Select<Environment>
                   id="environment-select"
-                  style={{ width: '100%', marginTop: 6 }}
+                  className="evalc-env-select"
                   value={environment}
                   onChange={(env) => {
                     setEnvironment(env);
@@ -634,176 +550,116 @@ export const EvaluationConsolePage: React.FC = () => {
                 />
               </div>
 
-              {/* Flag Key Input / Select */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
-                  <label htmlFor="flag-key-input">
-                    <Text strong>特性开关标识 (Flag Key) *</Text>
+              <div className="evalc-field-flag">
+                <div className="evalc-label-row">
+                  <label className="evalc-label" htmlFor="flag-key-input">
+                    特性开关标识 (Flag Key)
+                    <span className="evalc-req" aria-hidden="true">*</span>
                   </label>
                   {flags.length > 0 && (
-                    <Text type="secondary" style={{ fontSize: 12 }}>
+                    <span className="evalc-hint">
                       当前匹配 {flags.length} 个 Flag
-                    </Text>
+                    </span>
+                  )}
+                  {loadingFlags && flags.length === 0 && (
+                    <span className="evalc-hint">正在匹配 Flag...</span>
                   )}
                 </div>
-                <AutoComplete
-                  id="flag-key-input"
-                  style={{ width: '100%', marginTop: 6 }}
-                  placeholder="选择或输入 Flag Key (例如 ai_ride_assistant_enabled)"
-                  value={flagKey}
-                  onChange={(val: string) => {
-                    setFlagKey(val);
-                    setEvalResult(null);
-                    setEvalError(null);
-                  }}
-                  allowClear
-                  options={flags.map((f) => ({
-                    label: `${f.key} (${f.name}) [${f.enabled ? '已启用' : '已停用'}]`,
-                    value: f.key,
-                  }))}
-                  filterOption={false}
-                />
-                {loadingFlags && (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    正在加载当前环境 Flag...
-                  </Text>
-                )}
+                <div className="evalc-combo">
+                  <SearchOutlined className="evalc-combo-icon" aria-hidden="true" />
+                  <AutoComplete
+                    id="flag-key-input"
+                    className="evalc-flag-autocomplete"
+                    placeholder="选择或输入 Flag Key (例如 ai_ride_assistant_enabled)"
+                    value={flagKey}
+                    onChange={(val: string) => {
+                      setFlagKey(val);
+                      setEvalResult(null);
+                      setEvalError(null);
+                    }}
+                    allowClear
+                    options={flags.map((f) => ({
+                      label: `${f.key} (${f.name}) [${f.enabled ? '已启用' : '已停用'}]`,
+                      value: f.key,
+                    }))}
+                    filterOption={false}
+                  />
+                </div>
               </div>
 
-              <Divider style={{ margin: '8px 0' }} />
+              <div className="evalc-divider" role="presentation" />
 
-              {/* Context JSON Editor */}
-              <div>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 6,
-                    flexWrap: 'wrap',
-                    gap: 8,
-                  }}
-                >
-                  <Space align="center" wrap style={{ maxWidth: '100%' }}>
-                    <Text strong>用户属性上下文 (Context JSON) *</Text>
-                    {contextCheck.isEmpty ? (
-                      <Tag>空上下文 · 将按 {} 提交</Tag>
-                    ) : contextCheck.isValid ? (
-                      <Tag icon={<CheckCircleOutlined />} color="success">
-                        JSON 格式有效
-                      </Tag>
-                    ) : (
-                      <Tag icon={<ExclamationCircleOutlined />} color="error">
-                        JSON 格式错误
-                      </Tag>
-                    )}
-                  </Space>
-                  <Space size="small" wrap style={{ maxWidth: '100%' }}>
-                    <Tooltip title="自动美化排版 JSON">
-                      <Button
-                        size="small"
-                        icon={<FormatPainterOutlined />}
-                        onClick={handleFormatJson}
-                        disabled={!contextCheck.isValid}
-                      >
-                        格式化
-                      </Button>
-                    </Tooltip>
-                    <Button size="small" onClick={handleResetSample}>
-                      示例
-                    </Button>
-                    <Tooltip title="重置为空对象 {}">
-                      <Button size="small" icon={<ClearOutlined />} onClick={handleClearContext}>
-                        清空
-                      </Button>
-                    </Tooltip>
-                  </Space>
-                </div>
-
-                <TextArea
+              <div className="evalc-field-context">
+                <label className="evalc-label" htmlFor="context-json">
+                  用户属性上下文 (Context JSON)
+                  <span className="evalc-req" aria-hidden="true">*</span>
+                </label>
+                <JsonContextEditor
                   id="context-json"
-                  aria-label="用户属性上下文 Context JSON"
-                  aria-invalid={!contextCheck.isValid}
-                  rows={9}
                   value={contextText}
-                  onChange={(e) => {
-                    setContextText(e.target.value);
+                  onChange={(next) => {
+                    setContextText(next);
                     setEvalResult(null);
                     setEvalError(null);
                   }}
-                  onKeyDown={(e) => {
-                    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                      e.preventDefault();
-                      if (flagKey.trim() && contextCheck.isValid && !evaluating) {
-                        handleEvaluate();
-                      }
+                  onFormat={handleFormatJson}
+                  onInsertSample={handleResetSample}
+                  onClear={handleClearContext}
+                  isValid={contextCheck.isValid}
+                  error={contextError}
+                  onSubmitShortcut={() => {
+                    if (flagKey.trim() && contextCheck.isValid && !evaluating) {
+                      void handleEvaluate();
                     }
                   }}
-                  status={contextCheck.isValid ? '' : 'error'}
-                  style={{
-                    fontFamily: 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
-                    fontSize: 13,
-                  }}
-                  placeholder='{\n  "country": "CN",\n  "plan": "premium"\n}'
                 />
-
-                {/* Real-time Validation Error Banner */}
-                {!contextCheck.isValid && (
-                  <Alert
-                    data-testid="context-json-error"
-                    type="error"
-                    showIcon
-                    message={`JSON 语法错误${contextCheck.line ? `（第 ${contextCheck.line} 行）` : ''}`}
-                    description={contextCheck.reason}
-                    style={{ marginTop: 8 }}
-                  />
-                )}
               </div>
 
-              {/* Evaluation Action Button */}
               <Button
                 type="primary"
                 size="large"
-                icon={<PlayCircleOutlined />}
                 block
+                className="evalc-submit"
+                icon={<PlayCircleOutlined />}
                 loading={evaluating}
                 disabled={!flagKey.trim() || !contextCheck.isValid || evaluating}
                 onClick={handleEvaluate}
-                style={{ height: 44, fontSize: 16 }}
               >
                 发起在线评估
               </Button>
-            </Space>
-          </Card>
-        </Col>
+            </div>
+          </div>
+        </section>
 
-        {/* Right Output: Result View */}
-        <Col xs={24} xl={12}>
-          <Card
-            title="评估结果与链路决策"
-            variant="borderless"
-            style={{
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02)',
-              borderRadius: 8,
-              minHeight: 460,
-            }}
-          >
+        {/* Right: decision chain */}
+        <section className="evalc-card" aria-labelledby="eval-result-title">
+          <header className="evalc-card-head">
+            <h2 id="eval-result-title" className="evalc-card-title">
+              评估结果与链路决策
+            </h2>
+          </header>
+          <div className="evalc-card-body evalc-result-body">
             {evalError && (
-              <Alert
-                type="error"
-                showIcon
-                message="评估调用失败"
-                description={evalError}
-                style={{ marginBottom: 16 }}
-                closable
-                onClose={() => setEvalError(null)}
-              />
+              <div className="evalc-alert" role="alert">
+                <ExclamationCircleFilled className="evalc-alert-icon" aria-hidden="true" />
+                <div>
+                  <div className="evalc-alert-title">评估调用失败</div>
+                  <div className="evalc-alert-desc">{evalError}</div>
+                </div>
+                <button
+                  type="button"
+                  className="evalc-alert-close"
+                  aria-label="关闭评估错误提示"
+                  onClick={() => setEvalError(null)}
+                >
+                  <CloseOutlined />
+                </button>
+              </div>
             )}
-
-            {renderResultCard()}
-          </Card>
-        </Col>
-      </Row>
+            <div className="evalc-result-stage">{renderResult()}</div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 };

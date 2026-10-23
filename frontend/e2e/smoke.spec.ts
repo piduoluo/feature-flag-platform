@@ -101,7 +101,8 @@ test('SPEC-US 33/UI-R 04: a legacy tab deep link opens audit on one canonical UR
   await expect(page.getByRole('tab', { name: '变更历史' })).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(new RegExp(`/flags/${flagId}$`));
   // Creating the flag wrote an audit row through the same transaction.
-  await expect(page.getByText('创建 Flag').first()).toBeVisible();
+  // The audit console labels FLAG_CREATED as 新建开关 (four-character contract).
+  await expect(page.getByText('新建开关').first()).toBeVisible();
 });
 
 test('SPEC-US 34: Nginx serves the legacy path link and the canonical URL survives reload', async ({ page }) => {
