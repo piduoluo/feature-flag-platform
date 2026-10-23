@@ -85,29 +85,29 @@ interface BeforeAfterRowProps {
 }
 
 const BeforeAfterRow: React.FC<BeforeAfterRowProps> = ({ testId, label, before, after, format }) => (
-  <div data-testid={testId}>
+  <div data-testid={testId} className="diff-change">
     <Space wrap size={[8, 4]}>
       <Tag>{label}</Tag>
-      <Typography.Text delete type="danger">{format(before)}</Typography.Text>
-      <Typography.Text type="secondary">→</Typography.Text>
-      <Typography.Text strong type="success">{format(after)}</Typography.Text>
+      <Typography.Text delete type="danger" className="before">{format(before)}</Typography.Text>
+      <Typography.Text type="secondary" className="arrow">→</Typography.Text>
+      <Typography.Text strong type="success" className="after">{format(after)}</Typography.Text>
     </Space>
   </div>
 );
 
 const RuleDiffView: React.FC<{ diff: RuleDiff }> = ({ diff }) => {
   if (!diff.added.length && !diff.updated.length && !diff.deleted.length) {
-    return <Typography.Text type="secondary">本次同步无规则增删改。</Typography.Text>;
+    return <Typography.Text type="secondary" className="diff-summary">本次同步无规则增删改。</Typography.Text>;
   }
 
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
       {diff.added.length > 0 && (
-        <section>
-          <Typography.Text strong>新增规则（{diff.added.length}）</Typography.Text>
-          <Space direction="vertical" size="small" style={{ width: '100%', marginTop: 8 }}>
+        <section className="diff-section">
+          <Typography.Text strong className="diff-title">新增规则（{diff.added.length}）</Typography.Text>
+          <Space direction="vertical" size="small" className="diff-rules" style={{ width: '100%', marginTop: 8 }}>
             {diff.added.map((rule, index) => (
-              <Card key={rule.id ?? `added-${index}`} size="small" type="inner">
+              <Card key={rule.id ?? `added-${index}`} size="small" type="inner" className="diff-rule">
                 <RuleSnapshotView rule={rule} />
               </Card>
             ))}
@@ -116,26 +116,28 @@ const RuleDiffView: React.FC<{ diff: RuleDiff }> = ({ diff }) => {
       )}
 
       {diff.updated.length > 0 && (
-        <section>
-          <Typography.Text strong>修改规则（{diff.updated.length}）</Typography.Text>
-          <Space direction="vertical" size="small" style={{ width: '100%', marginTop: 8 }}>
+        <section className="diff-section">
+          <Typography.Text strong className="diff-title">修改规则（{diff.updated.length}）</Typography.Text>
+          <Space direction="vertical" size="small" className="diff-rules" style={{ width: '100%', marginTop: 8 }}>
             {diff.updated.map(rule => (
-              <Card key={rule.id} size="small" type="inner" title={`规则 #${rule.id}`}>
+              <Card key={rule.id} size="small" type="inner" title={`规则 #${rule.id}`} className="diff-rule">
                 {rule.changes.length === 0 ? (
                   <Typography.Text type="secondary">字段内容未发生变化。</Typography.Text>
                 ) : (
-                  <Space direction="vertical" size={4} style={{ width: '100%' }}>
-                    {rule.changes.map(change => (
-                      <BeforeAfterRow
-                        key={change.field}
-                        testId={`rule-change-${change.field}`}
-                        label={RULE_FIELD_LABELS[change.field]}
-                        before={change.before}
-                        after={change.after}
-                        format={value => formatRuleField(change.field, value)}
-                      />
-                    ))}
-                  </Space>
+                  <div className="diff-changes">
+                    <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                      {rule.changes.map(change => (
+                        <BeforeAfterRow
+                          key={change.field}
+                          testId={`rule-change-${change.field}`}
+                          label={RULE_FIELD_LABELS[change.field]}
+                          before={change.before}
+                          after={change.after}
+                          format={value => formatRuleField(change.field, value)}
+                        />
+                      ))}
+                    </Space>
+                  </div>
                 )}
               </Card>
             ))}
@@ -144,11 +146,11 @@ const RuleDiffView: React.FC<{ diff: RuleDiff }> = ({ diff }) => {
       )}
 
       {diff.deleted.length > 0 && (
-        <section>
-          <Typography.Text strong>删除规则（{diff.deleted.length}）</Typography.Text>
-          <Space direction="vertical" size="small" style={{ width: '100%', marginTop: 8 }}>
+        <section className="diff-section">
+          <Typography.Text strong className="diff-title">删除规则（{diff.deleted.length}）</Typography.Text>
+          <Space direction="vertical" size="small" className="diff-rules" style={{ width: '100%', marginTop: 8 }}>
             {diff.deleted.map((rule, index) => (
-              <Card key={rule.id ?? `deleted-${index}`} size="small" type="inner">
+              <Card key={rule.id ?? `deleted-${index}`} size="small" type="inner" className="diff-rule">
                 <Space wrap size={[8, 4]}>
                   <Tag color="red">已删除</Tag>
                   <RuleSnapshotView rule={rule} />
@@ -164,28 +166,32 @@ const RuleDiffView: React.FC<{ diff: RuleDiff }> = ({ diff }) => {
 
 const FlagUpdateView: React.FC<{ diff: FlagUpdateDiff }> = ({ diff }) => {
   if (!diff.changes.length) {
-    return <Typography.Text type="secondary">未检测到字段变化。</Typography.Text>;
+    return <Typography.Text type="secondary" className="diff-summary">未检测到字段变化。</Typography.Text>;
   }
   return (
-    <Space direction="vertical" size={4} style={{ width: '100%' }}>
-      {diff.changes.map(change => (
-        <BeforeAfterRow
-          key={change.field}
-          testId={`flag-change-${change.field}`}
-          label={FLAG_FIELD_LABELS[change.field]}
-          before={change.before}
-          after={change.after}
-          format={formatFlagValue}
-        />
-      ))}
-    </Space>
+    <div className="diff-changes">
+      <Space direction="vertical" size={4} style={{ width: '100%' }}>
+        {diff.changes.map(change => (
+          <BeforeAfterRow
+            key={change.field}
+            testId={`flag-change-${change.field}`}
+            label={FLAG_FIELD_LABELS[change.field]}
+            before={change.before}
+            after={change.after}
+            format={formatFlagValue}
+          />
+        ))}
+      </Space>
+    </div>
   );
 };
 
 const FlagToggleView: React.FC<{ diff: FlagToggleDiff }> = ({ diff }) => (
-  <Typography.Text strong data-testid="flag-toggle-diff">
-    {`${diff.old_enabled ? '已启用' : '已停用'} → ${diff.new_enabled ? '已启用' : '已停用'}`}
-  </Typography.Text>
+  <div className="diff-toggle">
+    <Typography.Text strong data-testid="flag-toggle-diff">
+      {`${diff.old_enabled ? '已启用' : '已停用'} → ${diff.new_enabled ? '已启用' : '已停用'}`}
+    </Typography.Text>
+  </div>
 );
 
 const FlagCreatedView: React.FC<{ diff: FlagCreatedDiff }> = ({ diff }) => {
@@ -198,12 +204,12 @@ const FlagCreatedView: React.FC<{ diff: FlagCreatedDiff }> = ({ diff }) => {
     diff.enabled === undefined ? null : { key: 'enabled', label: '启停状态', children: diff.enabled ? '已启用' : '已停用' },
     diff.rule_count === undefined ? null : { key: 'rule_count', label: '初始规则数', children: String(diff.rule_count) },
   ].filter((item): item is NonNullable<typeof item> => item !== null);
-  return <Descriptions size="small" column={1} items={items} />;
+  return <Descriptions size="small" column={1} items={items} className="diff-created" />;
 };
 
 /** 无结构化明细时的可读摘要（如种子同步、未知动作）。 */
 const SummaryView: React.FC<{ diff: ParsedAuditDiff }> = ({ diff }) => (
-  <Space direction="vertical" size={4} style={{ width: '100%' }}>
+  <Space direction="vertical" size={4} style={{ width: '100%' }} className="diff-summary">
     <Typography.Text type="secondary">{diff.summary}</Typography.Text>
     {diff.fallbackText && <Alert type="warning" showIcon message={diff.fallbackText} />}
   </Space>

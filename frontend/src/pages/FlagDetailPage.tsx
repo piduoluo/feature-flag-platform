@@ -16,7 +16,7 @@ const basicValues = (flag: Flag): UpdateFlagPayload => ({
 
 export const FlagDetailPage: React.FC = () => {
   const { id, tab } = useParams();
-  return <FlagWorkspace key={`${id}-${tab ?? 'default'}`} id={Number(id)} paramTab={tab} />;
+  return <FlagWorkspace key={id} id={Number(id)} paramTab={tab} />;
 };
 
 const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramTab }) => {
@@ -78,8 +78,10 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
   const hasUnsavedChanges = isBasicDirty || isRulesDirty;
 
   const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      !bypass.current && (hasUnsavedChanges || pending.current) && currentLocation.pathname !== nextLocation.pathname
+    ({ nextLocation }) =>
+      !bypass.current &&
+      (hasUnsavedChanges || pending.current) &&
+      !nextLocation.pathname.startsWith(`/flags/${id}`)
   );
 
   useEffect(() => {
@@ -187,7 +189,6 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
                 code
                 copyable={{
                   onCopy: () => {
-                    message.success('Key 已复制');
                     toast(`已复制: ${savedFlag.key}`, 'success');
                   },
                 }}

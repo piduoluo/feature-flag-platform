@@ -44,5 +44,3 @@ export function toast(message: string, type: ToastType = 'success') {
     }, 200);
   }, 2600);
 }
-
-export const showToast = toast;

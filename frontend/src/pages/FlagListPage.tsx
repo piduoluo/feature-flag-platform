@@ -13,6 +13,7 @@ import {
   Tooltip,
   Alert,
   Switch,
+  Pagination,
   message,
 } from 'antd';
 import {
@@ -81,7 +82,24 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
   // Prototype additions: View toggle & Status filter
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewModeState] = useState<'list' | 'grid'>(() => {
+    try {
+      const saved = localStorage.getItem('flag_list_view_mode');
+      if (saved === 'grid' || saved === 'list') return saved;
+    } catch {
+      // ignore
+    }
+    return 'list';
+  });
+
+  const setViewMode = (mode: 'list' | 'grid') => {
+    setViewModeState(mode);
+    try {
+      localStorage.setItem('flag_list_view_mode', mode);
+    } catch {
+      // ignore
+    }
+  };
   const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const statusMenuRef = useRef<HTMLDivElement>(null);
@@ -529,7 +547,8 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
         {viewMode === 'grid' ? (
           <div>
             {displayedFlags.length > 0 ? (
-              <div className="flag-grid" aria-label="Flag 宫格视图">
+              <>
+                <div className="flag-grid" aria-label="Flag 宫格视图">
                 {displayedFlags.map((flag) => (
                   <article
                     key={flag.id}
@@ -610,6 +629,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                       <div style={{ fontSize: 11, color: '#8a8580' }}>
                         <span>默认值: </span>
                         <code>{flag.default_value ? 'true' : 'false'}</code>
+                        <span style={{ marginLeft: 8 }}>· {formatDateTime(flag.updated_at).datePart}</span>
                       </div>
                       <Tooltip title={flag.enabled ? '点击停用' : '点击启用'}>
                         <Switch
@@ -624,6 +644,35 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                   </article>
                 ))}
               </div>
+              {displayedFlags.length > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: 16,
+                    padding: '12px 16px',
+                    borderTop: '1px solid #f2f0ed',
+                  }}
+                >
+                  <div style={{ fontSize: 13, color: '#8a8580' }}>
+                    共 {statusFilter === 'all' ? total : displayedFlags.length} 条记录
+                  </div>
+                  <Pagination
+                    current={currentPage}
+                    pageSize={pageSize}
+                    total={statusFilter === 'all' ? total : displayedFlags.length}
+                    showSizeChanger
+                    pageSizeOptions={['10', '20', '50']}
+                    onChange={(p, size) => {
+                      setCurrentPage(size === pageSize ? p : 1);
+                      setPageSize(size);
+                    }}
+                    size="small"
+                  />
+                </div>
+              )}
+            </>
             ) : (
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}

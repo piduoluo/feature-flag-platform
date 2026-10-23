@@ -185,6 +185,16 @@ export const GlobalAuditLogsPage: React.FC = () => {
               dataSource={logs}
               loading={loading}
               expandable={{
+                expandIcon: ({ expanded, onExpand, record }) => (
+                  <button
+                    type="button"
+                    className={`expand-btn ${expanded ? 'open' : ''}`}
+                    aria-label={expanded ? 'Collapse row' : 'Expand row'}
+                    onClick={(e) => onExpand(record, e)}
+                  >
+                    {expanded ? '−' : '+'}
+                  </button>
+                ),
                 expandedRowRender: (record) => (
                   <div data-testid={`audit-diff-${record.id}`}>
                     <AuditDiffView diff={parseAuditDiff(record.diff_summary, record.action_type)} />

@@ -64,7 +64,7 @@ export const RuleWorkspace: React.FC<Props> = ({
               规则 {String(index + 1).padStart(2, '0')}
             </div>
             <div className="rule-card-body">
-              <div className="rule-cond">
+              <div className="rule-condition rule-cond">
                 <strong className="rule-attr">{rule.attribute_name}</strong>
                 <span className="rule-op">{rule.operator}</span>
                 <code className="rule-val">{JSON.stringify(rule.expected_value)}</code>

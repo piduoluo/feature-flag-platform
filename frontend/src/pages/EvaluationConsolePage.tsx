@@ -55,7 +55,7 @@ function isEnvironment(value: string | null): value is Environment {
 function resolveEntryQuery(searchParams: URLSearchParams) {
   const environmentParam = searchParams.get('environment') || searchParams.get('env');
   const flagKey = (searchParams.get('flag_key') || searchParams.get('key') || '').trim();
-  const flagIdParam = searchParams.get('flag_id') || searchParams.get('id') || '';
+  const flagIdParam = searchParams.get('flag_id') || '';
   const flagId = /^\d+$/.test(flagIdParam) ? Number(flagIdParam) : null;
 
   return {
