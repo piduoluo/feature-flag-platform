@@ -1,4 +1,4 @@
-.PHONY: test test-backend test-frontend build dev-backend dev-frontend docker-up docker-down
+.PHONY: test test-backend test-frontend build dev-backend dev-frontend docker-up docker-down e2e e2e-clean
 
 test: test-backend test-frontend
 
@@ -27,3 +27,11 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+e2e:
+	@echo "===> Running Playwright against the Compose stack (http://localhost:3000)..."
+	@cd frontend && npx playwright test
+
+e2e-clean:
+	@echo "===> Removing smoke_* flags and their audit rows..."
+	@./scripts/cleanup-e2e-data.sh

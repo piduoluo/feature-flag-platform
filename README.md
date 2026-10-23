@@ -86,26 +86,33 @@ npm run dev
 
 ### 自动化测试执行
 
-项目采用单元测试与集成测试双重保障，测试覆盖率高且全量通过：
+项目采用单元测试、集成测试与真实浏览器端到端测试三层保障：
 
 ```bash
-# 运行后端全量测试套件（引擎、服务、控制器）
-cd backend && go test -v -count=1 ./...
+# 1. 后端：纯内存引擎、Service/Handler、迁移与种子数据（真实 PostgreSQL 集成测试）
+cd backend && go test -count=1 ./...
 
-# 运行前端组件与页面集成测试
+# 2. 前端：组件、页面集成与工具函数（Vitest + React Testing Library）
 cd frontend && npm test
+
+# 3. 前端类型检查 + 生产构建
+cd frontend && npm run build
 ```
 
-真实浏览器端到端冒烟（Playwright + 系统 Chrome，需先拉起 Compose 全栈）：
+真实浏览器端到端测试（Playwright + 系统 Chrome，需先拉起 Compose 全栈）：
 
 ```bash
 # 若本机 5432 已被占用，用 e2e 覆盖文件把容器库改映射到 15432
 docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
 
-cd frontend && npx playwright test
+# 18 条用例：外壳/路由/深链冒烟 + 「创建 → 规则 → 评估 → 停用 → 审计」核心链路
+make e2e
+
+# 清理 e2e 写入的全部 smoke_* Flag 及其规则、审计记录（演示数据不受影响）
+make e2e-clean
 ```
 
-冒烟用例动态创建 `smoke_*` Flag（不硬编码 id），覆盖深链直达、Nginx `try_files` 刷新回退、浏览器前进后退、`beforeunload` 防误关与全局审计台。
+冒烟用例动态创建 `smoke_*` Flag（不硬编码 id），覆盖深链直达、Nginx `try_files` 刷新回退、浏览器前进后退、`beforeunload` 防误关与全局审计台；核心链路用例 [`frontend/e2e/core-flow.spec.ts`](frontend/e2e/core-flow.spec.ts) 通过真实抽屉创建 Flag、配置 `country equals "CN"` 规则、在评估台验证规则命中 / 默认值回退 / 停用熔断，并核对同事务写入的审计记录。
 
 ---
 
@@ -114,6 +121,7 @@ cd frontend && npx playwright test
 ### 1. 规则优先级策略
 * **方向定义**：**数值越小优先级越高**（`1` 为最高优先级，升序依次评估）。
 * **匹配决策**：评估引擎按照 Priority 从小到大遍历规则。**第一条命中的规则立即决定最终返回值**，后续规则不再计算（Short-circuit）；若所有规则均未命中，则回退使用当前 Flag 的默认返回值 (`default_value`)。
+* **可解释链路**：响应中的 `rule_trace` 按实际执行顺序记录每条规则的属性、操作符、实际值、期望值、命中结果与未命中原因；它只描述同一次求值过程，不参与二次计算。停用或未执行任何规则时返回空数组。
 
 ### 2. 匹配操作符语义与严格类型隔离
 规则支持 `equals` 和 `in` 两个操作符，底层采用 **严格 JSON 类型隔离与高精度匹配**，坚决杜绝 JavaScript 式的隐式跨类型弱转换：
@@ -223,7 +231,7 @@ erDiagram
 | **操作历史** | 创建、修改、增删改规则、启用或停用 | 后端按类型完整记录并落库结构化变更 Diff 与操作时默认返回值快照；前端「变更历史」时间轴与全局审计表格均接入真实 API，支持动作图标、默认返回值与结构化 Diff 展开 |
 | | 变更与历史原子一致 | 强制使用数据库物理事务同时提交，同成功同失败 |
 | **工程质量** | 数据库迁移与演示数据 | 包含 init 迁移脚本与自动加载的 4 个演示 Key、5 条跨环境 Flag |
-| | 自动化测试套件 | 后端全量 Go 单元/集成测试 + 前端 Vitest 组件与页面集成测试全部通过 |
+| | 自动化测试套件 | 后端全量 Go 单元/集成测试 + 前端 Vitest 组件与页面集成测试 + 18 条真实浏览器 Playwright 端到端用例全部通过，并附带 `make e2e-clean` 数据清理 |
 | | 交付件齐备 | 包含标准 README、Docker Compose 编排与 AI 协同日志 |
 
 ---

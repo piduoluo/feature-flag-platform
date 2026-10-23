@@ -25,3 +25,7 @@ frontend/test-results/
 frontend/playwright-report/
 frontend/blob-report/
 frontend/.playwright/
+
+# Local tooling + design-reference captures (not part of the deliverable)
+.playwright-cli/
+image/

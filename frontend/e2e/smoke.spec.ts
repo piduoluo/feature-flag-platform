@@ -5,8 +5,8 @@ import { expect, test } from '@playwright/test';
  *
  * Every case runs against the real browser + real Nginx-served SPA + real Go
  * API + real PostgreSQL. No `/flags/1` is ever hardcoded: the suite creates a
- * flag with a random key, drives the UI through it, and the harness cleans the
- * `smoke_` rows afterwards.
+ * flag with a random key, drives the UI through it, and `make e2e-clean`
+ * removes the `smoke_` rows afterwards.
  */
 
 const API_BASE = process.env.E2E_API_BASE ?? 'http://localhost:8080/api/v1';
@@ -153,13 +153,50 @@ test('Ticket 13: list filters do not stack browser history entries', async ({ pa
   await page.goto('/flags');
   await page.waitForSelector('.ant-table-row');
 
-  await page.locator('.ant-segmented-item:has-text("Development")').click();
+  await page.getByRole('button', { name: /环境筛选：全部环境/ }).click();
+  await page.getByRole('menuitem', { name: 'Development' }).click();
   await expect(page).toHaveURL(/environment=development/);
   await page.getByRole('button', { name: /已启用/ }).click();
   await expect(page).toHaveURL(/enabled=true/);
 
   // Both filter changes replaced the list entry, so one back leaves the list.
   await page.goBack();
+  await expect(page).toHaveURL(/\/audit-logs$/);
+});
+
+test('Ticket 28: returning from the evaluation console keeps the detail source', async ({ page }) => {
+  await page.goto('/flags?environment=development');
+  await page.getByText(flagKey).first().click();
+  await expect(page).toHaveURL(new RegExp(`/flags/${flagId}$`));
+  await expect(page.getByTestId('detail-back-nav')).toHaveText(/功能开关/);
+
+  await page.getByRole('button', { name: '前往在线评估' }).click();
+  await expect(page).toHaveURL(/\/evaluations\?/);
+
+  await page.getByRole('link', { name: /返回 Flag 详情/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/flags/${flagId}$`));
+  // The round trip must not claim the console as the detail's source.
+  await expect(page.getByTestId('detail-back-nav')).toHaveText(/功能开关/);
+
+  await page.getByTestId('detail-back-nav').click();
+  await expect(page).toHaveURL(/\/flags\?environment=development$/);
+});
+
+test('Ticket 28: the audit round trip also keeps its source', async ({ page }) => {
+  await page.goto('/audit-logs');
+  await page.getByLabel('Flag Key 搜索').fill(flagKey);
+  const detailLink = page.locator(`a[href="/flags/${flagId}?tab=audit"]`).first();
+  await expect(detailLink).toBeVisible();
+  await detailLink.click();
+  await expect(page.getByTestId('detail-back-nav')).toHaveText(/全局操作历史/);
+
+  await page.getByRole('button', { name: '前往在线评估' }).click();
+  await expect(page).toHaveURL(/\/evaluations\?/);
+
+  await page.getByRole('link', { name: /返回 Flag 详情/ }).click();
+  await expect(page.getByTestId('detail-back-nav')).toHaveText(/全局操作历史/);
+
+  await page.getByTestId('detail-back-nav').click();
   await expect(page).toHaveURL(/\/audit-logs$/);
 });
 
@@ -170,7 +207,21 @@ test('SPEC-US 27: the evaluation console accepts the deep-linked context', async
   await expect(page.getByLabel('Flag Key')).toHaveValue(flagKey);
 
   await page.getByRole('button', { name: '发起在线评估' }).click();
-  await expect(page.getByText('回退至默认返回值 (DEFAULT_FALLBACK)')).toBeVisible();
+  // The flag has no rules, so the real API returns DEFAULT_FALLBACK with an
+  // empty trace and the flag id used by the follow-up navigation.
+  const summary = page.getByRole('region', { name: '结果摘要' });
+  await expect(summary).toBeVisible();
+  const value = page.getByLabel('最终返回值');
+  await expect(value).toHaveText('false');
+  await expect(value).toHaveCSS('color', 'rgb(194, 64, 58)');
+  await expect(summary).toContainText('来源：Flag 默认值配置');
+  await expect(page.getByText('决策链路')).toBeVisible();
+  await expect(page.getByText('回退默认值')).toBeVisible();
+  await expect(page.getByText('默认值：false')).toBeVisible();
+  await expect(page.getByRole('link', { name: /查看该 Flag 的规则/ })).toHaveAttribute(
+    'href',
+    `/flags/${flagId}?tab=rules`
+  );
 });
 
 test('UI-R 08: an unsaved draft triggers the native beforeunload prompt', async ({ page }) => {

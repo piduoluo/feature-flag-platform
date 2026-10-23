@@ -5,10 +5,15 @@
 
 **Blocked by:** 04: 确定性有序评估引擎与在线评估控制台
 
-**Status:** claimed
+**Status:** resolved
 
 - [x] 提供幂等的数据迁移与演示数据种子机制，首次启动自动填充多环境 Flag、多条有序规则与初始审计记录，重复启动不产生脏数据
 - [x] 提供 docker-compose.yml 一键编排全栈服务，Nginx 反向代理统一代理前端与 /api 路径，开箱即用无跨域阻碍
 - [x] 保证系统在本地开发模式下通过少量命令（Go 启动与 Vite 代理启动）即可稳定运行复现
-- [ ] 编写详尽规范的 README.md，包含启动方式、数据模型、优先级与匹配语义、设计取舍、已完成功能与测试命令（依指令暂缓执行）
+- [x] 编写详尽规范的 README.md，包含启动方式、数据模型、优先级与匹配语义、设计取舍、已完成功能与测试命令
 - [x] 全量自动化测试套件（单元测试与集成测试）可通过单条命令完整运行且全部通过
+
+**Resolution:**
+- `docker compose up --build -d` 冷启动成功，PostgreSQL 健康检查、后端迁移/种子、Nginx SPA 回退均验证通过。
+- 最终验收：`go vet ./...`、`go test -count=1 ./...`、`tsc --noEmit`、`npm test`（148 项）、`npm run build`、Playwright 18 条 e2e 全部通过。
+- `make e2e-clean` 清理全部 `smoke_*` 测试数据，数据库仅保留 4 个演示 Key / 5 条演示 Flag。

@@ -2,6 +2,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// Vitest resolves React through `process.env.NODE_ENV`; a host shell that
+// exports `NODE_ENV=production` would pull in the production React build,
+// where `act()` is unsupported and every component test fails. Pin the test
+// environment before Vite resolves dependencies so `npm test` is repeatable.
+if (process.env.VITEST && process.env.NODE_ENV === 'production') {
+  process.env.NODE_ENV = 'test';
+}
+
 export default defineConfig({
   plugins: [react()],
   server: {

@@ -26,7 +26,7 @@
   - Scope: 纯内存规则评估引擎、严格类型比对、在线控制台与三态原因反馈。
 - **[05-demo-seed-docker-compose-and-verification.md](issues/05-demo-seed-docker-compose-and-verification.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: 04
   - Scope: 演示种子数据注入、Docker Compose 编排、端到端验证与自测报告。
 - **[06-responsive-layout-and-table-overflow.md](issues/06-responsive-layout-and-table-overflow.md)**
@@ -121,6 +121,30 @@
   - Blocked by: 08B, 18
   - Scope: 按参考稿重排全局操作历史表格列与动作图标，并由后端提供默认返回值审计快照。
 
+- **[28-evaluation-roundtrip-back-source.md](issues/28-evaluation-roundtrip-back-source.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 11, 26
+  - Scope: 修复详情→在线评估→详情往返后返回导航被覆盖为「规则评估」并在两页循环的问题，保留原始来源历史记录。
+
+- **[29-settings-layout-hierarchy.md](issues/29-settings-layout-hierarchy.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 12, 28
+  - Scope: 收窄 Flag 详情基本设置表单容器、用分隔线建立字段分组，并移除默认返回值下方的描述性小字。
+
+- **[30-evaluation-result-simplification.md](issues/30-evaluation-result-simplification.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 26, 29
+  - Scope: 评估结果摘要压缩为来源+返回值单行、false 红/true 绿，移除原因码/胶囊/解释小字与「下一步」标题，并让三个后续操作与左侧发起按钮同线。
+
+- **[31-env-filter-dropdown.md](issues/31-env-filter-dropdown.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 20, 30
+  - Scope: 功能开关页环境筛选改为「环境触发器 + 下拉面板」，并与搜索、视图切换、刷新、新建合并到同一行工具栏。
+
 ## Decisions-so-far
 - 遵循 [docs/SPEC.md](../../docs/SPEC.md) 与 [docs/adr/](../../docs/adr/) 中的 ADR 0001~0006。
 - 架构采用 `Handler -> Service -> Repository -> Database` 单向流，纯内存 `Engine`。
@@ -148,3 +172,19 @@
 - [Ticket 22 完成](issues/22-audit-history-reference-layout-default-value.md)：操作历史表格按参考稿改为 Flag Key / 环境 / 默认返回值 / 操作 / 操作人 / 操作时间，动作用线性图标 + 文案；后端新增 `audit_logs.default_value` 快照列，旧记录保留 null，四类写操作在同一事务内写入真实默认值，前后端测试与真实浏览器检查通过。
 
 - [Ticket 23 完成](issues/23-merge-evaluation-audit.md)：集成评估与历史界面，旧审计值保持未知；后端完整测试、前端 130 项、真实 E2E 11 项和桌面/手机浏览器检查通过。
+
+- [Ticket 24 完成](issues/24-unify-interface-typography.md)：全站字体对齐顶部环境筛选，保留字号层级并收敛字重；130 项测试、构建与桌面/手机浏览器检查通过，localhost:3000 已更新。
+
+- [Ticket 25 完成](issues/25-update-brand-orange.md)：品牌主色统一为 #FF6400，覆盖 Logo、全局主题、列表及交互状态；构建和实际浏览器检查通过，localhost:3000 已更新。
+
+- [Ticket 26 完成](issues/26-evaluation-decision-trace.md)：在线评估页按“输入 → 结果摘要 → 决策链路 → 下一步”重排，后端补充逐条规则执行明细；三态摘要、请求快照复制、规则/设置 Tab 跳转与过期响应处理已完成，真实 API 多尺寸检查通过。
+
+- [Ticket 27 完成](issues/27-sidebar-nav-ui-assets.md)：将独立 UI 资产包中的新品牌 Logo、三标签双态图标与侧栏收起/展开控件迁移进侧边栏；保留原图直出与无损视口，补齐收起态居中、紧凑 42px 行高与 28px 图标、展开选中底色铺满行宽、移除左侧竖条/收起仅图标状态、侧栏整体收至 156px（最后标签文字+54px）、移动抽屉字标头部和悬停橙色箭头，导航项简化为“操作历史”并整体左移 6px，收起态 64px、抽屉同步 156px，移除品牌副标题与顶部装饰线，148 项前端测试与多尺寸浏览器检查通过。
+
+- [Ticket 28 完成](issues/28-evaluation-roundtrip-back-source.md)：Flag 详情进入在线评估时携带 `fromFlagDetail` 上下文；评估页横幅在 Flag/环境未变时以 POP 返回原详情历史记录，保留「功能开关」/「全局操作历史」来源，切换 Flag 后仍按原契约 push 并标记「规则评估」；148 项前端测试、类型检查、生产构建与 13 项真实浏览器 E2E 通过，localhost:3000 已更新。
+
+- [Ticket 29 完成](issues/29-settings-layout-hierarchy.md)：基本设置改为 760px 聚焦卡片，名称/描述与默认返回值以细分隔线分组；删除「默认返回值」下方长段小字，语义继续由详情头部 meta 行承载；148 项前端测试、构建、13 项 E2E 与 1440/390px 视觉检查通过，localhost:3000 已更新。
+
+- [Ticket 30 完成](issues/30-evaluation-result-simplification.md)：在线评估结果区收敛为「来源 + 返回值」单行，false 红 / true 绿；删除胶囊、原因码、结果容器与链路解释小字；移除「下一步」标题，三个后续操作固定在右卡底部并与左侧发起按钮同中心线；148 项单测、构建、13 项 E2E 与 1440/390px 视觉检查通过，localhost:3000 已更新。
+
+- [Ticket 31 完成](issues/31-env-filter-dropdown.md)：环境下拉替代平铺 Segmented，触发器白底深色文字并显示环境颜色圆点，菜单四项统一深色文字 + 对应圆点（全部灰/开发蓝/预发琥珀/生产红），选中项中性浅灰底与勾选；桌面端环境/搜索/视图/刷新/新建同一行，移动端分行；148 项单测、构建与 13 项 E2E 通过，localhost:3000 已更新。
