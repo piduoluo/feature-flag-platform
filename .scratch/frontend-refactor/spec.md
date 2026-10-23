@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: resolved
 
 # Feature Flag 平台前端 UI 布局迁移与渐进式重构规范说明书 (Spec v2.4)
 
