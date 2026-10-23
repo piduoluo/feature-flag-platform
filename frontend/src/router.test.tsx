@@ -57,7 +57,6 @@ describe('Router & AppShell Integration', () => {
 
     // Check AppShell branding
     expect(screen.getByText('Feature Flag')).toBeInTheDocument();
-    expect(screen.getByText('灰度规则平台')).toBeInTheDocument();
 
     // Check sidebar navigation menu items
     const flagsMenuItem = screen.getByRole('menuitem', { name: /功能开关/i });
@@ -65,7 +64,7 @@ describe('Router & AppShell Integration', () => {
     expect(flagsMenuItem).toHaveClass('ant-menu-item-selected');
 
     expect(screen.getByRole('menuitem', { name: /规则评估/i })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /全局操作历史/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /操作历史/i })).toBeInTheDocument();
 
     // Navigation opens the list content without a global breadcrumb.
     expect(screen.queryByTestId('app-breadcrumb')).not.toBeInTheDocument();
@@ -85,7 +84,7 @@ describe('Router & AppShell Integration', () => {
   it('renders active sidebar state and page content for "/audit-logs"', async () => {
     renderRoute(['/audit-logs']);
 
-    const auditMenuItem = screen.getByRole('menuitem', { name: /全局操作历史/i });
+    const auditMenuItem = screen.getByRole('menuitem', { name: /操作历史/i });
     expect(auditMenuItem).toHaveClass('ant-menu-item-selected');
 
     expect(screen.queryByTestId('app-breadcrumb')).not.toBeInTheDocument();
@@ -124,8 +123,8 @@ describe('Router & AppShell Integration', () => {
       expect(router.state.location.pathname).toBe('/evaluations');
     });
 
-    // Click "全局操作历史"
-    const auditMenuItem = screen.getByRole('menuitem', { name: /全局操作历史/i });
+    // Click "操作历史"
+    const auditMenuItem = screen.getByRole('menuitem', { name: /操作历史/i });
     fireEvent.click(auditMenuItem);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/audit-logs');

@@ -155,7 +155,7 @@ describe('FlagListPage (Ticket 02)', () => {
     expect(router.state.location.search).toContain('search=demo');
   });
 
-  it('SPEC-US 04 & UI-R 03: switching environment Segmented updates URL Query and triggers refetch', async () => {
+  it('SPEC-US 04 & UI-R 03: switching environment from the dropdown updates URL Query and triggers refetch', async () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [],
       total: 0,
@@ -168,14 +168,15 @@ describe('FlagListPage (Ticket 02)', () => {
       expect(api.getFlags).toHaveBeenCalled();
     });
 
-    // Click 'Development'
-    const devOption = screen.getByText('Development');
-    fireEvent.click(devOption);
+    // Open the environment dropdown and pick Development.
+    fireEvent.click(screen.getByRole('button', { name: /环境筛选：全部环境/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Development' }));
 
     await waitFor(() => {
       expect(router.state.location.search).toContain('environment=development');
     });
     expect(router.state.historyAction).toBe('REPLACE');
+    expect(screen.getByRole('button', { name: /环境筛选：Development/ })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(api.getFlags).toHaveBeenCalledWith(
@@ -185,9 +186,9 @@ describe('FlagListPage (Ticket 02)', () => {
       );
     });
 
-    // Click '全部环境'
-    const allOption = screen.getByText('全部环境');
-    fireEvent.click(allOption);
+    // Reopen and switch back to all environments.
+    fireEvent.click(screen.getByRole('button', { name: /环境筛选：Development/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '全部环境' }));
 
     await waitFor(() => {
       expect(router.state.location.search).not.toContain('environment=development');

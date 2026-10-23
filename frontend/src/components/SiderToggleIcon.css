@@ -1,0 +1,31 @@
+.sider-toggle-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.sider-toggle-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The supplied frame PNG has an opaque near-white background. */
+  mix-blend-mode: multiply;
+}
+
+.sider-toggle-arrow {
+  stroke: #5B5B5B;
+  transition: stroke 0.18s ease;
+}
+
+.sider-toggle-button:hover .sider-toggle-arrow,
+.sider-toggle-button:focus-visible .sider-toggle-arrow {
+  stroke: var(--brand, #FF6400);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sider-toggle-arrow {
+    transition: none;
+  }
+}

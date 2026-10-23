@@ -224,6 +224,23 @@
      - Data:
        ```json
        {
+         "flag_id": 12,
+         "default_value": false,
+         "rule_count": 2,
+         "rule_trace": [
+           {
+             "id": 1,
+             "priority": 1,
+             "attribute_name": "user_id",
+             "operator": "in",
+             "expected_value": [10001, 10002],
+             "return_value": true,
+             "attribute_present": true,
+             "actual_value": 10001,
+             "matched": true,
+             "reason": "MATCHED"
+           }
+         ],
          "flag_key": "ai_ride_assistant_enabled",
          "environment": "production",
          "enabled": true,
@@ -240,6 +257,10 @@
        }
        ```
        *(注：当 `reason` 为 `DEFAULT_FALLBACK` 或 `FLAG_DISABLED` 时，`matched_rule` 为 `null`；若停用则 `enabled: false, result: false`)*
+     - `rule_trace` 只记录实际执行过的规则，按 `priority ASC` 排列；首条命中后停止执行，后续规则不出现在链路中。Flag 停用或没有执行任何规则时返回空数组 `[]`。
+     - `rule_count` 是本次加载的规则总数；已执行数量等于 `rule_trace.length`，两者之差即未执行规则数。
+     - 未命中原因枚举：`ATTRIBUTE_MISSING`（Context 未提供属性）、`NULL_VALUE`（显式 `null`）、`TYPE_MISMATCH`（严格 JSON 类型不同；`in` 没有任何同类型候选项）、`VALUE_MISMATCH`（`equals` 同类型但值不同）、`NOT_IN_SET`（`in` 有同类型候选但均不相等）、`INVALID_RULE`（规则 JSON 或操作符非法，评估时跳过）、`MATCHED`（命中规则）。
+     - `flag_id`、`default_value`、`rule_count`、`rule_trace` 为向后兼容的新增字段；评估结果、三态原因和命中短路行为保持不变。
   8. `GET /api/v1/flags/:id/audit-logs`
      - Data: `[AuditLog]` 列表（按 `created_at DESC` 排序）
   9. `GET /api/v1/audit-logs?page=1&page_size=20&environment=&flag_key=&action_type=`

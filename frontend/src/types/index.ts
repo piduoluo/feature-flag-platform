@@ -130,7 +130,23 @@ export interface EvaluationPayload {
   context: Record<string, unknown>;
 }
 
+export type RuleTraceReason =
+  | 'MATCHED' | 'ATTRIBUTE_MISSING' | 'NULL_VALUE' | 'TYPE_MISMATCH'
+  | 'VALUE_MISMATCH' | 'NOT_IN_SET' | 'INVALID_RULE';
+
+export interface RuleTrace extends MatchedRuleInfo {
+  attribute_present: boolean;
+  actual_value: unknown;
+  matched: boolean;
+  reason: RuleTraceReason;
+}
+
 export interface EvaluationResult {
+  // Optional while an older backend is still serving the original contract.
+  flag_id?: number;
+  default_value?: boolean;
+  rule_count?: number;
+  rule_trace?: RuleTrace[];
   flag_key: string;
   environment: Environment;
   enabled: boolean;

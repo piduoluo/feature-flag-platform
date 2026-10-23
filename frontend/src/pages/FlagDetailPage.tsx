@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams, useNavigate, useBlocker, useLocation, Navigate } from 'react-router-dom';
-import { Alert, Button, Card, Form, Input, message, Modal, Space, Spin, Switch, Tabs, Typography } from 'antd';
+import { Alert, Button, Card, Divider, Form, Input, message, Modal, Space, Spin, Switch, Tabs, Typography } from 'antd';
 import { api } from '../api/client';
 import { Flag, Rule, UpdateFlagPayload } from '../types';
 import { DetailBackNav } from '../components/DetailBackNav';
@@ -8,6 +8,7 @@ import { RuleWorkspace } from '../components/RuleWorkspace';
 import { FlagAuditHistoryTab } from '../components/FlagAuditHistoryTab';
 import { BooleanValueTag, EnvironmentBadge, StatusBadge } from '../components/EnvironmentBadge';
 import { rulesEqual, rulePayload } from './ruleDraft';
+import { EvaluationEntryState, readNavSource } from '../navigation';
 import { toast } from '../utils/toast';
 
 const basicValues = (flag: Flag): UpdateFlagPayload => ({
@@ -22,18 +23,11 @@ type DetailTab = (typeof DETAIL_TABS)[number];
 const isDetailTab = (value: unknown): value is DetailTab =>
   typeof value === 'string' && (DETAIL_TABS as readonly string[]).includes(value);
 
-interface FlagDetailLocationState {
-  /** 进入详情前的完整站内地址，用于左上角返回到实际来源页。 */
-  from?: string;
-  /** 来源页在返回导航上的名称。 */
-  fromLabel?: string;
-}
-
 export const FlagDetailPage: React.FC = () => {
   const { id, tab } = useParams();
   const [query] = useSearchParams();
   const location = useLocation();
-  const state = (location.state ?? {}) as FlagDetailLocationState;
+  const state = location.state;
 
   // Legacy path URLs such as /flags/42/audit used to be separate history
   // entries. Normalize them once through the same one-shot ?tab= entry that
@@ -63,9 +57,9 @@ const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, in
   const [evaluationPrompt, setEvaluationPrompt] = useState(false);
   const [query, setQuery] = useSearchParams();
   const [activeTab, setActiveTab] = useState<DetailTab>(initialTab);
-  const navState = (location.state ?? {}) as FlagDetailLocationState;
-  const backTarget = typeof navState.from === 'string' && navState.from.startsWith('/') ? navState.from : undefined;
-  const backLabel = typeof navState.fromLabel === 'string' && navState.fromLabel ? navState.fromLabel : '功能开关';
+  const navState = readNavSource(location.state);
+  const backTarget = navState.from;
+  const backLabel = navState.fromLabel ?? '功能开关';
   const [savedFlag, setSavedFlag] = useState<Flag>();
   const [basicDraft, setBasicDraft] = useState<UpdateFlagPayload>();
   const [rulesDraft, setRulesDraft] = useState<Rule[]>();
@@ -150,11 +144,13 @@ const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, in
   function goEvaluate() {
     if (!savedFlag) return;
     bypass.current = true;
+    const entryState: EvaluationEntryState = { fromFlagDetail: { path: `/flags/${id}` } };
     navigate(
       `/evaluations?${new URLSearchParams({
         flag_key: savedFlag.key,
         environment: savedFlag.environment,
-      })}`
+      })}`,
+      { state: entryState }
     );
   }
 
@@ -235,7 +231,7 @@ const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, in
         <div className="detail-head-row" data-testid="detail-head-row">
           <div className="detail-main">
             <div className="detail-title-row" data-testid="detail-title-row">
-              <Typography.Title level={3} style={{ margin: 0, fontWeight: 700 }}>
+              <Typography.Title level={3} style={{ margin: 0 }}>
                 {savedFlag.name}
               </Typography.Title>
               <EnvironmentBadge environment={savedFlag.environment} />
@@ -277,7 +273,7 @@ const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, in
               type="primary"
               disabled={busy}
               onClick={() => (hasUnsavedChanges ? setEvaluationPrompt(true) : goEvaluate())}
-              style={{ background: 'var(--brand, #ff7d41)', borderColor: 'var(--brand, #ff7d41)' }}
+              style={{ background: 'var(--brand, #FF6400)', borderColor: 'var(--brand, #FF6400)' }}
             >
               前往在线评估
             </Button>
@@ -324,13 +320,13 @@ const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, in
             label: `基本设置${isBasicDirty ? ' *' : ''}`,
             forceRender: true,
             children: (
-              <Card variant="borderless" style={{ borderRadius: 8, padding: '8px 0' }}>
+              <Card variant="borderless" className="detail-settings-card">
                 <Form
                   form={form}
                   layout="vertical"
                   disabled={busy}
                   onValuesChange={(_, values) => setBasicDraft(values)}
-                  style={{ maxWidth: 600 }}
+                  className="detail-settings-form"
                 >
                   <Form.Item
                     name="name"
@@ -345,12 +341,8 @@ const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, in
                   <Form.Item name="description" label="描述">
                     <Input.TextArea rows={3} placeholder="输入 Flag 描述" />
                   </Form.Item>
-                  <Form.Item
-                    name="default_value"
-                    label="默认返回值"
-                    valuePropName="checked"
-                    extra="持久化配置值（即配置默认值）：未命中规则时生效；Flag 停用期间不参与评估，评估始终返回 false，且停用不会修改该配置值。"
-                  >
+                  <Divider className="detail-settings-divider" />
+                  <Form.Item name="default_value" label="默认返回值" valuePropName="checked">
                     <Switch />
                   </Form.Item>
                   <Button
@@ -358,7 +350,7 @@ const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, in
                     loading={busy}
                     disabled={!isBasicDirty || busy}
                     onClick={() => run(saveBasic)}
-                    style={{ background: 'var(--brand, #ff7d41)', borderColor: 'var(--brand, #ff7d41)' }}
+                    style={{ background: 'var(--brand, #FF6400)', borderColor: 'var(--brand, #FF6400)' }}
                   >
                     保存设置
                   </Button>
@@ -386,7 +378,7 @@ const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, in
         <div style={{ overflow: 'hidden', minHeight: 0 }}>
           <div className="dirty-bar">
             <div className="dirty-bar-text">
-              <span className="dot on" style={{ background: 'var(--brand, #ff7d41)' }} />
+              <span className="dot on" style={{ background: 'var(--brand, #FF6400)' }} />
               <span>规则配置有未保存修改</span>
             </div>
             <div className="dirty-bar-actions">
@@ -398,7 +390,7 @@ const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, in
                 loading={busy}
                 disabled={busy || !isRulesDirty}
                 onClick={() => run(saveRules)}
-                style={{ background: 'var(--brand, #ff7d41)', borderColor: 'var(--brand, #ff7d41)' }}
+                style={{ background: 'var(--brand, #FF6400)', borderColor: 'var(--brand, #FF6400)' }}
               >
                 保存规则配置
               </Button>
@@ -426,7 +418,7 @@ const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, in
           >
             放弃修改并前往
           </Button>,
-          <Button key="save" type="primary" onClick={() => run(saveAndEvaluate)} style={{ background: 'var(--brand, #ff7d41)', borderColor: 'var(--brand, #ff7d41)' }}>
+          <Button key="save" type="primary" onClick={() => run(saveAndEvaluate)} style={{ background: 'var(--brand, #FF6400)', borderColor: 'var(--brand, #FF6400)' }}>
             保存并前往
           </Button>,
         ]}

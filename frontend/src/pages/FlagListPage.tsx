@@ -4,7 +4,6 @@ import {
   Button,
   Dropdown,
   Input,
-  Segmented,
   Empty,
   Tooltip,
   Alert,
@@ -19,7 +18,9 @@ import {
   SearchOutlined,
   AppstoreOutlined,
   BarsOutlined,
+  CheckOutlined,
   CopyOutlined,
+  DownOutlined,
   EllipsisOutlined,
 } from '@ant-design/icons';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
@@ -37,6 +38,11 @@ const STATUS_FILTERS = [
 ] as const;
 
 type StatusFilter = (typeof STATUS_FILTERS)[number]['key'];
+
+/** Environment color dot shared by the trigger and the dropdown options. */
+const EnvDot: React.FC<{ env: 'all' | Environment }> = ({ env }) => (
+  <span className={`flag-env-dot flag-env-dot--${env}`} aria-hidden="true" />
+);
 
 interface FlagListPageProps {
   onNavigateToEval?: (flagKey: string, env: Environment) => void;
@@ -69,6 +75,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [envMenuOpen, setEnvMenuOpen] = useState(false);
 
   // View preference is local presentation state; list contents remain server-owned.
   const [viewMode, setViewModeState] = useState<'list' | 'grid'>(() => {
@@ -103,6 +110,21 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     nextParams.delete('page');
     setSearchParams(nextParams, { replace: true });
   };
+
+  const currentEnvLabel =
+    ENV_FILTER_OPTIONS.find((option) => option.value === selectedEnv)?.label ?? '全部环境';
+  const envMenuItems = ENV_FILTER_OPTIONS.map((option) => ({
+    key: option.value,
+    label: (
+      <span className="flag-env-option-label">
+        <span className="flag-env-option-main">
+          <EnvDot env={option.value} />
+          <span>{option.label}</span>
+        </span>
+        {selectedEnv === option.value && <CheckOutlined className="flag-env-option-check" aria-hidden="true" />}
+      </span>
+    ),
+  }));
 
   const handleSearchChange = (value: string) => {
     setSearchInput(value);
@@ -368,17 +390,37 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
           />
         )}
 
-        {/* Environment first, followed by the full-width search and actions. */}
+        {/* Environment trigger, search and view actions share one toolbar row. */}
         <div className="toolbar flag-toolbar">
-          <div className="toolbar-left flag-toolbar-env">
-            <Segmented
-              value={selectedEnv}
-              onChange={(val) => handleEnvChange(val as string)}
-              options={ENV_FILTER_OPTIONS}
-            />
+          <div className="flag-toolbar-env">
+            <Dropdown
+              trigger={['click']}
+              placement="bottomLeft"
+              open={envMenuOpen}
+              onOpenChange={setEnvMenuOpen}
+              overlayClassName="flag-env-dropdown"
+              menu={{
+                items: envMenuItems,
+                selectable: true,
+                selectedKeys: [selectedEnv],
+                onClick: ({ key }) => handleEnvChange(key),
+              }}
+            >
+              <button
+                type="button"
+                className={`flag-env-trigger${envMenuOpen ? ' is-open' : ''}`}
+                aria-label={`环境筛选：${currentEnvLabel}`}
+                aria-haspopup="menu"
+                aria-expanded={envMenuOpen}
+              >
+                <EnvDot env={selectedEnv} />
+                <span>{currentEnvLabel}</span>
+                <DownOutlined className="flag-env-trigger-chevron" aria-hidden="true" />
+              </button>
+            </Dropdown>
           </div>
 
-          <div className="toolbar-right flag-toolbar-actions">
+          <div className="flag-toolbar-actions">
             <Input
               className="flag-search"
               placeholder="搜索 Flag Key 或名称..."

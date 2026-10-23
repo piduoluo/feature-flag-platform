@@ -2,7 +2,9 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Layout, Menu, Drawer } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { initTooltip } from '../utils/tooltip';
-import featureFlagLogo from '../assets/feature-flag-logo-light.png';
+import { BrandLogo } from '../components/BrandLogo';
+import { NavTabIcon } from '../components/NavTabIcon';
+import { SiderToggleIcon } from '../components/SiderToggleIcon';
 import './AppShell.css';
 
 const { Sider, Content } = Layout;
@@ -30,11 +32,8 @@ export const AppShell: React.FC = () => {
     {
       key: '/flags',
       icon: (
-        <span className="nav-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1v12Z" />
-            <path d="M4 22v-7" />
-          </svg>
+        <span>
+          <NavTabIcon tab="flags" selected={selectedKeys.includes('/flags')} />
         </span>
       ),
       label: '功能开关',
@@ -42,10 +41,8 @@ export const AppShell: React.FC = () => {
     {
       key: '/evaluations',
       icon: (
-        <span className="nav-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="M13.5 2.8 5 13h6.2l-.8 8.2L19 10.8h-6.2l.7-8Z" />
-          </svg>
+        <span>
+          <NavTabIcon tab="evaluations" selected={selectedKeys.includes('/evaluations')} />
         </span>
       ),
       label: '规则评估',
@@ -53,14 +50,11 @@ export const AppShell: React.FC = () => {
     {
       key: '/audit-logs',
       icon: (
-        <span className="nav-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 7v5l3 3" />
-          </svg>
+        <span>
+          <NavTabIcon tab="audit-logs" selected={selectedKeys.includes('/audit-logs')} />
         </span>
       ),
-      label: '全局操作历史',
+      label: '操作历史',
     },
   ];
 
@@ -70,52 +64,47 @@ export const AppShell: React.FC = () => {
       <Sider
         className={`app-shell-sidebar sidebar ${collapsed ? 'collapsed' : ''}`}
         theme="light"
-        width={256}
-        collapsedWidth={72}
+        width={156}
+        collapsedWidth={64}
         collapsed={collapsed}
         trigger={null}
       >
         <div className="brand">
-          <div className={`brand-logo-frame ${collapsed ? 'collapsed-brand-control' : ''}`}>
-            <img className="brand-logo-image" src={featureFlagLogo} alt="FeatureFlag Logo" />
-            {collapsed && (
+          {collapsed ? (
+            <div className="brand-logo-frame collapsed-brand-control">
+              <BrandLogo size={36} />
               <button
                 type="button"
-                className="icon-btn ghost sm expand-toggle"
+                className="icon-btn ghost sm expand-toggle sider-toggle-button"
                 aria-label="展开侧边栏"
                 data-tip="展开侧边栏"
                 onClick={() => setCollapsed(false)}
               >
-                <svg className="i" viewBox="0 0 24 24">
-                  <path d="m9 18 6-6-6-6" />
-                </svg>
+                <SiderToggleIcon direction="expand" size={32} />
               </button>
-            )}
-          </div>
-          {!collapsed && (
-            <div className="brand-text">
-              <div className="brand-name">Feature Flag</div>
-              <div className="brand-sub">灰度规则平台</div>
             </div>
+          ) : (
+            <>
+              <div className="brand-text">
+                <div className="brand-name">Feature Flag</div>
+              </div>
+              <button
+                type="button"
+                className="icon-btn ghost sm collapse-toggle sider-toggle-button"
+                aria-label="折叠侧边栏"
+                data-tip="折叠侧边栏"
+                onClick={() => setCollapsed(true)}
+              >
+                <SiderToggleIcon direction="collapse" size={24} />
+              </button>
+            </>
           )}
-          {!collapsed ? (
-            <button
-              type="button"
-              className="icon-btn ghost sm collapse-toggle"
-              aria-label="折叠侧边栏"
-              data-tip="折叠侧边栏"
-              onClick={() => setCollapsed(true)}
-            >
-              <svg className="i" viewBox="0 0 24 24">
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-            </button>
-          ) : null}
         </div>
 
         <Menu
           className="nav custom-nav"
           mode="inline"
+          inlineCollapsed={collapsed}
           selectedKeys={selectedKeys}
           onClick={(e) => navigate(e.key)}
           items={menuItems}
@@ -126,7 +115,7 @@ export const AppShell: React.FC = () => {
       <Layout
         className="app-shell-main workspace"
         style={{
-          marginLeft: collapsed ? 72 : 256,
+          marginLeft: collapsed ? 64 : 156,
           minHeight: '100vh',
           background: 'var(--canvas, #f6f6f4)',
           transition: 'margin-left .18s ease',
@@ -154,23 +143,15 @@ export const AppShell: React.FC = () => {
       {/* Mobile Drawer (lazy mounted) */}
       {mobileMenuOpen && (
         <Drawer
+          title={<span className="mobile-nav-brand">Feature Flag</span>}
           placement="left"
-          width={264}
+          width={156}
           open={mobileMenuOpen}
           onClose={() => setMobileMenuOpen(false)}
           destroyOnClose
           styles={{ body: { padding: 0 } }}
           className="mobile-nav-drawer"
         >
-          <div className="brand" style={{ padding: '0 18px', height: 68 }}>
-            <div className="brand-logo-frame">
-              <img className="brand-logo-image" src={featureFlagLogo} alt="FeatureFlag Logo" />
-            </div>
-            <div className="brand-text">
-              <div className="brand-name">Feature Flag</div>
-              <div className="brand-sub">灰度规则平台</div>
-            </div>
-          </div>
           <Menu
             className="nav custom-nav"
             mode="inline"

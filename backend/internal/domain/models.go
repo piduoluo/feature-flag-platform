@@ -179,6 +179,27 @@ type MatchedRuleInfo struct {
 	ReturnValue   bool            `json:"return_value"`
 }
 
+// RuleTraceReason explains one executed rule without changing evaluation semantics.
+type RuleTraceReason string
+
+const (
+	TraceMatched          RuleTraceReason = "MATCHED"
+	TraceAttributeMissing RuleTraceReason = "ATTRIBUTE_MISSING"
+	TraceNullValue        RuleTraceReason = "NULL_VALUE"
+	TraceTypeMismatch     RuleTraceReason = "TYPE_MISMATCH"
+	TraceValueMismatch    RuleTraceReason = "VALUE_MISMATCH"
+	TraceNotInSet         RuleTraceReason = "NOT_IN_SET"
+	TraceInvalidRule      RuleTraceReason = "INVALID_RULE"
+)
+
+type RuleTrace struct {
+	MatchedRuleInfo
+	AttributePresent bool            `json:"attribute_present"`
+	ActualValue      interface{}     `json:"actual_value"`
+	Matched          bool            `json:"matched"`
+	Reason           RuleTraceReason `json:"reason"`
+}
+
 // EvaluationRequest payload for evaluating a feature flag with user context.
 type EvaluationRequest struct {
 	FlagKey     string                 `json:"flag_key"`
@@ -188,10 +209,14 @@ type EvaluationRequest struct {
 
 // EvaluationResponse standard payload returned by evaluation endpoint.
 type EvaluationResponse struct {
-	FlagKey     string           `json:"flag_key"`
-	Environment Environment      `json:"environment"`
-	Enabled     bool             `json:"enabled"`
-	Result      bool             `json:"result"`
-	Reason      EvaluationReason `json:"reason"`
-	MatchedRule *MatchedRuleInfo `json:"matched_rule"`
+	FlagID       int64            `json:"flag_id"`
+	DefaultValue bool             `json:"default_value"`
+	RuleCount    int              `json:"rule_count"`
+	RuleTrace    []RuleTrace      `json:"rule_trace"`
+	FlagKey      string           `json:"flag_key"`
+	Environment  Environment      `json:"environment"`
+	Enabled      bool             `json:"enabled"`
+	Result       bool             `json:"result"`
+	Reason       EvaluationReason `json:"reason"`
+	MatchedRule  *MatchedRuleInfo `json:"matched_rule"`
 }

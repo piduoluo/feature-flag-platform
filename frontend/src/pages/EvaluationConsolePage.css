@@ -12,16 +12,14 @@ main.app-shell-content:has(> .evalc-page) {
 }
 
 .evalc-page {
-  --ev-ink: #111827;
-  --ev-ink-2: #1f2937;
-  --ev-muted: #6b7280;
-  --ev-subtle: #8b95a5;
-  --ev-line: #e8ecf2;
-  --ev-line-soft: #eef1f6;
+  --ev-ink: var(--text);
+  --ev-ink-2: var(--text);
+  --ev-muted: var(--text-2);
+  --ev-subtle: var(--text-3);
+  --ev-line: var(--line);
+  --ev-line-soft: var(--line-soft);
   --ev-field: #d9dfe8;
   --ev-field-hover: #c5cdd9;
-  --ev-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas,
-    "Liberation Mono", monospace;
 
   width: 100%;
   max-width: 1680px;
@@ -83,7 +81,7 @@ main.app-shell-content:has(> .evalc-page) {
 
 .evalc-banner-text strong {
   color: var(--ev-ink);
-  font-family: var(--ev-mono);
+  font-family: var(--font-ui);
   font-size: 12.5px;
   font-weight: 600;
 }
@@ -127,23 +125,7 @@ main.app-shell-content:has(> .evalc-page) {
   overflow: hidden;
 }
 
-.evalc-card-head {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  height: 72px;
-  padding: 0 30px;
-  border-bottom: 1px solid var(--ev-line-soft);
-}
 
-.evalc-card-title {
-  margin: 0;
-  font-size: 24px;
-  line-height: 1.25;
-  font-weight: 600;
-  letter-spacing: -.02em;
-  color: var(--ev-ink);
-}
 
 .evalc-card-body {
   flex: 1;
@@ -237,7 +219,7 @@ main.app-shell-content:has(> .evalc-page) {
 
 .evalc-page .evalc-env-select.ant-select-focused .ant-select-selector {
   border-color: var(--brand) !important;
-  box-shadow: 0 0 0 3px rgba(255, 125, 65, .12) !important;
+  box-shadow: 0 0 0 3px rgba(255, 100, 0, .12) !important;
 }
 
 /* Flag Key combobox */
@@ -310,7 +292,7 @@ main.app-shell-content:has(> .evalc-page) {
 
 .evalc-page .evalc-flag-autocomplete.ant-select-focused .ant-select-selector {
   border-color: var(--brand) !important;
-  box-shadow: 0 0 0 3px rgba(255, 125, 65, .12) !important;
+  box-shadow: 0 0 0 3px rgba(255, 100, 0, .12) !important;
 }
 
 .evalc-divider {
@@ -355,8 +337,8 @@ main.app-shell-content:has(> .evalc-page) {
 }
 
 .ctx-editor-shell:focus-within {
-  border-color: #ffb08a;
-  box-shadow: 0 0 0 3px rgba(255, 125, 65, .1);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(255, 100, 0, .1);
 }
 
 .ctx-editor.is-invalid .ctx-editor-shell {
@@ -455,7 +437,7 @@ main.app-shell-content:has(> .evalc-page) {
   top: 14px;
   right: 0;
   left: 0;
-  font-family: var(--ev-mono);
+  font-family: var(--font-ui);
   font-size: 12.5px;
   line-height: 23px;
   color: #8b95a5;
@@ -480,7 +462,7 @@ main.app-shell-content:has(> .evalc-page) {
   inset: 0;
   margin: 0;
   padding: 14px 16px;
-  font-family: var(--ev-mono);
+  font-family: var(--font-ui);
   font-size: 13.5px;
   font-weight: 400;
   line-height: 23px;
@@ -593,7 +575,7 @@ main.app-shell-content:has(> .evalc-page) {
   background: #e2695e;
   color: #fff;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 16px;
   text-align: center;
 }
@@ -606,7 +588,7 @@ main.app-shell-content:has(> .evalc-page) {
 
 .ctx-editor-error-message {
   margin-top: 2px;
-  font-family: var(--ev-mono);
+  font-family: var(--font-ui);
   font-size: 11.5px;
   line-height: 1.5;
   color: #b4534a;
@@ -626,7 +608,7 @@ main.app-shell-content:has(> .evalc-page) {
   font-size: 16px;
   font-weight: 600;
   letter-spacing: .01em;
-  box-shadow: 0 1px 2px rgba(185, 76, 28, .2);
+  box-shadow: 0 1px 2px rgba(255, 100, 0, .2);
 }
 
 .evalc-submit.ant-btn-primary {
@@ -644,17 +626,12 @@ main.app-shell-content:has(> .evalc-page) {
   font-size: 18px;
 }
 
-.evalc-submit.ant-btn:disabled {
-  background: #fdf2ec;
-  border-color: #f6e0d3;
-  color: #c4937b;
-  box-shadow: none;
-}
-
+.evalc-submit.ant-btn:disabled,
 .evalc-submit.ant-btn:disabled:hover {
-  background: #fdf2ec;
-  border-color: #f6e0d3;
-  color: #c4937b;
+  background: var(--brand);
+  border-color: var(--brand);
+  color: rgba(255, 255, 255, .65);
+  box-shadow: none;
 }
 
 /* ---------- Result panel ---------- */
@@ -765,6 +742,11 @@ main.app-shell-content:has(> .evalc-page) {
   color: #c2403a;
 }
 
+.evalc-alert-body {
+  flex: 1;
+  min-width: 0;
+}
+
 .evalc-alert-title {
   font-size: 13px;
   font-weight: 600;
@@ -799,6 +781,20 @@ main.app-shell-content:has(> .evalc-page) {
   color: #8f2f27;
 }
 
+/* Failed request state replaces the result content instead of sitting above it. */
+.evalc-result-error {
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  text-align: left;
+}
+
+.evalc-result-error .evalc-alert {
+  width: 100%;
+  max-width: 620px;
+  margin-bottom: 0;
+}
+
 /* Decision states */
 .evalc-result-stage {
   flex: 1;
@@ -807,358 +803,53 @@ main.app-shell-content:has(> .evalc-page) {
   flex-direction: column;
 }
 
-.evalc-result-stage > .evalc-verdict {
-  flex: 0 0 auto;
-  max-height: 100%;
-  margin: auto 0;
-  overflow: auto;
-}
-
-.evalc-result-stage > .evalc-result-inset {
-  flex: 1;
-}
-
-.evalc-verdict {
+/* Summary, executed steps and follow-up actions share one reading column. */
+.evalc-result-stage > .evalc-result-inset { flex: 1; }
+.evalc-decision {
   flex: 1;
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
+  flex-direction: column;
   min-width: 0;
-  padding: 22px 22px 24px;
-  border: 1px solid;
-  border-radius: 10px;
+  color: var(--text);
 }
-
-.evalc-verdict--green {
-  background: #f5faf7;
-  border-color: #d8e9de;
-}
-
-.evalc-verdict--amber {
-  background: #fdf9ef;
-  border-color: #efdfbd;
-}
-
-.evalc-verdict--blue {
-  background: #f5f8fc;
-  border-color: #dbe4f0;
-}
-
-.evalc-verdict--neutral {
-  background: #fafafa;
-  border-color: #e7e7e7;
-}
-
-.evalc-verdict-icon {
-  flex: 0 0 auto;
-  margin-top: 1px;
-  font-size: 26px;
-}
-
-.evalc-verdict--green .evalc-verdict-icon {
-  color: #168653;
-}
-
-.evalc-verdict--amber .evalc-verdict-icon {
-  color: #a2650f;
-}
-
-.evalc-verdict--blue .evalc-verdict-icon {
-  color: #3f6b97;
-}
-
-.evalc-verdict--neutral .evalc-verdict-icon {
-  color: #8b95a5;
-}
-
-.evalc-verdict-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.evalc-verdict-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.evalc-verdict-title {
-  margin: 0;
-  font-size: 19px;
-  line-height: 1.35;
-  font-weight: 700;
-  letter-spacing: -.01em;
-}
-
-.evalc-verdict--green .evalc-verdict-title {
-  color: #166b46;
-}
-
-.evalc-verdict--amber .evalc-verdict-title {
-  color: #8a5a12;
-}
-
-.evalc-verdict--blue .evalc-verdict-title {
-  color: #33597f;
-}
-
-.evalc-verdict--neutral .evalc-verdict-title {
-  color: #33302d;
-}
-
-.evalc-verdict-tag {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  border: 1px solid;
-  border-radius: 999px;
-  font-family: var(--ev-mono);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: .01em;
-  white-space: nowrap;
-}
-
-.evalc-verdict--green .evalc-verdict-tag {
-  background: #ecf7f1;
-  border-color: #cfe6d8;
-  color: #1d6f47;
-}
-
-.evalc-verdict--amber .evalc-verdict-tag {
-  background: #fbf3e2;
-  border-color: #f0e0bd;
-  color: #8a5a12;
-}
-
-.evalc-verdict--blue .evalc-verdict-tag {
-  background: #eef4fb;
-  border-color: #d7e2ef;
-  color: #33597f;
-}
-
-.evalc-verdict--neutral .evalc-verdict-tag {
-  background: #f5f4f1;
-  border-color: #e6e3de;
-  color: #4d4843;
-}
-
-.evalc-verdict-desc {
-  margin: 8px 0 0;
-  font-size: 13px;
-  line-height: 1.7;
-  color: #5b6472;
-}
-
-.evalc-verdict-desc code {
-  padding: 1px 5px;
-  border: 1px solid #e6e3de;
-  border-radius: 4px;
-  background: #fbfaf8;
-  font-family: var(--ev-mono);
-  font-size: 11.5px;
-  color: #3f3b37;
-}
-
-.evalc-value-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 16px;
-  padding: 14px 18px;
-  background: #fff;
-  border: 1px solid;
-  border-radius: 8px;
-}
-
-.evalc-verdict--green .evalc-value-card {
-  border-color: #cfe6d8;
-}
-
-.evalc-verdict--amber .evalc-value-card {
-  border-color: #f0e0bd;
-}
-
-.evalc-verdict--blue .evalc-value-card {
-  border-color: #d7e2ef;
-}
-
-.evalc-verdict--neutral .evalc-value-card {
-  border-color: #e7e7e7;
-}
-
-.evalc-value-label {
-  font-size: 11px;
-  color: #918b85;
-}
-
-.evalc-value {
-  margin-top: 2px;
-  font-family: var(--ev-mono);
-  font-size: 26px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.evalc-value--green {
-  color: #168653;
-}
-
-.evalc-value--red {
-  color: #c2403a;
-}
-
-.evalc-value--muted {
-  color: #8a8580;
-}
-
-.evalc-value-pill {
-  display: inline-flex;
-  align-items: center;
-  height: 24px;
-  padding: 0 9px;
-  border: 1px solid;
-  border-radius: 6px;
-  font-size: 11.5px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.evalc-verdict--green .evalc-value-pill {
-  background: #ecf7f1;
-  border-color: #cfe6d8;
-  color: #1d6f47;
-}
-
-.evalc-verdict--amber .evalc-value-pill {
-  background: #fbf3e2;
-  border-color: #f0e0bd;
-  color: #8a5a12;
-}
-
-.evalc-verdict--blue .evalc-value-pill {
-  background: #eef4fb;
-  border-color: #d7e2ef;
-  color: #33597f;
-}
-
-.evalc-value-pill--danger {
-  background: #fdf2f0 !important;
-  border-color: #f0d3ce !important;
-  color: #a53c32 !important;
-}
-
-/* Matched rule breakdown */
-.evalc-rule-detail {
-  margin-top: 16px;
-  background: #fff;
-  border: 1px solid #d9eadf;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.evalc-rule-detail-head {
-  padding: 10px 14px;
-  background: #f5faf7;
-  border-bottom: 1px solid #d9eadf;
-  color: #1d6f47;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.evalc-rule-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.evalc-rule-table th,
-.evalc-rule-table td {
-  padding: 10px 12px;
-  border-right: 1px solid #f0eeeb;
-  border-bottom: 1px solid #f0eeeb;
-  text-align: left;
-  vertical-align: top;
-  word-break: break-word;
-}
-
-.evalc-rule-table tr:last-child th,
-.evalc-rule-table tr:last-child td {
-  border-bottom: 0;
-}
-
-.evalc-rule-table th:last-child,
-.evalc-rule-table td:last-child {
-  border-right: 0;
-}
-
-.evalc-rule-table th {
-  width: 24%;
-  background: #fcfbf9;
-  color: #8a8580;
-  font-size: 10.5px;
-  font-weight: 500;
-  line-height: 1.45;
-}
-
-.evalc-rule-table td {
-  font-size: 12px;
-  color: #3f3b37;
-}
-
-.evalc-rule-table code {
-  font-family: var(--ev-mono);
-  font-size: 11.5px;
-  color: #2f2b27;
-  word-break: break-all;
-}
-
-.evalc-rule-pill {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 7px;
-  border: 1px solid #e1ddf7;
-  border-radius: 5px;
-  background: #f5f3fb;
-  color: #5747a4;
-  font-family: var(--ev-mono);
-  font-size: 10.5px;
-  font-weight: 600;
-}
-
-.evalc-rule-op {
-  display: inline-flex;
-  align-items: center;
-  height: 20px;
-  padding: 0 7px;
-  border: 1px solid #dbe5f0;
-  border-radius: 5px;
-  background: #f2f6fb;
-  color: #3f6b97;
-  font-family: var(--ev-mono);
-  font-size: 10.5px;
-  font-weight: 600;
-}
-
-.evalc-rule-bool {
-  font-family: var(--ev-mono);
-  font-size: 11.5px;
-  font-weight: 700;
-}
-
-.evalc-rule-bool--true {
-  color: #168653;
-}
-
-.evalc-rule-bool--false {
-  color: #c2403a;
-}
+.evalc-decision h3 { margin: 0 0 22px; font-size: 16px; font-weight: 600; }
+.evalc-summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px; }
+.evalc-summary-value { font-size: 26px; line-height: 1.2; font-weight: 600; letter-spacing: -.02em; }
+.evalc-summary-value.is-true { color: var(--green); }
+.evalc-summary-value.is-false { color: var(--red); }
+.evalc-summary-source { font-size: 13px; color: var(--text-3); }
+.evalc-chain { padding-top: 24px; margin-top: 20px; border-top: 1px solid var(--line-soft); }
+.evalc-steps, .evalc-traces { list-style: none; padding: 0; margin: 0; }
+.evalc-step { position: relative; padding: 0 0 22px 40px; min-width: 0; }
+.evalc-step:last-child { padding-bottom: 0; }
+.evalc-step:not(:last-child)::before { content: ''; position: absolute; left: 10px; top: 28px; bottom: 5px; width: 2px; background: var(--line); }
+.evalc-step.is-passed::before { background: var(--green-line); }
+.evalc-step-dot { position: absolute; top: 2px; left: 0; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--text-4); color: white; font-size: 12px; }
+.evalc-step.is-passed .evalc-step-dot { background: var(--green); }
+.evalc-step.is-stopped .evalc-step-dot { background: var(--amber); }
+.evalc-step.is-final .evalc-step-dot { background: var(--brand); border: 4px solid var(--brand-soft); }
+.evalc-step-heading { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.evalc-step-heading h4 { margin: 0; font-size: 14px; font-weight: 600; }
+.evalc-step-heading > span { font-size: 12px; color: var(--text-3); }
+.evalc-step.is-passed > .evalc-step-heading > span { color: var(--green); }
+.evalc-step.is-stopped > .evalc-step-heading > span { color: var(--amber); }
+.evalc-step p { margin: 6px 0 0; color: var(--text-3); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.evalc-traces { margin-top: 12px; border-radius: 8px; padding: 0 14px; background: var(--surface-muted); }
+.evalc-trace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 12px 20px; padding: 14px 0; }
+.evalc-trace + .evalc-trace { border-top: 1px solid var(--line); }
+.evalc-trace > div { min-width: 0; }
+.evalc-trace strong { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.evalc-trace.is-matched strong { color: var(--green); }
+.evalc-trace code { font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+.evalc-trace p { font-size: 12px; margin-top: 4px; }
+.evalc-trace-unavailable { margin: 24px 0 0; font-size: 13px; color: var(--text-3); }
+.evalc-next { margin-top: auto; padding-top: 22px; border-top: 1px solid var(--line-soft); }
+.evalc-actions { display: flex; align-items: center; min-height: 52px; flex-wrap: wrap; gap: 10px; }
+.evalc-action, .evalc-actions .ant-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: auto; min-height: 40px; padding: 9px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 12px; font-weight: 500; line-height: 1.5; }
+.evalc-action--primary { color: var(--brand); border-color: var(--brand-line); background: var(--brand-soft-2); }
+.evalc-action:hover { color: var(--brand-hover); border-color: var(--brand); }
+.evalc-action:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.evalc-copy-status { margin: 12px 0 0; font-size: 12px; color: var(--text-2); }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1200px) {
@@ -1170,14 +861,7 @@ main.app-shell-content:has(> .evalc-page) {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .evalc-card-head {
-    height: 64px;
-    padding: 0 22px;
-  }
 
-  .evalc-card-title {
-    font-size: 20px;
-  }
 
   .evalc-card-body,
   .evalc-result-body {
@@ -1190,6 +874,11 @@ main.app-shell-content:has(> .evalc-page) {
 }
 
 @media (max-width: 640px) {
+  .evalc-summary-value { font-size: 24px; }
+  .evalc-step { padding-left: 32px; }
+  .evalc-trace { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .evalc-actions { flex-direction: column; align-items: stretch; min-height: 0; }
+
   .evalc-page {
     gap: 14px;
   }
@@ -1202,14 +891,7 @@ main.app-shell-content:has(> .evalc-page) {
     border-radius: 10px;
   }
 
-  .evalc-card-head {
-    height: 58px;
-    padding: 0 18px;
-  }
 
-  .evalc-card-title {
-    font-size: 18px;
-  }
 
   .evalc-card-body,
   .evalc-result-body {
@@ -1260,59 +942,15 @@ main.app-shell-content:has(> .evalc-page) {
     font-size: 15px;
   }
 
-  .evalc-verdict {
-    gap: 12px;
-    padding: 16px;
-  }
 
-  .evalc-verdict-title {
-    font-size: 17px;
-  }
 
-  .evalc-verdict-icon {
-    font-size: 22px;
-  }
 
-  .evalc-value {
-    font-size: 23px;
-  }
 
-  /* Rule breakdown: 2 columns become stacked label/value pairs so the
-     Chinese labels never wrap into one character per line. */
-  .evalc-rule-table,
-  .evalc-rule-table tbody,
-  .evalc-rule-table tr {
-    display: block;
-    width: 100%;
-  }
 
-  .evalc-rule-table tr {
-    display: grid;
-    grid-template-columns: 116px minmax(0, 1fr);
-    border-bottom: 1px solid #f0eeeb;
-  }
 
-  .evalc-rule-table tr:last-child {
-    border-bottom: 0;
-  }
 
-  .evalc-rule-table th,
-  .evalc-rule-table td {
-    width: auto;
-    padding: 7px 10px;
-    border-right: 0;
-    border-bottom: 0;
-  }
 
-  .evalc-rule-table th {
-    background: #fcfbf9;
-    font-size: 10px;
-    line-height: 1.45;
-  }
 
-  .evalc-rule-table td {
-    align-self: center;
-  }
 }
 
 @media (max-width: 400px) {

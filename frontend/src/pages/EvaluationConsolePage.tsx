@@ -1,22 +1,20 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useSearchParams, useLocation, Link } from 'react-router-dom';
+import { useSearchParams, useLocation, Link, useNavigate } from 'react-router-dom';
 import { Select, AutoComplete, Button } from 'antd';
 import {
   ArrowLeftOutlined,
-  CheckCircleFilled,
   CloseOutlined,
   ExclamationCircleFilled,
-  ExclamationCircleOutlined,
   FlagOutlined,
-  InfoCircleFilled,
   PlayCircleOutlined,
   SearchOutlined,
-  StopOutlined,
 } from '@ant-design/icons';
-import { Environment, EvaluationResult, Flag } from '../types';
+import { Environment, EvaluationPayload, EvaluationResult, Flag } from '../types';
 import { api, ApiError } from '../api/client';
 import { parseJson, stringifyJson } from '../utils/json';
 import { JsonContextEditor } from '../components/JsonContextEditor';
+import { EvaluationDecision } from '../components/EvaluationDecision';
+import { EvaluationEntryState, isInAppPath } from '../navigation';
 import './EvaluationConsolePage.css';
 
 const ENV_LABELS: Record<Environment, string> = {
@@ -153,61 +151,6 @@ function parseContextInput(source: string): ContextInputCheck {
   }
 }
 
-type VerdictTone = 'green' | 'amber' | 'blue' | 'neutral';
-
-interface VerdictProps {
-  tone: VerdictTone;
-  testId: string;
-  icon: React.ReactNode;
-  title: string;
-  tag: string;
-  description: React.ReactNode;
-  children?: React.ReactNode;
-}
-
-/** Shared decision panel: icon, verdict title + reason tag, copy and payload. */
-const Verdict: React.FC<VerdictProps> = ({
-  tone,
-  testId,
-  icon,
-  title,
-  tag,
-  description,
-  children,
-}) => (
-  <section className={`evalc-verdict evalc-verdict--${tone}`} data-testid={testId}>
-    <span className="evalc-verdict-icon" aria-hidden="true">
-      {icon}
-    </span>
-    <div className="evalc-verdict-main">
-      <div className="evalc-verdict-head">
-        <h3 className="evalc-verdict-title">{title}</h3>
-        <span className="evalc-verdict-tag">{tag}</span>
-      </div>
-      <p className="evalc-verdict-desc">{description}</p>
-      {children}
-    </div>
-  </section>
-);
-
-interface ValueCardProps {
-  label: string;
-  value: string;
-  tone: 'green' | 'red' | 'muted';
-  pill: string;
-  dangerPill?: boolean;
-}
-
-const ValueCard: React.FC<ValueCardProps> = ({ label, value, tone, pill, dangerPill }) => (
-  <div className="evalc-value-card">
-    <div>
-      <div className="evalc-value-label">{label}</div>
-      <div className={`evalc-value evalc-value--${tone}`}>{value}</div>
-    </div>
-    <span className={`evalc-value-pill${dangerPill ? ' evalc-value-pill--danger' : ''}`}>{pill}</span>
-  </div>
-);
-
 /** Empty inbox illustration from the mock: tray, lid notch and sun rays. */
 const InboxIllustration: React.FC = () => (
   <svg
@@ -231,24 +174,47 @@ const InboxIllustration: React.FC = () => (
 export const EvaluationConsolePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const [entry] = useState(() => resolveEntryQuery(searchParams));
+  const entryState = (location.state ?? {}) as EvaluationEntryState;
 
   const [environment, setEnvironment] = useState<Environment>(entry.environment);
   const [flagKey, setFlagKey] = useState<string>(entry.flagKey);
   const [contextText, setContextText] = useState<string>('');
   const [flags, setFlags] = useState<Flag[]>([]);
+  const [flagTotal, setFlagTotal] = useState<number | null>(null);
   const [loadingFlags, setLoadingFlags] = useState(false);
 
   const [evaluating, setEvaluating] = useState(false);
   const [evalResult, setEvalResult] = useState<EvaluationResult | null>(null);
   const [evalError, setEvalError] = useState<string | null>(null);
+  const [submittedRequest, setSubmittedRequest] = useState<string | null>(null);
+  const evaluationRequestRef = useRef(0);
   const evaluatingRef = useRef(false);
   const flagRequestRef = useRef(0);
 
-  const selectedFlag = flags.find((flag) => flag.key === flagKey);
+  const selectedFlag = flags.find((flag) => flag.key === flagKey && flag.environment === environment);
   const unchangedEntry = environment === entry.environment && flagKey === entry.flagKey;
   const resolvedFlagId = (unchangedEntry ? entry.flagId : null) ?? selectedFlag?.id ?? null;
-  const backToFlagDetail = resolvedFlagId ? `/flags/${resolvedFlagId}` : '/flags';
+  const entryDetailPath =
+    entryState.fromFlagDetail && isInAppPath(entryState.fromFlagDetail.path)
+      ? entryState.fromFlagDetail.path
+      : undefined;
+  // Opened by the same Flag's detail page and still showing that Flag: the
+  // banner must revisit the existing detail entry. Pushing a new one would
+  // replace its original source with "规则评估" and bounce the user between the
+  // two pages forever.
+  const roundTripDetailPath = unchangedEntry ? entryDetailPath : undefined;
+  const backToFlagDetail =
+    roundTripDetailPath ?? (resolvedFlagId ? `/flags/${resolvedFlagId}` : '/flags');
+
+  // Keep modified clicks (new tab / new window) working as plain links; only a
+  // normal click should step back to the detail entry that opened the console.
+  const handleBackToEntryDetail = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    navigate(-1);
+  };
 
   // Query the existing list endpoint as the user types so every Flag remains reachable.
   const loadFlags = useCallback(async (env: Environment, search: string) => {
@@ -262,9 +228,15 @@ export const EvaluationConsolePage: React.FC = () => {
         page: 1,
         page_size: 20,
       });
-      if (requestId === flagRequestRef.current) setFlags(res.items);
+      if (requestId === flagRequestRef.current) {
+        setFlags(res.items);
+        setFlagTotal(res.total);
+      }
     } catch {
-      // Non-fatal assistance
+      if (requestId === flagRequestRef.current) {
+        setFlags([]);
+        setFlagTotal(null);
+      }
     } finally {
       if (requestId === flagRequestRef.current) setLoadingFlags(false);
     }
@@ -272,8 +244,27 @@ export const EvaluationConsolePage: React.FC = () => {
 
   useEffect(() => {
     const timer = window.setTimeout(() => loadFlags(environment, flagKey.trim()), 250);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      flagRequestRef.current += 1;
+    };
   }, [environment, flagKey, loadFlags]);
+
+  useEffect(() => () => { evaluationRequestRef.current += 1; }, []);
+
+  const invalidateEvaluation = () => {
+    evaluationRequestRef.current += 1;
+    evaluatingRef.current = false;
+    setEvaluating(false);
+    setEvalResult(null);
+    setEvalError(null);
+    setSubmittedRequest(null);
+  };
+
+  const changeContext = (next: string) => {
+    invalidateEvaluation();
+    setContextText(next);
+  };
 
   // Real-time JSON validation
   const contextCheck = useMemo(() => parseContextInput(contextText), [contextText]);
@@ -281,18 +272,18 @@ export const EvaluationConsolePage: React.FC = () => {
   // Handle prettify
   const handleFormatJson = () => {
     if (contextCheck.isValid && contextCheck.parsed) {
-      setContextText(stringifyJson(contextCheck.parsed, 2));
+      changeContext(stringifyJson(contextCheck.parsed, 2));
     }
   };
 
   // Handle reset to sample
   const handleResetSample = () => {
-    setContextText(DEFAULT_SAMPLE_CONTEXT);
+    changeContext(DEFAULT_SAMPLE_CONTEXT);
   };
 
   // Handle clear
   const handleClearContext = () => {
-    setContextText('{}');
+    changeContext('{}');
   };
 
   // Run evaluation; the ref guard protects against a double click landing
@@ -310,27 +301,34 @@ export const EvaluationConsolePage: React.FC = () => {
       return;
     }
 
+    const requestId = ++evaluationRequestRef.current;
+    const payload: EvaluationPayload = {
+      flag_key: flagKey.trim(), environment, context: contextCheck.parsed ?? {},
+    };
+    const requestSnapshot = stringifyJson(payload, 2);
+    setSubmittedRequest(null);
     evaluatingRef.current = true;
     setEvaluating(true);
     setEvalError(null);
     setEvalResult(null);
 
     try {
-      const result = await api.evaluate({
-        flag_key: flagKey.trim(),
-        environment,
-        context: contextCheck.parsed ?? {},
-      });
+      const result = await api.evaluate(payload);
+      if (requestId !== evaluationRequestRef.current) return;
       setEvalResult(result);
+      setSubmittedRequest(requestSnapshot);
     } catch (err) {
+      if (requestId !== evaluationRequestRef.current) return;
       if (err instanceof ApiError) {
         setEvalError(`[${err.code}] ${err.message}`);
       } else {
         setEvalError('评估请求执行失败，请检查服务状态');
       }
     } finally {
-      evaluatingRef.current = false;
-      setEvaluating(false);
+      if (requestId === evaluationRequestRef.current) {
+        evaluatingRef.current = false;
+        setEvaluating(false);
+      }
     }
   };
 
@@ -341,8 +339,34 @@ export const EvaluationConsolePage: React.FC = () => {
         message: contextCheck.reason ?? '无法解析该 JSON',
       };
 
-  // Render Result Card based on the 3 contract reasons (plus loading / empty).
+  // Render the result panel as one of: failure, loading, empty, or decision.
   const renderResult = () => {
+    if (evalError) {
+      return (
+        <div
+          className="evalc-result-inset evalc-result-error"
+          role="alert"
+          aria-live="assertive"
+        >
+          <div className="evalc-alert">
+            <ExclamationCircleFilled className="evalc-alert-icon" aria-hidden="true" />
+            <div className="evalc-alert-body">
+              <div className="evalc-alert-title">评估调用失败</div>
+              <div className="evalc-alert-desc">{evalError}</div>
+            </div>
+            <button
+              type="button"
+              className="evalc-alert-close"
+              aria-label="关闭评估错误提示"
+              onClick={() => setEvalError(null)}
+            >
+              <CloseOutlined />
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     if (evaluating) {
       return (
         <div className="evalc-result-inset evalc-result-loading" role="status" aria-live="polite">
@@ -363,130 +387,7 @@ export const EvaluationConsolePage: React.FC = () => {
       );
     }
 
-    // State 1: FLAG_DISABLED
-    if (evalResult.reason === 'FLAG_DISABLED') {
-      return (
-        <Verdict
-          tone="amber"
-          testId="result-card-disabled"
-          icon={<StopOutlined />}
-          title="特性开关已停用 (FLAG_DISABLED)"
-          tag="FLAG_DISABLED"
-          description={
-            <>
-              特性开关已停用，评估引擎已熔断并强制返回 <code>false</code>。当前 Feature Flag
-              的启停开关关闭，安全熔断机制会拦截所有规则匹配。
-            </>
-          }
-        >
-          <ValueCard
-            label="最终返回值 (Result)"
-            value="false"
-            tone="red"
-            pill="已熔断 / 强制关闭"
-            dangerPill
-          />
-        </Verdict>
-      );
-    }
-
-    // State 2: RULE_MATCH (Green Success)
-    if (evalResult.reason === 'RULE_MATCH' && evalResult.matched_rule) {
-      const rule = evalResult.matched_rule;
-      const isPositive = evalResult.result;
-
-      return (
-        <Verdict
-          tone="green"
-          testId="result-card-rule-match"
-          icon={<CheckCircleFilled />}
-          title="命中灰度规则 (RULE_MATCH)"
-          tag="RULE_MATCH"
-          description="用户属性上下文成功命中优先级最高的一条灰度规则，触发短路求值并直接返回该规则预设值。"
-        >
-          <ValueCard
-            label="最终返回值 (Result)"
-            value={String(evalResult.result)}
-            tone={isPositive ? 'green' : 'red'}
-            pill={isPositive ? '返回 true' : '返回 false'}
-          />
-          <div className="evalc-rule-detail">
-            <div className="evalc-rule-detail-head">命中规则明细</div>
-            <table className="evalc-rule-table">
-              <tbody>
-                <tr>
-                  <th>规则优先级 (Priority)</th>
-                  <td>
-                    <span className="evalc-rule-pill">#{rule.priority}</span>
-                  </td>
-                  <th>规则返回值</th>
-                  <td>
-                    <span className={`evalc-rule-bool evalc-rule-bool--${rule.return_value}`}>
-                      {String(rule.return_value)}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <th>匹配属性名 (Attribute)</th>
-                  <td>
-                    <code>{rule.attribute_name}</code>
-                  </td>
-                  <th>操作符 (Operator)</th>
-                  <td>
-                    <span className="evalc-rule-op">{rule.operator}</span>
-                  </td>
-                </tr>
-                <tr>
-                  <th>规则期望值 (Expected Value)</th>
-                  <td colSpan={3}>
-                    <code>{stringifyJson(rule.expected_value)}</code>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </Verdict>
-      );
-    }
-
-    // State 3: DEFAULT_FALLBACK
-    if (evalResult.reason === 'DEFAULT_FALLBACK') {
-      return (
-        <Verdict
-          tone="blue"
-          testId="result-card-default-fallback"
-          icon={<InfoCircleFilled />}
-          title="回退至默认返回值 (DEFAULT_FALLBACK)"
-          tag="DEFAULT_FALLBACK"
-          description="未命中任何规则，回退至当前 Flag 的默认返回值。用户属性上下文未满足该 Flag 下配置的有序灰度规则。"
-        >
-          <ValueCard
-            label="最终返回值 (默认值)"
-            value={String(evalResult.result)}
-            tone={evalResult.result ? 'green' : 'muted'}
-            pill="未命中规则 · 回退默认"
-          />
-        </Verdict>
-      );
-    }
-
-    // Contract violation fallback: never label an unexplained reason as a
-    // default-value fallback.
-    return (
-      <Verdict
-        tone="neutral"
-        testId="result-card-unknown"
-        icon={<ExclamationCircleOutlined />}
-        title="评估结果缺少可解释的决策依据"
-        tag="UNKNOWN"
-        description={
-          <>
-            后端返回原因 <code>{evalResult.reason}</code>，最终返回值{' '}
-            <code>{String(evalResult.result)}</code>，未包含命中的规则明细。
-          </>
-        }
-      />
-    );
+    return <EvaluationDecision result={evalResult} request={submittedRequest} />;
   };
 
   return (
@@ -507,25 +408,21 @@ export const EvaluationConsolePage: React.FC = () => {
             to={backToFlagDetail}
             className="evalc-banner-link"
             state={
-              resolvedFlagId
+              !roundTripDetailPath && resolvedFlagId
                 ? { from: `${location.pathname}${location.search}`, fromLabel: '规则评估' }
                 : undefined
             }
+            onClick={roundTripDetailPath ? handleBackToEntryDetail : undefined}
           >
             <ArrowLeftOutlined aria-hidden="true" />
-            {resolvedFlagId ? '返回 Flag 详情' : '返回 Flag 列表'}
+            {roundTripDetailPath || resolvedFlagId ? '返回 Flag 详情' : '返回 Flag 列表'}
           </Link>
         </div>
       )}
 
       <div className="evalc-grid">
         {/* Left: evaluation inputs */}
-        <section className="evalc-card" aria-labelledby="eval-input-title">
-          <header className="evalc-card-head">
-            <h2 id="eval-input-title" className="evalc-card-title">
-              评估输入配置
-            </h2>
-          </header>
+        <section className="evalc-card" aria-label="评估输入配置">
           <div className="evalc-card-body">
             <div className="evalc-form">
               <div>
@@ -539,8 +436,9 @@ export const EvaluationConsolePage: React.FC = () => {
                   value={environment}
                   onChange={(env) => {
                     setEnvironment(env);
-                    setEvalResult(null);
-                    setEvalError(null);
+                    setFlags([]);
+                    setFlagTotal(null);
+                    invalidateEvaluation();
                   }}
                   options={[
                     { label: ENV_LABELS.development, value: 'development' },
@@ -556,9 +454,9 @@ export const EvaluationConsolePage: React.FC = () => {
                     特性开关标识 (Flag Key)
                     <span className="evalc-req" aria-hidden="true">*</span>
                   </label>
-                  {flags.length > 0 && (
+                  {flagTotal !== null && (
                     <span className="evalc-hint">
-                      当前匹配 {flags.length} 个 Flag
+                      当前匹配 {flagTotal} 个 Flag
                     </span>
                   )}
                   {loadingFlags && flags.length === 0 && (
@@ -574,8 +472,8 @@ export const EvaluationConsolePage: React.FC = () => {
                     value={flagKey}
                     onChange={(val: string) => {
                       setFlagKey(val);
-                      setEvalResult(null);
-                      setEvalError(null);
+                      setFlagTotal(null);
+                      invalidateEvaluation();
                     }}
                     allowClear
                     options={flags.map((f) => ({
@@ -597,11 +495,7 @@ export const EvaluationConsolePage: React.FC = () => {
                 <JsonContextEditor
                   id="context-json"
                   value={contextText}
-                  onChange={(next) => {
-                    setContextText(next);
-                    setEvalResult(null);
-                    setEvalError(null);
-                  }}
+                  onChange={changeContext}
                   onFormat={handleFormatJson}
                   onInsertSample={handleResetSample}
                   onClear={handleClearContext}
@@ -632,30 +526,8 @@ export const EvaluationConsolePage: React.FC = () => {
         </section>
 
         {/* Right: decision chain */}
-        <section className="evalc-card" aria-labelledby="eval-result-title">
-          <header className="evalc-card-head">
-            <h2 id="eval-result-title" className="evalc-card-title">
-              评估结果与链路决策
-            </h2>
-          </header>
+        <section className="evalc-card" aria-label="评估结果与链路决策">
           <div className="evalc-card-body evalc-result-body">
-            {evalError && (
-              <div className="evalc-alert" role="alert">
-                <ExclamationCircleFilled className="evalc-alert-icon" aria-hidden="true" />
-                <div>
-                  <div className="evalc-alert-title">评估调用失败</div>
-                  <div className="evalc-alert-desc">{evalError}</div>
-                </div>
-                <button
-                  type="button"
-                  className="evalc-alert-close"
-                  aria-label="关闭评估错误提示"
-                  onClick={() => setEvalError(null)}
-                >
-                  <CloseOutlined />
-                </button>
-              </div>
-            )}
             <div className="evalc-result-stage">{renderResult()}</div>
           </div>
         </section>

@@ -95,6 +95,37 @@ it('browser back from any tab returns to the source page in one step', async () 
   await waitFor(() => expect(router.state.location.pathname).toBe('/flags'));
 });
 
+it('returns from the evaluation console in place and keeps the detail source', async () => {
+  server.use(http.get('*/api/v1/flags', () => HttpResponse.json({
+    code: 'SUCCESS',
+    data: { items: [flag], total: 1, stats: { all: 1, enabled: 0, disabled: 1 } },
+  })));
+  const router = createMemoryRouter(routeConfig, {
+    initialEntries: [
+      { pathname: '/flags', search: '?page=2' },
+      { pathname: '/flags/42', state: { from: '/flags?page=2', fromLabel: '功能开关' } },
+    ],
+    initialIndex: 1,
+  });
+  render(<RouterProvider router={router} />);
+  await screen.findByRole('heading', { name: 'Checkout' });
+  expect(screen.getByTestId('detail-back-nav')).toHaveTextContent('功能开关');
+
+  fireEvent.click(screen.getByRole('button', { name: '前往在线评估' }));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/evaluations'));
+
+  fireEvent.click(await screen.findByRole('link', { name: /返回 Flag 详情/ }));
+
+  await waitFor(() => expect(router.state.location.pathname).toBe('/flags/42'));
+  expect(router.state.historyAction).toBe('POP');
+  expect(router.state.location.state).toEqual({ from: '/flags?page=2', fromLabel: '功能开关' });
+  expect(screen.getByTestId('detail-back-nav')).toHaveTextContent('功能开关');
+
+  fireEvent.click(screen.getByTestId('detail-back-nav'));
+  await waitFor(() => expect(router.state.location.pathname).toBe('/flags'));
+  expect(router.state.location.search).toBe('?page=2');
+});
+
 it('keeps reordering local, clears reverted edits, and swaps persisted priorities only on save', async () => {
   await open('/flags/42');
   fireEvent.click(screen.getByRole('button', { name: '下移规则 1' }));
@@ -229,6 +260,9 @@ it('explains disabled evaluation semantics and leaves description length to the 
   expect(meta).toHaveTextContent('停用期间评估始终返回 false');
   expect(screen.queryByText(/配置的默认返回值（停用期间不参与评估）/)).not.toBeInTheDocument();
   expect(screen.queryByText(/默认返回值（Flag 停用期间不参与评估）/)).not.toBeInTheDocument();
+  // The settings form keeps only the field label; the old long explanatory
+  // helper under 默认返回值 was removed.
+  expect(screen.queryByText(/持久化配置值/)).not.toBeInTheDocument();
   expect(document.querySelector('.default-card')).toBeNull();
   fireEvent.click(screen.getByRole('tab', { name: '基本设置' }));
   expect(screen.getByLabelText('描述')).not.toHaveAttribute('maxlength');

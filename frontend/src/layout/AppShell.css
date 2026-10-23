@@ -21,15 +21,15 @@
   overflow: hidden;
 }
 
-.brand {
+.app-shell-sidebar .brand {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 68px;
-  padding: 0 16px;
+  gap: 8px;
+  height: 52px;
+  padding: 0 8px 0 4px;
   border-bottom: 1px solid var(--line, #ebe8e4);
-  flex: 0 0 68px;
+  flex: 0 0 52px;
   overflow: hidden;
 }
 
@@ -38,12 +38,21 @@
   padding: 0;
 }
 
-.brand-text {
+.app-shell-sidebar .brand-text {
   min-width: 0;
   flex: 1;
+  padding-left: 6px;
 }
 
-.brand-logo-frame {
+.app-shell-sidebar .brand-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.2px;
+  line-height: 1.2;
+  color: #0f1419;
+}
+
+.app-shell-sidebar .brand-logo-frame {
   position: relative;
   width: 36px;
   height: 36px;
@@ -53,37 +62,42 @@
   background: #ffffff;
 }
 
-.brand-logo-image {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 50px;
-  height: 50px;
-  max-width: none;
-  transform: translate(-50%, -50%);
-  transition: opacity .15s ease;
-}
-
 .collapse-toggle {
   margin-left: auto;
-  opacity: .6;
-  transition: opacity .15s ease;
 }
 
-.collapse-toggle:hover {
+.app-shell-sidebar .collapse-toggle.sider-toggle-button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line, #ebe8e4);
+  border-radius: 6px;
+  background: #fff;
   opacity: 1;
+}
+
+.app-shell-sidebar .collapse-toggle.sider-toggle-button:hover {
+  background: var(--brand-soft-2, #FFF9F5);
+  border-color: var(--brand-line, #FFCEAD);
 }
 
 .expand-toggle {
   position: absolute;
-  inset: 3px;
+  inset: 0;
   opacity: 0;
   pointer-events: none;
   transition: opacity .15s ease;
 }
 
-.collapsed-brand-control:hover .brand-logo-image,
-.collapsed-brand-control:focus-within .brand-logo-image {
+.app-shell-sidebar .expand-toggle.sider-toggle-button {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--brand-soft-2, #FFF9F5);
+}
+
+.collapsed-brand-control:hover .brand-logo,
+.collapsed-brand-control:focus-within .brand-logo {
   opacity: 0;
 }
 
@@ -93,8 +107,12 @@
   pointer-events: auto;
 }
 
+.collapsed-brand-control:focus-within .sider-toggle-arrow {
+  stroke: var(--brand, #FF6400);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .brand-logo-image,
+  .brand-logo,
   .expand-toggle {
     transition: none;
   }
@@ -102,29 +120,70 @@
 
 /* Ant Design Menu 1:1 Styling */
 .custom-nav.ant-menu {
-  padding: 16px 11px !important;
+  padding: 8px 8px 12px 4px !important;
   border-inline-end: none !important;
   background: transparent !important;
   flex: 1;
   overflow-y: auto;
 }
 
+.custom-nav.ant-menu .ant-menu-title-content {
+  margin-inline-start: 0 !important;
+}
+
 .custom-nav.ant-menu .ant-menu-item {
-  height: 44px !important;
-  line-height: 44px !important;
-  margin: 0 0 4px 0 !important;
+  height: 42px !important;
+  line-height: 42px !important;
+  margin: 0 0 2px 0 !important;
   width: 100% !important;
-  padding: 0 14px !important;
-  border-radius: 8px !important;
+  padding: 0 8px 0 6px !important;
+  border-radius: 6px !important;
   color: #5b5b5b !important;
-  font-size: 14px !important;
-  font-weight: 450 !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
   transition: background-color .16s ease, color .16s ease !important;
 }
 
+.custom-nav.ant-menu .ant-menu-item > .ant-menu-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  margin-inline-end: 10px;
+  line-height: 1;
+  font-size: 28px;
+}
+
+.app-shell-sidebar.collapsed .custom-nav.ant-menu {
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+
 .app-shell-sidebar.collapsed .custom-nav.ant-menu .ant-menu-item {
+  display: flex !important;
+  width: 100% !important;
+  max-width: none;
+  align-items: center;
   padding: 0 !important;
   justify-content: center;
+}
+
+/* Keep the label available to the accessibility tree/tooltip without letting
+   its (opacity-zero) box push the icon off-centre. */
+.app-shell-sidebar.collapsed .custom-nav.ant-menu .ant-menu-title-content {
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+.app-shell-sidebar.collapsed .custom-nav.ant-menu .ant-menu-item > .ant-menu-item-icon {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  margin-inline-end: 0;
+  font-size: 28px;
 }
 
 .custom-nav.ant-menu .ant-menu-item:hover:not(.ant-menu-item-selected) {
@@ -133,25 +192,18 @@
 }
 
 .custom-nav.ant-menu .ant-menu-item-selected {
-  background-color: var(--brand-soft, #fff4ee) !important;
+  background-color: var(--brand-soft, #FFF3EB) !important;
   color: #29231f !important;
   font-weight: 600 !important;
 }
 
-.custom-nav.ant-menu .ant-menu-item-selected::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 9px;
-  bottom: 9px;
-  width: 3px;
-  border-radius: 0 4px 4px 0;
-  background: var(--brand, #ff7d41);
+
+/* The collapsed rail only changes the icon's own state; the selected row keeps
+   the same transparent surface as its neighbours. */
+.app-shell-sidebar.collapsed .custom-nav.ant-menu .ant-menu-item-selected {
+  background-color: transparent !important;
 }
 
-.custom-nav.ant-menu .ant-menu-item-selected .nav-icon svg {
-  stroke: #d95f25 !important;
-}
 
 .app-shell-mobile-bar {
   display: none;
@@ -164,6 +216,38 @@
 
 .app-shell-menu-button {
   display: none;
+}
+
+/* The drawer header doubles as the wordmark row; the body starts with the nav. */
+.mobile-nav-drawer .ant-drawer-header {
+  min-height: 52px;
+  padding: 0 8px 0 4px;
+  border-bottom: 1px solid var(--line, #ebe8e4);
+}
+
+.mobile-nav-drawer .ant-drawer-header-title {
+  align-items: center;
+}
+
+.mobile-nav-drawer .ant-drawer-title {
+  flex: 1;
+  order: 1;
+  padding-left: 6px;
+  color: #0f1419;
+}
+
+.mobile-nav-brand {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.2px;
+  line-height: 1.2;
+}
+
+.mobile-nav-drawer .ant-drawer-close {
+  order: 2;
+  margin-inline-start: auto;
+  margin-inline-end: 0 !important;
+  color: #5b5b5b;
 }
 
 @media (max-width: 980px) {

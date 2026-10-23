@@ -172,6 +172,13 @@ func TestEvaluationHandler_SuccessfulEvaluationFlow(t *testing.T) {
 	require.NotNil(t, resp.Data.MatchedRule)
 	assert.Equal(t, 1, resp.Data.MatchedRule.Priority)
 	assert.Equal(t, "account_id", resp.Data.MatchedRule.AttributeName)
+	assert.Equal(t, flag.ID, resp.Data.FlagID)
+	assert.False(t, resp.Data.DefaultValue)
+	assert.Equal(t, 1, resp.Data.RuleCount)
+	require.Len(t, resp.Data.RuleTrace, 1)
+	assert.True(t, resp.Data.RuleTrace[0].Matched)
+	assert.Equal(t, domain.TraceMatched, resp.Data.RuleTrace[0].Reason)
+	assert.True(t, resp.Data.RuleTrace[0].AttributePresent)
 
 	// 4. Test off-by-one big integer (9007199254740992) -> should NOT match, fallback to default false
 	evalNonMatchJSON := fmt.Sprintf(`{
@@ -200,4 +207,11 @@ func TestEvaluationHandler_SuccessfulEvaluationFlow(t *testing.T) {
 	assert.False(t, resp2.Data.Result)
 	assert.Equal(t, domain.ReasonDefaultFallback, resp2.Data.Reason)
 	assert.Nil(t, resp2.Data.MatchedRule)
+	assert.Equal(t, flag.ID, resp2.Data.FlagID)
+	assert.False(t, resp2.Data.DefaultValue)
+	assert.Equal(t, 1, resp2.Data.RuleCount)
+	require.Len(t, resp2.Data.RuleTrace, 1)
+	assert.False(t, resp2.Data.RuleTrace[0].Matched)
+	assert.Equal(t, domain.TraceValueMismatch, resp2.Data.RuleTrace[0].Reason)
+	assert.True(t, resp2.Data.RuleTrace[0].AttributePresent)
 }

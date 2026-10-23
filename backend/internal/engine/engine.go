@@ -28,86 +28,112 @@ func (e *evaluationEngine) Evaluate(
 	rules []domain.Rule,
 	context map[string]interface{},
 ) *domain.EvaluationResponse {
-	// 1. Short-circuit: Disabled flag returns false immediately
-	if !flag.Enabled {
-		return &domain.EvaluationResponse{
-			FlagKey:     flag.Key,
-			Environment: flag.Environment,
-			Enabled:     false,
-			Result:      false,
-			Reason:      domain.ReasonFlagDisabled,
-			MatchedRule: nil,
-		}
-	}
-
 	if rules == nil {
 		rules = flag.Rules
 	}
+	res := &domain.EvaluationResponse{
+		FlagID: flag.ID, FlagKey: flag.Key, Environment: flag.Environment,
+		Enabled: flag.Enabled, DefaultValue: flag.DefaultValue,
+		RuleCount: len(rules), RuleTrace: make([]domain.RuleTrace, 0),
+		Result: false, Reason: domain.ReasonFlagDisabled,
+	}
+	if !flag.Enabled {
+		return res
+	}
 
-	// 2. Sort rules by Priority ascending (1 is highest priority)
-	sortedRules := make([]domain.Rule, len(rules))
-	copy(sortedRules, rules)
+	sortedRules := append([]domain.Rule(nil), rules...)
 	sort.SliceStable(sortedRules, func(i, j int) bool {
 		return sortedRules[i].Priority < sortedRules[j].Priority
 	})
-
-	// 3. Evaluate each rule in order
 	for _, rule := range sortedRules {
-		ctxVal, exists := context[rule.AttributeName]
-		if !exists || ctxVal == nil {
-			// Missing attribute or explicit null safely skips to next rule
-			continue
+		actual, present := context[rule.AttributeName]
+		reason := explainRule(rule, actual, present)
+		expected := rule.ExpectedValue
+		// Corrupt stored JSON must not make the diagnostic response unserializable.
+		if !json.Valid(expected) {
+			expected = json.RawMessage("null")
 		}
-
-		decoder := json.NewDecoder(bytes.NewReader(rule.ExpectedValue))
-		decoder.UseNumber()
-		var expVal interface{}
-		if err := decoder.Decode(&expVal); err != nil {
-			continue
+		trace := domain.RuleTrace{
+			MatchedRuleInfo: domain.MatchedRuleInfo{
+				ID: rule.ID, Priority: rule.Priority, AttributeName: rule.AttributeName,
+				Operator: rule.Operator, ExpectedValue: expected, ReturnValue: rule.ReturnValue,
+			},
+			AttributePresent: present, ActualValue: actual,
+			Matched: reason == domain.TraceMatched, Reason: reason,
 		}
-
-		matched := false
-		switch rule.Operator {
-		case "equals":
-			matched = matchScalar(ctxVal, expVal)
-		case "in":
-			if expArr, ok := expVal.([]interface{}); ok {
-				for _, elem := range expArr {
-					if matchScalar(ctxVal, elem) {
-						matched = true
-						break
-					}
-				}
-			}
-		}
-
-		if matched {
-			return &domain.EvaluationResponse{
-				FlagKey:     flag.Key,
-				Environment: flag.Environment,
-				Enabled:     true,
-				Result:      rule.ReturnValue,
-				Reason:      domain.ReasonRuleMatch,
-				MatchedRule: &domain.MatchedRuleInfo{
-					ID:            rule.ID,
-					Priority:      rule.Priority,
-					AttributeName: rule.AttributeName,
-					Operator:      rule.Operator,
-					ExpectedValue: rule.ExpectedValue,
-					ReturnValue:   rule.ReturnValue,
-				},
-			}
+		res.RuleTrace = append(res.RuleTrace, trace)
+		if trace.Matched {
+			res.Result = rule.ReturnValue
+			res.Reason = domain.ReasonRuleMatch
+			res.MatchedRule = &trace.MatchedRuleInfo
+			return res
 		}
 	}
+	res.Result = flag.DefaultValue
+	res.Reason = domain.ReasonDefaultFallback
+	return res
+}
 
-	// 4. Fallback to flag default value if no rules matched
-	return &domain.EvaluationResponse{
-		FlagKey:     flag.Key,
-		Environment: flag.Environment,
-		Enabled:     true,
-		Result:      flag.DefaultValue,
-		Reason:      domain.ReasonDefaultFallback,
-		MatchedRule: nil,
+// explainRule performs the match once and records the first decisive reason.
+func explainRule(rule domain.Rule, actual interface{}, present bool) domain.RuleTraceReason {
+	if !present {
+		return domain.TraceAttributeMissing
+	}
+	if actual == nil {
+		return domain.TraceNullValue
+	}
+	decoder := json.NewDecoder(bytes.NewReader(rule.ExpectedValue))
+	decoder.UseNumber()
+	var expected interface{}
+	if err := decoder.Decode(&expected); err != nil {
+		return domain.TraceInvalidRule
+	}
+	switch rule.Operator {
+	case "equals":
+		if scalarType(expected) == "" {
+			return domain.TraceInvalidRule
+		}
+		if matchScalar(actual, expected) {
+			return domain.TraceMatched
+		}
+		if scalarType(actual) != scalarType(expected) {
+			return domain.TraceTypeMismatch
+		}
+		return domain.TraceValueMismatch
+	case "in":
+		values, ok := expected.([]interface{})
+		if !ok {
+			return domain.TraceInvalidRule
+		}
+		sameType := false
+		for _, value := range values {
+			if matchScalar(actual, value) {
+				return domain.TraceMatched
+			}
+			if kind := scalarType(value); kind != "" && kind == scalarType(actual) {
+				sameType = true
+			}
+		}
+		if sameType {
+			return domain.TraceNotInSet
+		}
+		return domain.TraceTypeMismatch
+	default:
+		return domain.TraceInvalidRule
+	}
+}
+
+func scalarType(value interface{}) string {
+	switch value.(type) {
+	case string:
+		return "string"
+	case bool:
+		return "boolean"
+	default:
+		if _, ok := toRat(value); ok {
+			return "number"
+		}
+		return ""
 	}
 }
 

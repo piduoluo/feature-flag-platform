@@ -46,7 +46,7 @@ export const RuleWorkspace: React.FC<Props> = ({
           type="primary"
           disabled={disabled}
           onClick={() => edit(null)}
-          style={{ background: 'var(--brand, #ff7d41)', borderColor: 'var(--brand, #ff7d41)' }}
+          style={{ background: 'var(--brand, #FF6400)', borderColor: 'var(--brand, #FF6400)' }}
         >
           添加规则
         </Button>
@@ -133,7 +133,7 @@ export const RuleWorkspace: React.FC<Props> = ({
         open={editing !== undefined}
         okText="确认"
         cancelText="取消"
-        okButtonProps={{ style: { background: 'var(--brand, #ff7d41)', borderColor: 'var(--brand, #ff7d41)' } }}
+        okButtonProps={{ style: { background: 'var(--brand, #FF6400)', borderColor: 'var(--brand, #FF6400)' } }}
         onCancel={() => setEditing(undefined)}
         onOk={async () => {
           try {

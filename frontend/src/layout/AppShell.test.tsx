@@ -36,15 +36,31 @@ describe('AppShell 1:1 Design & Interactions', () => {
   it('renders confirmed product branding without unsupported vendor/version copy', () => {
     renderRoute(['/flags']);
 
-    const productLogo = screen.getByRole('img', { name: 'FeatureFlag Logo' });
-    expect(productLogo).toHaveAttribute('src', expect.stringContaining('feature-flag-logo-light.png'));
+    expect(screen.queryByRole('img', { name: 'FeatureFlag Logo' })).not.toBeInTheDocument();
     expect(screen.getByText('Feature Flag')).toBeInTheDocument();
-    expect(screen.getByText('灰度规则平台')).toBeInTheDocument();
+    expect(screen.queryByText('灰度规则平台')).not.toBeInTheDocument();
     expect(screen.queryByText('滴滴研发工具')).not.toBeInTheDocument();
     expect(screen.queryByText('v1.0')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /admin/i })).not.toBeInTheDocument();
     expect(screen.queryByText('个人设置')).not.toBeInTheDocument();
     expect(screen.queryByText('退出登录')).not.toBeInTheDocument();
+  });
+
+  it('maps the active route to the supplied two-state nav icons', () => {
+    const { container } = renderRoute(['/evaluations']);
+
+    expect(container.querySelector('[data-tab-id="flags"]')).toHaveAttribute(
+      'data-tab-state',
+      'unselected'
+    );
+    expect(container.querySelector('[data-tab-id="evaluations"]')).toHaveAttribute(
+      'data-tab-state',
+      'selected'
+    );
+    expect(container.querySelector('[data-tab-id="audit-logs"]')).toHaveAttribute(
+      'data-tab-state',
+      'unselected'
+    );
   });
 
   it('removes the global breadcrumb and desktop top bar, keeping a mobile nav control', () => {
@@ -79,6 +95,8 @@ describe('AppShell 1:1 Design & Interactions', () => {
   it('supports desktop sidebar collapse and expansion', () => {
     const { container } = renderRoute(['/flags']);
 
+    expect(container.querySelector('.sider-toggle-icon[data-sider-dir="collapse"]')).toBeInTheDocument();
+
     const collapseBtn = screen.getByRole('button', { name: /折叠侧边栏/i });
     fireEvent.click(collapseBtn);
 
@@ -86,6 +104,7 @@ describe('AppShell 1:1 Design & Interactions', () => {
     const logoControl = container.querySelector('.collapsed-brand-control');
     expect(sidebar).toHaveClass('collapsed');
     expect(logoControl).toContainElement(screen.getByRole('img', { name: 'FeatureFlag Logo' }));
+    expect(container.querySelector('.sider-toggle-icon[data-sider-dir="expand"]')).toBeInTheDocument();
 
     // The expand button shares the logo's 36px hover/focus target.
     const expandBtn = screen.getByRole('button', { name: /展开侧边栏/i });

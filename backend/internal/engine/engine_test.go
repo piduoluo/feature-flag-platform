@@ -426,3 +426,110 @@ func TestEvaluationEngine_MissingAttributeSkipsToNextRule(t *testing.T) {
 		t.Errorf("expected matched rule ID 2, got %+v", res.MatchedRule)
 	}
 }
+
+func TestEvaluationEngine_TraceExplainsDecisions(t *testing.T) {
+	cases := []struct {
+		name, operator, expected string
+		context                  map[string]interface{}
+		reason                   domain.RuleTraceReason
+	}{
+		{"missing is distinct from null", "equals", `"CN"`, map[string]interface{}{}, domain.TraceAttributeMissing},
+		{"explicit null", "equals", `"CN"`, map[string]interface{}{"value": nil}, domain.TraceNullValue},
+		{"strict types", "equals", `1`, map[string]interface{}{"value": "1"}, domain.TraceTypeMismatch},
+		{"object cannot equal a scalar", "equals", `1`, map[string]interface{}{"value": map[string]interface{}{}}, domain.TraceTypeMismatch},
+		{"different string", "equals", `"CN"`, map[string]interface{}{"value": "US"}, domain.TraceValueMismatch},
+		{"same type outside set", "in", `["premium","enterprise"]`, map[string]interface{}{"value": "free"}, domain.TraceNotInSet},
+		{"no matching type in set", "in", `[1,2]`, map[string]interface{}{"value": "1"}, domain.TraceTypeMismatch},
+		{"mixed set includes same type", "in", `[1,"premium"]`, map[string]interface{}{"value": "free"}, domain.TraceNotInSet},
+		{"invalid JSON skips safely", "equals", `{`, map[string]interface{}{"value": "CN"}, domain.TraceInvalidRule},
+		{"invalid operator", "contains", `"CN"`, map[string]interface{}{"value": "CN"}, domain.TraceInvalidRule},
+		{"in requires array", "in", `"CN"`, map[string]interface{}{"value": "CN"}, domain.TraceInvalidRule},
+		{"equals requires scalar", "equals", `{}`, map[string]interface{}{"value": "CN"}, domain.TraceInvalidRule},
+		{"exact large integer hit", "in", `[9007199254740993]`, map[string]interface{}{"value": json.Number("9007199254740993")}, domain.TraceMatched},
+		{"adjacent large integer miss", "equals", `9007199254740993`, map[string]interface{}{"value": json.Number("9007199254740992")}, domain.TraceValueMismatch},
+		{"equivalent JSON numbers", "equals", `1.0`, map[string]interface{}{"value": json.Number("1")}, domain.TraceMatched},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			flag := &domain.Flag{ID: 42, Key: "trace", Enabled: true, DefaultValue: true}
+			rule := domain.Rule{ID: 7, Priority: 1, AttributeName: "value", Operator: tc.operator, ExpectedValue: json.RawMessage(tc.expected), ReturnValue: false}
+			res := engine.NewEvaluationEngine().Evaluate(flag, []domain.Rule{rule}, tc.context)
+			if len(res.RuleTrace) != 1 {
+				t.Fatalf("expected one executed rule, got %+v", res)
+			}
+			trace := res.RuleTrace[0]
+			_, present := tc.context["value"]
+			if trace.Reason != tc.reason || trace.AttributePresent != present || trace.Matched != (tc.reason == domain.TraceMatched) {
+				t.Fatalf("incorrect explanation: %+v", trace)
+			}
+			if res.FlagID != 42 || !res.DefaultValue || res.RuleCount != 1 {
+				t.Fatalf("missing evaluation metadata: %+v", res)
+			}
+			if trace.Matched {
+				if res.Result || res.Reason != domain.ReasonRuleMatch || res.MatchedRule.ID != rule.ID {
+					t.Fatalf("matched false must not become fallback: %+v", res)
+				}
+			} else if !res.Result || res.Reason != domain.ReasonDefaultFallback || res.MatchedRule != nil {
+				t.Fatalf("miss must preserve default: %+v", res)
+			}
+			encoded, err := json.Marshal(res)
+			if err != nil {
+				t.Fatalf("trace must be valid JSON: %v", err)
+			}
+			var roundtrip domain.EvaluationResponse
+			if err := json.Unmarshal(encoded, &roundtrip); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestEvaluationEngine_TraceStopsAtFirstMatch(t *testing.T) {
+	rules := []domain.Rule{
+		{ID: 3, Priority: 3, AttributeName: "plan", Operator: "in", ExpectedValue: json.RawMessage(`["premium","enterprise"]`), ReturnValue: true},
+		{ID: 1, Priority: 1, AttributeName: "user_id", Operator: "in", ExpectedValue: json.RawMessage(`[10001,10002]`), ReturnValue: true},
+		{ID: 2, Priority: 2, AttributeName: "country", Operator: "equals", ExpectedValue: json.RawMessage(`"CN"`), ReturnValue: false},
+	}
+	flag := &domain.Flag{Enabled: true, Rules: rules}
+	eng := engine.NewEvaluationEngine()
+	res := eng.Evaluate(flag, nil, map[string]interface{}{"country": "US", "plan": "free"})
+	if res.Reason != domain.ReasonDefaultFallback || len(res.RuleTrace) != 3 {
+		t.Fatalf("all misses must be recorded: %+v", res)
+	}
+	for i, reason := range []domain.RuleTraceReason{domain.TraceAttributeMissing, domain.TraceValueMismatch, domain.TraceNotInSet} {
+		if res.RuleTrace[i].Priority != i+1 || res.RuleTrace[i].Reason != reason {
+			t.Fatalf("incorrect ordered trace: %+v", res.RuleTrace)
+		}
+	}
+	res = eng.Evaluate(flag, nil, map[string]interface{}{"country": "CN", "plan": "premium"})
+	if res.Reason != domain.ReasonRuleMatch || res.Result || len(res.RuleTrace) != 2 || res.MatchedRule.ID != 2 || res.RuleCount != 3 {
+		t.Fatalf("second rule returns false and third must remain unevaluated: %+v", res)
+	}
+	if rules[0].ID != 3 {
+		t.Fatal("evaluation must not reorder caller-owned rules")
+	}
+}
+
+func TestEvaluationEngine_EmptyTraceSerializesAsArray(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		flag := &domain.Flag{Enabled: enabled, DefaultValue: true}
+		if !enabled {
+			flag.Rules = []domain.Rule{{Priority: 1, Operator: "equals", AttributeName: "x", ExpectedValue: json.RawMessage(`1`)}}
+		}
+		res := engine.NewEvaluationEngine().Evaluate(flag, nil, map[string]interface{}{"x": 1})
+		if res.RuleTrace == nil || len(res.RuleTrace) != 0 || res.Result != enabled {
+			t.Fatalf("disabled/empty must have empty trace and correct result: %+v", res)
+		}
+		encoded, err := json.Marshal(res)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var wire map[string]json.RawMessage
+		if err := json.Unmarshal(encoded, &wire); err != nil {
+			t.Fatal(err)
+		}
+		if string(wire["rule_trace"]) != "[]" {
+			t.Fatalf("expected [], got %s", wire["rule_trace"])
+		}
+	}
+}

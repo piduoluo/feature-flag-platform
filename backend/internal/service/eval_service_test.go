@@ -177,6 +177,11 @@ func TestEvaluationService_FullLifecycleEvaluation(t *testing.T) {
 	assert.False(t, resDisabled.Result)
 	assert.Equal(t, domain.ReasonFlagDisabled, resDisabled.Reason)
 	assert.Nil(t, resDisabled.MatchedRule)
+	assert.Equal(t, createdFlag.ID, resDisabled.FlagID)
+	assert.True(t, resDisabled.DefaultValue)
+	assert.Equal(t, 2, resDisabled.RuleCount)
+	require.NotNil(t, resDisabled.RuleTrace)
+	assert.Empty(t, resDisabled.RuleTrace)
 
 	// Now enable flag
 	enabled := true
@@ -228,6 +233,13 @@ func TestEvaluationService_FullLifecycleEvaluation(t *testing.T) {
 	assert.True(t, resFallback.Result)
 	assert.Equal(t, domain.ReasonDefaultFallback, resFallback.Reason)
 	assert.Nil(t, resFallback.MatchedRule)
+	assert.Equal(t, createdFlag.ID, resFallback.FlagID)
+	assert.True(t, resFallback.DefaultValue)
+	assert.Equal(t, 2, resFallback.RuleCount)
+	require.Len(t, resFallback.RuleTrace, 2)
+	assert.Equal(t, domain.TraceAttributeMissing, resFallback.RuleTrace[0].Reason)
+	assert.Equal(t, domain.TraceNotInSet, resFallback.RuleTrace[1].Reason)
+	assert.False(t, resFallback.RuleTrace[1].Matched)
 
 	// Case E: Disabling again must not mutate the persisted default value or
 	// rules, and a context that would match Rule 1 must still short-circuit.

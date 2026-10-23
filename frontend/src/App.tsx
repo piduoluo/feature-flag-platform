@@ -11,10 +11,16 @@ export const App: React.FC = () => {
       locale={zhCN}
       theme={{
         token: {
-          colorPrimary: '#ff7d41',
-          colorLink: '#ff7d41',
-          colorLinkHover: '#f76d30',
+          colorPrimary: '#FF6400',
+          colorLink: '#FF6400',
+          colorLinkHover: '#E65A00',
+          colorPrimaryHover: '#E65A00',
+          colorPrimaryActive: '#CC5000',
+          colorLinkActive: '#CC5000',
           borderRadius: 6,
+          fontFamily: 'var(--font-ui)',
+          fontFamilyCode: 'var(--font-ui)',
+          fontWeightStrong: 600,
         },
       }}
     >
