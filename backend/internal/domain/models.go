@@ -63,14 +63,19 @@ func (Rule) TableName() string {
 
 // AuditLog tracks configuration modifications atomically.
 type AuditLog struct {
-	ID          int64           `json:"id" gorm:"primaryKey;autoIncrement"`
-	FlagID      int64           `json:"flag_id" gorm:"column:flag_id;not null"`
-	FlagKey     string          `json:"flag_key" gorm:"column:flag_key;not null;size:128"`
-	Environment Environment     `json:"environment" gorm:"column:environment;not null;size:32"`
-	ActionType  string          `json:"action_type" gorm:"column:action_type;not null;size:64"`
-	Operator    string          `json:"operator" gorm:"column:operator;not null;size:64;default:'admin'"`
-	DiffSummary json.RawMessage `json:"diff_summary" gorm:"column:diff_summary;type:jsonb;not null;default:'{}'"`
-	CreatedAt   time.Time       `json:"created_at" gorm:"column:created_at;autoCreateTime"`
+	ID          int64       `json:"id" gorm:"primaryKey;autoIncrement"`
+	FlagID      int64       `json:"flag_id" gorm:"column:flag_id;not null"`
+	FlagKey     string      `json:"flag_key" gorm:"column:flag_key;not null;size:128"`
+	Environment Environment `json:"environment" gorm:"column:environment;not null;size:32"`
+	ActionType  string      `json:"action_type" gorm:"column:action_type;not null;size:64"`
+	Operator    string      `json:"operator" gorm:"column:operator;not null;size:64;default:'admin'"`
+	// DefaultValue snapshots the flag's effective default value at the moment of
+	// the operation. Like FlagKey and Environment it is redundant by design, so
+	// old audit rows stay readable even after the flag configuration evolves.
+	// It is nullable only for rows written before the column existed.
+	DefaultValue *bool           `json:"default_value" gorm:"column:default_value"`
+	DiffSummary  json.RawMessage `json:"diff_summary" gorm:"column:diff_summary;type:jsonb;not null;default:'{}'"`
+	CreatedAt    time.Time       `json:"created_at" gorm:"column:created_at;autoCreateTime"`
 }
 
 func (AuditLog) TableName() string {

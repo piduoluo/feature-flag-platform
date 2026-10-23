@@ -200,12 +200,13 @@ func SeedDemoData(db *gorm.DB) error {
 			})
 
 			auditLog := &domain.AuditLog{
-				FlagID:      flag.ID,
-				FlagKey:     flag.Key,
-				Environment: flag.Environment,
-				ActionType:  domain.ActionFlagCreated,
-				Operator:    domain.DefaultOperator,
-				DiffSummary: initialDiff,
+				FlagID:       flag.ID,
+				FlagKey:      flag.Key,
+				Environment:  flag.Environment,
+				ActionType:   domain.ActionFlagCreated,
+				Operator:     domain.DefaultOperator,
+				DefaultValue: &flag.DefaultValue,
+				DiffSummary:  initialDiff,
 			}
 			if err := tx.Create(auditLog).Error; err != nil {
 				return fmt.Errorf("failed to seed audit log for flag %s: %w", sf.Key, err)

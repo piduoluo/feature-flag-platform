@@ -72,14 +72,14 @@ describe('Router & AppShell Integration', () => {
     expect(screen.getByRole('heading', { name: '功能开关管理' })).toBeInTheDocument();
   });
 
-  it('renders active sidebar state and page title for "/evaluations"', async () => {
+  it('renders active sidebar state and page content for "/evaluations"', async () => {
     renderRoute(['/evaluations']);
 
     const evalMenuItem = screen.getByRole('menuitem', { name: /规则评估/i });
     expect(evalMenuItem).toHaveClass('ant-menu-item-selected');
 
     expect(screen.queryByTestId('app-breadcrumb')).not.toBeInTheDocument();
-    expect(screen.getByText('确定性规则在线评估控制台')).toBeInTheDocument();
+    expect(screen.getByText('评估输入配置')).toBeInTheDocument();
   });
 
   it('renders active sidebar state and page content for "/audit-logs"', async () => {

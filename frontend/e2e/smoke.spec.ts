@@ -101,7 +101,7 @@ test('SPEC-US 33/UI-R 04: a legacy tab deep link opens audit on one canonical UR
   await expect(page.getByRole('tab', { name: '变更历史' })).toHaveAttribute('aria-selected', 'true');
   await expect(page).toHaveURL(new RegExp(`/flags/${flagId}$`));
   // Creating the flag wrote an audit row through the same transaction.
-  await expect(page.getByText('创建 Flag').first()).toBeVisible();
+  await expect(page.getByText('新建开关').first()).toBeVisible();
 });
 
 test('SPEC-US 34: Nginx serves the legacy path link and the canonical URL survives reload', async ({ page }) => {
@@ -186,11 +186,11 @@ test('UI-R 08: an unsaved draft triggers the native beforeunload prompt', async 
 
 test('Ticket 08B: the global audit console lists and expands this flag', async ({ page }) => {
   await page.goto('/audit-logs');
+  await expect(page.getByRole('columnheader', { name: '默认返回值' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: '操作时间' })).toBeVisible();
   await page.getByLabel('Flag Key 搜索').fill(flagKey);
-  // The link wraps <Text code>, whose accessible name Chromium reports as
-  // empty, so address it by its exact destination instead.
-  // Creating and then enabling the flag leaves two audit rows, both linking
-  // to the same destination.
+  // Creating and then enabling the flag leaves two audit rows; both link to
+  // the same detail destination, so pick the newest one.
   const detailLink = page.locator(`a[href="/flags/${flagId}?tab=audit"]`).first();
   await expect(detailLink).toBeVisible();
 

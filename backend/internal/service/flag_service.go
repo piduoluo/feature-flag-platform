@@ -151,12 +151,13 @@ func (s *flagService) CreateFlag(ctx context.Context, req *domain.CreateFlagRequ
 		diffBytes, _ := json.Marshal(diffMap)
 
 		auditLog := &domain.AuditLog{
-			FlagID:      flag.ID,
-			FlagKey:     flag.Key,
-			Environment: flag.Environment,
-			ActionType:  domain.ActionFlagCreated,
-			Operator:    domain.DefaultOperator,
-			DiffSummary: diffBytes,
+			FlagID:       flag.ID,
+			FlagKey:      flag.Key,
+			Environment:  flag.Environment,
+			ActionType:   domain.ActionFlagCreated,
+			Operator:     domain.DefaultOperator,
+			DefaultValue: &flag.DefaultValue,
+			DiffSummary:  diffBytes,
 		}
 
 		if err := s.auditRepo.Create(ctx, tx, auditLog); err != nil {
@@ -250,12 +251,13 @@ func (s *flagService) UpdateFlag(ctx context.Context, id int64, req *domain.Upda
 		diffBytes, _ := json.Marshal(diffMap)
 
 		auditLog := &domain.AuditLog{
-			FlagID:      flag.ID,
-			FlagKey:     flag.Key,
-			Environment: flag.Environment,
-			ActionType:  domain.ActionFlagUpdated,
-			Operator:    domain.DefaultOperator,
-			DiffSummary: diffBytes,
+			FlagID:       flag.ID,
+			FlagKey:      flag.Key,
+			Environment:  flag.Environment,
+			ActionType:   domain.ActionFlagUpdated,
+			Operator:     domain.DefaultOperator,
+			DefaultValue: &flag.DefaultValue,
+			DiffSummary:  diffBytes,
 		}
 
 		if err := s.auditRepo.Create(ctx, tx, auditLog); err != nil {
@@ -306,12 +308,13 @@ func (s *flagService) ToggleFlag(ctx context.Context, id int64, req *domain.Togg
 		diffBytes, _ := json.Marshal(diffMap)
 
 		auditLog := &domain.AuditLog{
-			FlagID:      flag.ID,
-			FlagKey:     flag.Key,
-			Environment: flag.Environment,
-			ActionType:  domain.ActionFlagToggled,
-			Operator:    domain.DefaultOperator,
-			DiffSummary: diffBytes,
+			FlagID:       flag.ID,
+			FlagKey:      flag.Key,
+			Environment:  flag.Environment,
+			ActionType:   domain.ActionFlagToggled,
+			Operator:     domain.DefaultOperator,
+			DefaultValue: &flag.DefaultValue,
+			DiffSummary:  diffBytes,
 		}
 
 		if err := s.auditRepo.Create(ctx, tx, auditLog); err != nil {

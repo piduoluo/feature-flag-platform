@@ -103,6 +103,12 @@
   - Blocked by: 18
   - Scope: 删除规则评估页顶部管理 Flag 入口及其操作栏。
 
+- **[20-audit-history-reference-layout-default-value.md](issues/20-audit-history-reference-layout-default-value.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 08B, 18
+  - Scope: 按参考稿重排全局操作历史表格列与动作图标，并由后端提供默认返回值审计快照。
+
 ## Decisions-so-far
 - 遵循 [docs/SPEC.md](../../docs/SPEC.md) 与 [docs/adr/](../../docs/adr/) 中的 ADR 0001~0006。
 - 架构采用 `Handler -> Service -> Repository -> Database` 单向流，纯内存 `Engine`。
@@ -124,3 +130,4 @@
 - [Ticket 17 完成](issues/17-flag-console-layout-typography.md)：标题与统计收紧，筛选操作按容器宽度重排，统一列表和宫格字体及分页节奏；相关测试、生产构建与多尺寸浏览器检查通过，localhost:3000 已更新。
 - [Ticket 18 完成](issues/18-remove-secondary-page-headings.md)：在线评估与全局操作历史首页顶部大标题已删除；27 项相关测试、构建及真实页面验证通过，localhost:3000 已更新。
 - [Ticket 19 完成](issues/19-remove-evaluation-flag-management-entry.md)：规则评估页的管理 Flag 入口及顶部操作栏已删除，生产构建通过，localhost:3000 已更新。
+- [Ticket 20 完成](issues/20-audit-history-reference-layout-default-value.md)：操作历史表格按参考稿改为 Flag Key / 环境 / 默认返回值 / 操作 / 操作人 / 操作时间，动作用线性图标 + 文案；后端新增 `audit_logs.default_value` 快照列并回填旧记录，四类写操作在同一事务内写入真实默认值，前后端测试与真实浏览器检查通过。

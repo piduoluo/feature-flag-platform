@@ -24,7 +24,12 @@ afterEach(() => {
   server.resetHandlers();
 });
 
-const base = { flag_id: 42, flag_key: 'checkout', environment: 'production' as const };
+const base = {
+  flag_id: 42,
+  flag_key: 'checkout',
+  environment: 'production' as const,
+  default_value: true,
+};
 
 const rulesLog: AuditLog = {
   ...base,
@@ -81,7 +86,7 @@ describe('FlagAuditHistoryTab', () => {
     expect(timeline).toBeInTheDocument();
     expect(screen.getByText('规则变更')).toBeInTheDocument();
     expect(screen.getByText('修改信息')).toBeInTheDocument();
-    expect(screen.getByText('启停切换')).toBeInTheDocument();
+    expect(screen.getByText('启停')).toBeInTheDocument();
     expect(screen.getAllByText('操作人：admin')).toHaveLength(2);
     expect(screen.getByText('操作人：alice')).toBeInTheDocument();
     expect(screen.getByText(new Date(rulesLog.created_at).toLocaleString('zh-CN'))).toBeInTheDocument();
@@ -150,7 +155,7 @@ describe('FlagAuditHistoryTab', () => {
     expect(screen.getByText('审计服务不可用')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '重新加载' }));
-    expect(await screen.findByText('启停切换')).toBeInTheDocument();
+    expect(await screen.findByText('启停')).toBeInTheDocument();
     expect(screen.queryByText('变更历史加载失败')).not.toBeInTheDocument();
   });
 

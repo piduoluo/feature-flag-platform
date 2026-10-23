@@ -273,12 +273,13 @@ func (s *ruleService) SyncRules(ctx context.Context, flagID int64, req *domain.S
 		diffBytes, _ := json.Marshal(diffMap)
 
 		auditLog := &domain.AuditLog{
-			FlagID:      flag.ID,
-			FlagKey:     flag.Key,
-			Environment: flag.Environment,
-			ActionType:  domain.ActionRulesSynced,
-			Operator:    domain.DefaultOperator,
-			DiffSummary: diffBytes,
+			FlagID:       flag.ID,
+			FlagKey:      flag.Key,
+			Environment:  flag.Environment,
+			ActionType:   domain.ActionRulesSynced,
+			Operator:     domain.DefaultOperator,
+			DefaultValue: &flag.DefaultValue,
+			DiffSummary:  diffBytes,
 		}
 		if err := s.auditRepo.Create(ctx, tx, auditLog); err != nil {
 			return domain.NewInternalError(fmt.Sprintf("failed to record audit log: %v", err))

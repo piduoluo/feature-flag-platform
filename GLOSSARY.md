@@ -29,8 +29,8 @@ _Avoid_: Rank, Order, Weight
 _Avoid_: Check, Match, Resolve, Test
 
 **Audit Log (操作历史)**:
-记录 Flag 与规则的创建、修改、批量同步（含新增/修改/删除规则精确 diff）、启停等变更行为的不可变日志，与业务变更在同一数据库事务中原子提交。无实质变化时不产生空记录。
-界面上的四个动作标签固定为四字：**新建开关**（`FLAG_CREATED`）、**修改信息**（`FLAG_UPDATED`）、**启停切换**（`FLAG_TOGGLED`）、**规则变更**（`RULES_SYNCED`）。
+记录 Flag 与规则的创建、修改、批量同步（含新增/修改/删除规则精确 diff）、启停等变更行为的不可变日志，与业务变更在同一数据库事务中原子提交。无实质变化时不产生空记录。每条日志同时冗余记录操作时的 Flag Key、运行环境、默认返回值快照与操作人，保证主配置演进后历史仍可独立阅读。
+界面的动作标签为：**新建开关**（`FLAG_CREATED`）、**修改信息**（`FLAG_UPDATED`）、**启停**（`FLAG_TOGGLED`）、**规则变更**（`RULES_SYNCED`）。
 _Avoid_: History, ChangeLog, Event, Activity
 
 **ErrorCode (业务错误码)**:

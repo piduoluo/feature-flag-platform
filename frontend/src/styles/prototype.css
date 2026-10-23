@@ -1144,33 +1144,109 @@
   .diff-summary { font-size: 12px; color: var(--text-3); }
 
   /* ============================================================
-     Audit log page
+     Global operation history (audit log)
      ============================================================ */
-  .audit-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-  .audit-filters .select { width: 186px; }
-  .audit-filters .search-plain { width: 292px; }
-  table.audit-table { min-width: 880px; }
-  .audit-table .expand-cell { width: 44px; }
-  .expand-btn {
-    width: 24px; height: 24px; display: inline-grid; place-items: center;
-    border: 1px solid #e7e3de; border-radius: 4px; background: #fff; color: #8a8580;
+  main.app-shell-content:has(> .global-audit-page) { max-width: none; margin: 0; padding: 0; }
+  .global-audit-page {
+    min-height: 100vh;
+    padding: 26px 32px 40px;
+    background: #fff;
+    color: #262626;
+  }
+  .global-audit-inner { width: 100%; max-width: 1046px; margin: 0 auto; }
+  .audit-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+
+  .audit-log-table .ant-table { background: #fff; color: #262626; font-size: 12px; }
+  .audit-log-table .ant-table-container { border: 0; }
+  .audit-log-table .ant-table-thead > tr > th {
+    padding: 8px 16px;
+    background: #fff;
+    border-bottom: 1px solid #f0f0f0;
+    color: #595959;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 22px;
+  }
+  .audit-log-table .ant-table-thead > tr > th::before { display: none !important; }
+  .audit-log-table .ant-table-thead > tr > th.ant-table-cell-scrollbar { box-shadow: none; }
+  .audit-log-table .ant-table-tbody > tr > td {
+    padding: 9px 16px;
+    background: #fff;
+    border-bottom: 1px solid #f2f2f2;
+    color: #262626;
+    font-size: 12px;
+    line-height: 22px;
+  }
+  .audit-log-table .ant-table-tbody > tr.ant-table-row:hover > td,
+  .audit-log-table .ant-table-tbody > tr > td.ant-table-cell-row-hover { background: #fafafa !important; }
+  .audit-log-table .ant-table-tbody > tr.ant-table-placeholder > td { background: #fff; border-bottom: 0; }
+  .audit-log-table .ant-table-tbody > tr.ant-table-placeholder:hover > td { background: #fff !important; }
+
+  .audit-flag-link {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    color: #262626;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .audit-flag-link:hover { color: #1d64ad; }
+
+  .audit-log-table .env-badge {
+    gap: 6px;
+    color: #1d64ad;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 22px;
+  }
+  .audit-log-table .env-badge-dot { width: 7px; height: 7px; }
+  .audit-log-table .env-badge--development { color: #1d64ad; }
+  .audit-log-table .env-badge--development .env-badge-dot { background: #1d64ad; }
+  .audit-log-table .env-badge--staging { color: var(--env-staging-text); }
+  .audit-log-table .env-badge--staging .env-badge-dot { background: var(--env-staging-dot); }
+  .audit-log-table .env-badge--production { color: var(--env-prod-text); }
+  .audit-log-table .env-badge--production .env-badge-dot { background: var(--env-prod-dot); }
+  .audit-log-table .env-badge--unknown { color: var(--text-3); }
+
+  .audit-default-value { color: #262626; font-variant-numeric: tabular-nums; }
+  .audit-default-value.is-empty { color: #8c8c8c; }
+
+  .audit-action-label { display: inline-flex; align-items: center; gap: 8px; color: #262626; white-space: nowrap; }
+  .audit-action-icon { width: 14px; height: 14px; flex: 0 0 14px; }
+  .audit-time { color: #8c8c8c; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .audit-log-table .expand-btn {
+    width: 24px;
+    height: 24px;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
+    background: #fff;
+    color: #8c8c8c;
     transition: border-color .14s, color .14s, background .14s;
   }
-  .expand-btn:hover { border-color: #cfc9c3; color: #171717; background: #fbfaf8; }
-  .expand-btn .i { width: 12px; height: 12px; }
-  .expand-btn.open { background: var(--brand-soft); border-color: var(--brand-line); color: var(--brand-ink); }
-  .audit-detail-row > td,
-  .ant-table-expanded-row.audit-detail-row > td {
+  .audit-log-table .expand-btn:hover { border-color: #d9d9d9; color: #262626; background: #fafafa; }
+  .audit-log-table .expand-btn.open { border-color: #d9d9d9; color: #262626; background: #f5f5f5; }
+  .audit-expand-icon {
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .audit-log-table .audit-detail-row > td,
+  .audit-log-table .ant-table-expanded-row.audit-detail-row > td {
     padding: 0 !important;
-    background: var(--surface-muted) !important;
+    background: #fafafa !important;
   }
-  .audit-detail {
-    padding: 12px 20px 14px 48px;
-  }
-  .audit-key { display: inline-flex; align-items: center; gap: 6px; padding: 0; background: none; text-align: left; min-width: 0; max-width: 100%; }
-  .audit-key .inline-code { transition: border-color .14s, color .14s; }
-  .audit-key:hover .inline-code { border-color: #d8d2cb; color: var(--brand-ink); }
-  .audit-muted { color: #8a8580; font-size: 12px; white-space: nowrap; }
+  .audit-log-table .audit-detail { padding: 14px 20px 16px 72px; }
+
+  .audit-log-table .ant-pagination { margin: 20px 0 0; }
+  .audit-log-table .ant-pagination .ant-pagination-total-text { color: #8c8c8c; }
 
   /* ============================================================
      Evaluation console
@@ -1398,9 +1474,8 @@
     .panel-head { height: 50px; padding: 0 16px; }
     .dirty-bar { flex-direction: column; align-items: stretch; gap: 10px; bottom: 10px; }
     .dirty-bar-actions { justify-content: flex-end; }
-    .audit-filters { gap: 8px; }
-    .audit-filters .select { flex: 1 1 150px; width: auto; }
-    .audit-filters .search-plain { flex: 1 1 100%; width: 100%; }
+    .global-audit-page { padding: 20px 18px 36px; }
+    .audit-toolbar { gap: 8px; margin-bottom: 14px; }
   }
   @media (max-width: 700px) {
     .page-card { padding: 18px 14px; }
@@ -1441,7 +1516,14 @@
     .drawer-title { font-size: 15px; }
     .drawer-actions .btn { padding: 0 10px; }
     .drawer-body { padding: 18px 16px; }
-    .audit-detail { padding: 14px 14px 16px 18px; }
+    .global-audit-page { padding: 16px 12px 32px; }
+    .audit-toolbar > .ant-space { display: flex; width: 100%; }
+    .audit-toolbar .ant-space-item { flex: 1 1 100%; }
+    .audit-toolbar .ant-select,
+    .audit-toolbar .ant-input-affix-wrapper { width: 100% !important; }
+    .audit-log-table .ant-table-thead > tr > th,
+    .audit-log-table .ant-table-tbody > tr > td { padding-left: 12px; padding-right: 12px; }
+    .audit-log-table .audit-detail { padding: 14px 14px 16px 18px; }
     .result-panel { padding: 16px; gap: 10px; }
     .result-title { font-size: 16px; }
     .result-value { font-size: 21px; }
@@ -1460,7 +1542,6 @@
     .detail-meta { font-size: 12px; }
     .detail-sub { font-size: 11.5px; }
     .rule-actions .btn { flex: 1 1 calc(50% - 4px); }
-    .audit-filters .select { flex: 1 1 100%; }
     .modal-foot { gap: 6px; }
     .modal-foot .btn { flex: 1 1 100%; }
     .modal.text-modal .modal-foot { flex-wrap: wrap; }
