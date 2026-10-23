@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useSearchParams, useNavigate, useLocation, Link } from 'react-router-dom';
+import { useSearchParams, useLocation, Link } from 'react-router-dom';
 import {
   Card,
   Row,
@@ -173,7 +173,6 @@ function parseContextInput(source: string): ContextInputCheck {
 
 export const EvaluationConsolePage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const location = useLocation();
   const [entry] = useState(() => resolveEntryQuery(searchParams));
 
@@ -562,18 +561,6 @@ export const EvaluationConsolePage: React.FC = () => {
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-      <div
-        style={{
-          marginBottom: 20,
-          display: 'flex',
-          justifyContent: 'flex-end',
-        }}
-      >
-        <Button icon={<FlagOutlined />} onClick={() => navigate('/flags')}>
-          管理 Feature Flags
-        </Button>
-      </div>
-
       {entry.hasEntryContext && (
         <Card
           data-testid="context-banner"

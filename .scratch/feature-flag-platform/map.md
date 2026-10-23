@@ -97,6 +97,12 @@
   - Blocked by: None
   - Scope: 删除在线评估与全局操作历史页顶部大标题，收掉标题遗留间距。
 
+- **[19-remove-evaluation-flag-management-entry.md](issues/19-remove-evaluation-flag-management-entry.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 18
+  - Scope: 删除规则评估页顶部管理 Flag 入口及其操作栏。
+
 ## Decisions-so-far
 - 遵循 [docs/SPEC.md](../../docs/SPEC.md) 与 [docs/adr/](../../docs/adr/) 中的 ADR 0001~0006。
 - 架构采用 `Handler -> Service -> Repository -> Database` 单向流，纯内存 `Engine`。
@@ -117,3 +123,4 @@
 - [Ticket 16 完成](issues/16-merge-flagshow.md)：主分支列表复刻与 melody/flagshow 宫格改动已完成整合，前后端全量测试、生产构建和真实浏览器检查通过。
 - [Ticket 17 完成](issues/17-flag-console-layout-typography.md)：标题与统计收紧，筛选操作按容器宽度重排，统一列表和宫格字体及分页节奏；相关测试、生产构建与多尺寸浏览器检查通过，localhost:3000 已更新。
 - [Ticket 18 完成](issues/18-remove-secondary-page-headings.md)：在线评估与全局操作历史首页顶部大标题已删除；27 项相关测试、构建及真实页面验证通过，localhost:3000 已更新。
+- [Ticket 19 完成](issues/19-remove-evaluation-flag-management-entry.md)：规则评估页的管理 Flag 入口及顶部操作栏已删除，生产构建通过，localhost:3000 已更新。
