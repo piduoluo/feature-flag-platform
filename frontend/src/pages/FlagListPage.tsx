@@ -10,13 +10,13 @@ import {
   Alert,
   Switch,
   Pagination,
+  Skeleton,
   message,
 } from 'antd';
 import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  ThunderboltOutlined,
   AppstoreOutlined,
   BarsOutlined,
   CopyOutlined,
@@ -59,7 +59,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
   const pageParam = Number(searchParams.get('page'));
   const currentPage = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
   const sizeParam = Number(searchParams.get('page_size'));
-  const pageSize = [10, 20, 50].includes(sizeParam) ? sizeParam : 10;
+  const pageSize = [12, 24, 48].includes(sizeParam) ? sizeParam : 12;
 
   const [searchInput, setSearchInput] = useState(searchText);
   const [flags, setFlags] = useState<Flag[]>([]);
@@ -131,8 +131,8 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
 
   const handlePageChange = (page: number, size: number) => {
     const nextParams = new URLSearchParams(searchParams);
-    const nextSize = [10, 20, 50].includes(size) ? size : pageSize;
-    if (nextSize !== 10) {
+    const nextSize = [12, 24, 48].includes(size) ? size : pageSize;
+    if (nextSize !== 12) {
       nextParams.set('page_size', String(nextSize));
     } else {
       nextParams.delete('page_size');
@@ -452,99 +452,88 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
         {/* Content: List (Table) vs Grid */}
         {viewMode === 'grid' ? (
           <div>
-            {flags.length > 0 ? (
-              <>
-                <div className="flag-grid" aria-label="Flag 宫格视图">
-                {flags.map((flag) => (
-                  <article
-                    key={flag.id}
-                    className="flag-card"
-                    role="article"
-                    tabIndex={0}
-                    onClick={() => openFlagDetail(flag.id)}
-                  >
-                    <div className="flag-card-top">
-                      <span className="flag-card-mark" aria-hidden="true">
-                        <svg className="i" viewBox="0 0 24 24">
-                          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1v12Z" />
-                          <path d="M4 22v-7" />
-                        </svg>
-                      </span>
-                      <div className="flag-card-key" onClick={(e) => e.stopPropagation()}>
-                        <span className="code-chip">
-                          <span className="key-text">{flag.key}</span>
-                          <button
-                            type="button"
-                            className="copy-mini"
-                            aria-label="复制 Key"
-                            onClick={(e) => copyKey(flag.key, e)}
-                          >
-                            <CopyOutlined />
-                          </button>
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        className="icon-btn ghost sm"
-                        aria-label="在线评估"
-                        data-tip="在线评估"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(
-                            `/evaluations?flag_key=${encodeURIComponent(flag.key)}&environment=${flag.environment}&flag_id=${flag.id}`
-                          );
-                        }}
-                        style={{ marginLeft: 'auto' }}
-                      >
-                        <ThunderboltOutlined />
-                      </button>
-                    </div>
-
-                    <div className="flag-card-name" style={{ fontWeight: 600, fontSize: 14, margin: '8px 0 4px' }}>
-                      {flag.name}
-                    </div>
-
-                    <div
-                      className="flag-card-desc"
-                      style={{ fontSize: 12, color: '#847e78', minHeight: 36, marginBottom: 10 }}
-                    >
-                      {flag.description || '暂无描述'}
-                    </div>
-
-                    <div className="flag-card-meta" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
-                      <EnvironmentBadge environment={flag.environment} />
-                      <StatusBadge enabled={flag.enabled} />
-                    </div>
-
-                    <div
-                      className="flag-card-bottom"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        paddingTop: 10,
-                        borderTop: '1px solid #f2f0ed',
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div style={{ fontSize: 11, color: '#8a8580', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <span>默认值:</span>
-                        <BooleanValueTag value={flag.default_value} />
-                        <span style={{ marginLeft: 4 }}>· {formatDateTime(flag.updated_at).datePart}</span>
-                      </div>
-                      <Tooltip title={flag.enabled ? '点击停用' : '点击启用'}>
-                        <Switch
-                          size="small"
-                          checked={flag.enabled}
-                          loading={togglingId === flag.id}
-                          disabled={togglingId === flag.id}
-                          onChange={(checked) => handleInlineToggle(flag, checked)}
-                        />
-                      </Tooltip>
-                    </div>
-                  </article>
+            {loading && flags.length === 0 ? (
+              <div className="flag-grid" aria-label="Flag 宫格视图" aria-busy="true">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div className="flag-card flag-card--skeleton" key={index} aria-hidden="true">
+                    <Skeleton active title={{ width: '46%' }} paragraph={{ rows: 1, width: ['64%'] }} />
+                  </div>
                 ))}
               </div>
+            ) : flags.length > 0 ? (
+              <>
+                <div
+                  className={`flag-grid${loading ? ' is-loading' : ''}`}
+                  aria-label="Flag 宫格视图"
+                  aria-busy={loading}
+                >
+                  {flags.map((flag) => (
+                    <article
+                      key={flag.id}
+                      className="flag-card"
+                      role="article"
+                      tabIndex={0}
+                      aria-label={`${flag.name} ${flag.key}`}
+                      onClick={() => openFlagDetail(flag.id)}
+                      onKeyDown={(event) => {
+                        if (event.target !== event.currentTarget) return;
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          openFlagDetail(flag.id);
+                        }
+                      }}
+                    >
+                      <div className="flag-card-head">
+                        <div className="flag-card-name" title={flag.name}>
+                          {flag.name}
+                        </div>
+                        <div
+                          className="flag-card-switch"
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          <Tooltip title={flag.enabled ? '点击停用' : '点击启用'}>
+                            <Switch
+                              checked={flag.enabled}
+                              loading={togglingId === flag.id}
+                              disabled={togglingId === flag.id}
+                              onChange={(checked) => handleInlineToggle(flag, checked)}
+                            />
+                          </Tooltip>
+                        </div>
+                      </div>
+
+                      <div className="flag-card-keyline">
+                        <span className="flag-card-key" title={flag.key}>
+                          {flag.key}
+                        </span>
+                        <button
+                          type="button"
+                          className="flag-card-copy"
+                          aria-label="复制 Key"
+                          title="复制 Key"
+                          onClick={(event) => copyKey(flag.key, event)}
+                        >
+                          <CopyOutlined />
+                        </button>
+                        <span className="flag-card-sep" aria-hidden="true" />
+                        <span className="flag-card-default">
+                          默认返回值： <code>{flag.default_value ? 'true' : 'false'}</code>
+                        </span>
+                      </div>
+
+                      <div className="flag-card-rule" aria-hidden="true" />
+
+                      <div className="flag-card-meta">
+                        <EnvironmentBadge environment={flag.environment} />
+                        <StatusBadge enabled={flag.enabled} />
+                        <span className="flag-card-updated">
+                          更新于 {formatDateTime(flag.updated_at).datePart}
+                        </span>
+                      </div>
+                    </article>
+                  ))}
+                </div>
               {flags.length > 0 && (
                 <div
                   style={{
@@ -564,7 +553,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                     pageSize={pageSize}
                     total={total}
                     showSizeChanger
-                    pageSizeOptions={['10', '20', '50']}
+                    pageSizeOptions={['12', '24', '48']}
                     onChange={handlePageChange}
                     size="small"
                   />
@@ -624,7 +613,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
               pageSize: pageSize,
               total: total,
               showSizeChanger: true,
-              pageSizeOptions: ['10', '20', '50'],
+              pageSizeOptions: ['12', '24', '48'],
               showTotal: (totalCount) => `共 ${totalCount} 条记录`,
               onChange: handlePageChange,
             }}

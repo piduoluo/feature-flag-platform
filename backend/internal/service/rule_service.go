@@ -284,6 +284,12 @@ func (s *ruleService) SyncRules(ctx context.Context, flagID int64, req *domain.S
 			return domain.NewInternalError(fmt.Sprintf("failed to record audit log: %v", err))
 		}
 
+		// 6) Refresh the flag's updated_at so the list's "last updated" column
+		// reflects rule changes. No-op syncs return before this transaction.
+		if err := s.flagRepo.Touch(ctx, tx, flagID); err != nil {
+			return domain.NewInternalError(fmt.Sprintf("failed to refresh flag updated_at: %v", err))
+		}
+
 		return nil
 	})
 

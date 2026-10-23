@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -16,6 +17,9 @@ type FlagRepository interface {
 	GetByKeyAndEnv(ctx context.Context, key, env string) (*domain.Flag, error)
 	List(ctx context.Context, query domain.FlagListQuery) ([]*domain.Flag, int64, domain.FlagStats, error)
 	Update(ctx context.Context, tx *gorm.DB, flag *domain.Flag) error
+	// Touch refreshes the flag's updated_at after rule-level changes, without
+	// rewriting the flag's own columns. It participates in the caller's transaction.
+	Touch(ctx context.Context, tx *gorm.DB, flagID int64) error
 	WithTransaction(ctx context.Context, fn func(tx *gorm.DB) error) error
 }
 
@@ -134,4 +138,16 @@ func (r *flagRepository) Update(ctx context.Context, tx *gorm.DB, flag *domain.F
 		db = tx.WithContext(ctx)
 	}
 	return db.Save(flag).Error
+}
+
+// Touch bumps updated_at in place so rule edits surface in the flag list's
+// "last updated" column while leaving name/description/enabled untouched.
+func (r *flagRepository) Touch(ctx context.Context, tx *gorm.DB, flagID int64) error {
+	db := r.db.WithContext(ctx)
+	if tx != nil {
+		db = tx.WithContext(ctx)
+	}
+	return db.Model(&domain.Flag{}).
+		Where("id = ?", flagID).
+		Update("updated_at", time.Now()).Error
 }
