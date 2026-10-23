@@ -2,13 +2,8 @@
 --
 -- Persist the flag's default return value alongside each audit record so the
 -- "默认返回值" column stays stable even after the flag is reconfigured later.
--- Rows written before this column existed are backfilled once from the current
--- flag configuration; the UPDATE is idempotent because new rows are never NULL.
+-- Rows written before this column existed remain NULL: the current flag
+-- configuration cannot establish the default value of a historical operation.
+-- New operations record their snapshot in the same transaction as the change.
 
 ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS default_value BOOLEAN;
-
-UPDATE audit_logs AS a
-SET default_value = f.default_value
-FROM flags AS f
-WHERE f.id = a.flag_id
-  AND a.default_value IS NULL;

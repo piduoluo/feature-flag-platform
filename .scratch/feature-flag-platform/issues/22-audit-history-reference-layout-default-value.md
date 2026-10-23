@@ -7,9 +7,9 @@
 
 **Status:** resolved
 
-**Progress:** 后端为 `audit_logs` 增加可空的 `default_value` 快照列（`000002_audit_log_default_value.up.sql`，对旧记录做一次性回填），四类写操作与种子数据在审计写入时记录操作后的默认值；`GET /api/v1/audit-logs` 直接返回 `default_value`。前端重写全局审计表格的列、行高、字号、分隔线与动作图标，新增 `AuditActionLabel` 共享组件，动作文案统一为「新建开关 / 修改信息 / 启停 / 规则变更」。筛选、分页、MSW 路由集成测试与 Playwright 冒烟断言同步更新。
+**Progress:** 后端为 `audit_logs` 增加可空的 `default_value` 快照列（`000002_audit_log_default_value.up.sql`，旧记录保留 null，不从当前配置推断历史值），四类写操作与种子数据在审计写入时记录操作后的默认值；`GET /api/v1/audit-logs` 直接返回 `default_value`。前端重写全局审计表格的列、行高、字号、分隔线与动作图标，新增 `AuditActionLabel` 共享组件，动作文案统一为「新建开关 / 修改信息 / 启停 / 规则变更」。筛选、分页、MSW 路由集成测试与 Playwright 冒烟断言同步更新。
 
-- [x] `AuditLog` 增加 `default_value` 快照字段，旧记录升级时从 `flags.default_value` 一次性回填，新记录永不覆盖历史值
+- [x] `AuditLog` 增加 `default_value` 快照字段，旧记录升级时保留 `null`，新记录永不覆盖历史值
 - [x] 创建、修改、启停、规则同步四条写路径在审计日志中记录操作后的默认返回值；种子审计记录同样携带该值
 - [x] 全局审计 API 与 Flag 详情审计 API 的响应项包含 `default_value`
 - [x] 全局表格列改为 Flag Key / 环境 / 默认返回值 / 操作 / 操作人 / 操作时间，环境使用蓝色圆点，操作使用线性图标 + 文案

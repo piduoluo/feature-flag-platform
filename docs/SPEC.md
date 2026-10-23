@@ -117,7 +117,7 @@
     - `environment` (冗余字符串, 必填)
     - `action_type` (枚举字符串: `FLAG_CREATED`, `FLAG_UPDATED`, `FLAG_TOGGLED`, `RULES_SYNCED`)
     - `operator` (固定操作者标识，如 `"admin"`)
-    - `default_value` (布尔快照，操作发生时的默认返回值；升级前的旧记录可为 `null`)
+    - `default_value` (布尔快照，操作发生时的默认返回值；升级前未记录快照的旧记录保留 `null`，不得使用当前 Flag 默认值回填)
     - `diff_summary` (JSONB 结构化摘要)
     - `created_at` (时间戳)
   - 约束：由事务管理器保证与业务变更在单一事务内原子持久化。
