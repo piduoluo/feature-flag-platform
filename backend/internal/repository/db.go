@@ -1,8 +1,12 @@
 package repository
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -11,6 +15,15 @@ import (
 
 	"feature-flag-platform/internal/domain"
 )
+
+// migrationDirs are checked in order so the same code works when the server
+// runs from the repo root, from backend/, or from the Docker image (/app).
+var migrationDirs = []string{
+	"migrations",
+	"backend/migrations",
+	"../../migrations",
+	"../../../backend/migrations",
+}
 
 // InitDB initializes GORM PostgreSQL connection.
 func InitDB(dsn string) (*gorm.DB, error) {
@@ -34,20 +47,10 @@ func InitDB(dsn string) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(50)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// Execute raw SQL migration if found to guarantee explicit constraints
-	migrationPaths := []string{
-		"migrations/000001_init.up.sql",
-		"backend/migrations/000001_init.up.sql",
-		"../../migrations/000001_init.up.sql",
-		"../../../backend/migrations/000001_init.up.sql",
-	}
-	for _, p := range migrationPaths {
-		if content, err := os.ReadFile(p); err == nil {
-			if _, err := sqlDB.Exec(string(content)); err != nil {
-				return nil, fmt.Errorf("failed to run SQL migration from %s: %w", p, err)
-			}
-			break
-		}
+	// Execute raw SQL migrations in filename order to guarantee explicit
+	// constraints and additive schema upgrades (e.g. new audit columns).
+	if err := runMigrations(sqlDB); err != nil {
+		return nil, err
 	}
 
 	// Ensure schema consistency with GORM models
@@ -56,6 +59,39 @@ func InitDB(dsn string) (*gorm.DB, error) {
 	}
 
 	return db, nil
+}
+
+// runMigrations applies every *.up.sql file from the first migration directory
+// that exists. The statements are written to be idempotent because this repo
+// does not keep a schema_migrations ledger.
+func runMigrations(sqlDB *sql.DB) error {
+	for _, dir := range migrationDirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+
+		names := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".up.sql") {
+				names = append(names, entry.Name())
+			}
+		}
+		sort.Strings(names)
+
+		for _, name := range names {
+			path := filepath.Join(dir, name)
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("failed to read SQL migration from %s: %w", path, err)
+			}
+			if _, err := sqlDB.Exec(string(content)); err != nil {
+				return fmt.Errorf("failed to run SQL migration from %s: %w", path, err)
+			}
+		}
+		return nil
+	}
+	return nil
 }
 
 // GetDSNFromEnv constructs PostgreSQL DSN from environment variables.

@@ -346,6 +346,7 @@ const auditRecords: AuditLog[] = [
     environment: 'production',
     action_type: 'RULES_SYNCED',
     operator: 'admin',
+    default_value: true,
     created_at: '2026-01-02T03:04:05Z',
     diff_summary: {
       action: 'rules_synced',
@@ -361,6 +362,7 @@ const auditRecords: AuditLog[] = [
     environment: 'production',
     action_type: 'FLAG_TOGGLED',
     operator: 'admin',
+    default_value: true,
     created_at: '2026-01-01T09:00:00Z',
     diff_summary: { action: 'toggled', old_enabled: false, new_enabled: true },
   },

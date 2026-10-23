@@ -187,11 +187,11 @@ test('UI-R 08: an unsaved draft triggers the native beforeunload prompt', async 
 
 test('Ticket 08B: the global audit console lists and expands this flag', async ({ page }) => {
   await page.goto('/audit-logs');
+  await expect(page.getByRole('columnheader', { name: '默认返回值' })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: '操作时间' })).toBeVisible();
   await page.getByLabel('Flag Key 搜索').fill(flagKey);
-  // The link wraps <Text code>, whose accessible name Chromium reports as
-  // empty, so address it by its exact destination instead.
-  // Creating and then enabling the flag leaves two audit rows, both linking
-  // to the same destination.
+  // Creating and then enabling the flag leaves two audit rows; both link to
+  // the same detail destination, so pick the newest one.
   const detailLink = page.locator(`a[href="/flags/${flagId}?tab=audit"]`).first();
   await expect(detailLink).toBeVisible();
 

@@ -23,9 +23,10 @@ func createFlagForAuditTest(t *testing.T, router *gin.Engine, key string, env do
 	t.Helper()
 
 	body, err := json.Marshal(domain.CreateFlagRequest{
-		Key:         key,
-		Name:        "Audit Handler Test Flag",
-		Environment: env,
+		Key:          key,
+		Name:         "Audit Handler Test Flag",
+		Environment:  env,
+		DefaultValue: true,
 	})
 	require.NoError(t, err)
 
@@ -102,6 +103,7 @@ func TestAuditHandler_ListAuditLogs_ReturnsEnvelopeWithFlagID(t *testing.T) {
 	assert.Equal(t, string(domain.EnvProduction), newest["environment"])
 	assert.Equal(t, domain.ActionFlagCreated, newest["action_type"])
 	assert.Equal(t, domain.DefaultOperator, newest["operator"])
+	assert.Equal(t, true, newest["default_value"], "audit list must expose the default_value snapshot")
 	assert.Contains(t, newest, "diff_summary")
 	assert.Contains(t, newest, "created_at")
 
@@ -111,6 +113,47 @@ func TestAuditHandler_ListAuditLogs_ReturnsEnvelopeWithFlagID(t *testing.T) {
 	assert.Equal(t, float64(1), defaultTotal)
 	assert.Equal(t, float64(1), defaultPage)
 	assert.Equal(t, float64(20), defaultPageSize)
+}
+
+func updateFlagForAuditTest(t *testing.T, router *gin.Engine, flagID int64, name string, defaultValue bool) {
+	t.Helper()
+
+	body, err := json.Marshal(domain.UpdateFlagRequest{
+		Name:         name,
+		Description:  "updated by audit handler test",
+		DefaultValue: defaultValue,
+	})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("/api/v1/flags/%d", flagID), bytes.NewBuffer(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+}
+
+func TestAuditHandler_ListAuditLogs_SnapshotsDefaultValuePerOperation(t *testing.T) {
+	router := setupTestServer(t)
+
+	key := fmt.Sprintf("h_audit_default_%d", time.Now().UnixNano())
+	flagID := createFlagForAuditTest(t, router, key, domain.EnvDevelopment)
+	updateFlagForAuditTest(t, router, flagID, "Audit Handler Test Flag Renamed", false)
+
+	_, resp := getAuditLogsRaw(t, router, "?flag_key="+key+"&page_size=100")
+	items, total, _, _ := auditListData(t, resp)
+	assert.Equal(t, float64(2), total)
+	require.Len(t, items, 2)
+
+	updated, ok := items[0].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, domain.ActionFlagUpdated, updated["action_type"])
+	assert.Equal(t, false, updated["default_value"])
+
+	created, ok := items[1].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, domain.ActionFlagCreated, created["action_type"])
+	assert.Equal(t, true, created["default_value"], "historical rows must keep the value from their own operation")
 }
 
 func TestAuditHandler_ListAuditLogs_FiltersByEnvironment(t *testing.T) {

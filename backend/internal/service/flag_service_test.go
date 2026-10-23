@@ -59,6 +59,8 @@ func TestFlagService_CreateFlag_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, logs, 1)
 	assert.Equal(t, domain.ActionFlagCreated, logs[0].ActionType)
+	require.NotNil(t, logs[0].DefaultValue, "audit log must snapshot the flag default value")
+	assert.True(t, *logs[0].DefaultValue)
 	assert.JSONEq(t, fmt.Sprintf(`{
 		"action": "created",
 		"key": %q,
@@ -246,6 +248,10 @@ func TestFlagService_UpdateFlag_Success(t *testing.T) {
 	require.GreaterOrEqual(t, len(logs), 2)
 	assert.Equal(t, domain.ActionFlagUpdated, logs[0].ActionType)
 	assert.Equal(t, "admin", logs[0].Operator)
+	require.NotNil(t, logs[0].DefaultValue, "updated audit log must snapshot the new default value")
+	assert.True(t, *logs[0].DefaultValue)
+	require.NotNil(t, logs[1].DefaultValue, "created audit log must keep its original default value")
+	assert.False(t, *logs[1].DefaultValue)
 }
 
 func boolPtr(b bool) *bool {
@@ -279,6 +285,8 @@ func TestFlagService_ToggleFlag_Success(t *testing.T) {
 	logs, err := flagService.GetAuditLogs(ctx, created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, domain.ActionFlagToggled, logs[0].ActionType)
+	require.NotNil(t, logs[0].DefaultValue)
+	assert.False(t, *logs[0].DefaultValue)
 }
 
 func TestFlagService_UpdateAndToggle_NotFound(t *testing.T) {

@@ -28,7 +28,7 @@ export interface ActionMeta {
 const ACTION_META: Record<string, ActionMeta> = {
   FLAG_CREATED: { label: '新建开关', color: 'gray' },
   FLAG_UPDATED: { label: '修改信息', color: 'gray' },
-  FLAG_TOGGLED: { label: '启停切换', color: 'gray' },
+  FLAG_TOGGLED: { label: '启停', color: 'gray' },
   RULES_SYNCED: { label: '规则变更', color: 'gray' },
   RULES_SEED_SYNCED: { label: '规则变更', color: 'gray' },
 };

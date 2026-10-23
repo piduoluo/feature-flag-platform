@@ -45,9 +45,10 @@ func TestRuleService_SyncRules_CreateAndOrder(t *testing.T) {
 
 	key := fmt.Sprintf("rules_order_%d", time.Now().UnixNano())
 	flag, err := flagService.CreateFlag(ctx, &domain.CreateFlagRequest{
-		Key:         key,
-		Name:        "Rules Order Flag",
-		Environment: domain.EnvDevelopment,
+		Key:          key,
+		Name:         "Rules Order Flag",
+		Environment:  domain.EnvDevelopment,
+		DefaultValue: true,
 	})
 	require.NoError(t, err)
 
@@ -81,6 +82,8 @@ func TestRuleService_SyncRules_CreateAndOrder(t *testing.T) {
 	logs, err := flagService.GetAuditLogs(ctx, flag.ID)
 	require.NoError(t, err)
 	assert.Equal(t, domain.ActionRulesSynced, logs[0].ActionType)
+	require.NotNil(t, logs[0].DefaultValue, "rule audit log must snapshot the flag default value")
+	assert.True(t, *logs[0].DefaultValue)
 }
 
 func TestRuleService_SyncRules_PrioritySwap(t *testing.T) {

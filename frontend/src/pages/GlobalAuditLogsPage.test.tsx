@@ -80,6 +80,7 @@ const createdLog: AuditLog = {
   environment: 'production',
   action_type: 'FLAG_CREATED',
   operator: 'alice',
+  default_value: true,
   created_at: createdAt,
   diff_summary: {
     action: 'flag_created',
@@ -95,7 +96,7 @@ beforeEach(() => {
 });
 
 describe('GlobalAuditLogsPage 首屏', () => {
-  it('通过 GET /api/v1/audit-logs 加载第一页并渲染 Flag Key、环境、动作、操作人与时间', async () => {
+  it('通过 GET /api/v1/audit-logs 加载第一页并渲染 Flag Key、环境、默认返回值、操作、操作人与操作时间', async () => {
     serveAuditLogs([createdLog]);
     renderGlobalAuditLogsPage();
 
@@ -104,10 +105,20 @@ describe('GlobalAuditLogsPage 首屏', () => {
     const link = await screen.findByRole('link', { name: 'checkout_v2' });
     expect(link).toHaveAttribute('href', '/flags/42?tab=audit');
 
-    expect(screen.getByText('Production')).toBeInTheDocument();
-    expect(screen.getByText('新建开关')).toBeInTheDocument();
-    expect(screen.getByText('alice')).toBeInTheDocument();
-    expect(screen.getByText(new Date(createdAt).toLocaleString('zh-CN'))).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Flag Key' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '环境' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '默认返回值' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '操作' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '操作人' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '操作时间' })).toBeInTheDocument();
+
+    const row = link.closest('tr');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText('Production')).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText('true')).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText('新建开关')).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText('alice')).toBeInTheDocument();
+    expect(within(row as HTMLElement).getByText(new Date(createdAt).toLocaleString('zh-CN'))).toBeInTheDocument();
     expect(screen.getByText('共 1 条记录')).toBeInTheDocument();
 
     expect(sentQueries).toHaveLength(1);
@@ -126,6 +137,7 @@ const devToggledLog: AuditLog = {
   environment: 'development',
   action_type: 'FLAG_TOGGLED',
   operator: 'bob',
+  default_value: false,
   created_at: '2026-01-04T10:00:00Z',
   diff_summary: { action: 'flag_toggled', old_enabled: true, new_enabled: false },
 };
@@ -137,6 +149,7 @@ const rulesSyncedLog: AuditLog = {
   environment: 'production',
   action_type: 'RULES_SYNCED',
   operator: 'carol',
+  default_value: true,
   created_at: '2026-01-03T10:00:00Z',
   diff_summary: {
     action: 'rules_synced',
@@ -238,6 +251,7 @@ const seedSyncedLog: AuditLog = {
   environment: 'development',
   action_type: 'RULES_SYNCED',
   operator: 'seed',
+  default_value: true,
   created_at: '2026-01-02T10:00:00Z',
   diff_summary: { action: 'rules_seed_synced', rule_count: 2 },
 };
@@ -249,6 +263,7 @@ const malformedRulesLog: AuditLog = {
   environment: 'development',
   action_type: 'RULES_SYNCED',
   operator: 'carol',
+  default_value: true,
   created_at: '2026-01-02T09:00:00Z',
   diff_summary: { action: 'rules_synced', added: 'not-an-array' },
 };
@@ -350,6 +365,16 @@ describe('GlobalAuditLogsPage 三态与直达跳转', () => {
 
     expect(await screen.findByText('暂无审计记录')).toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('升级前的记录缺少默认值快照时展示占位符而不是 undefined', async () => {
+    serveAuditLogs([{ ...createdLog, id: 77, default_value: null }]);
+    renderGlobalAuditLogsPage();
+
+    const link = await screen.findByRole('link', { name: 'checkout_v2' });
+    const row = link.closest('tr');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText('—')).toBeInTheDocument();
   });
 
   it('请求失败时展示可重试的 Alert，点击“重新加载”后恢复列表', async () => {

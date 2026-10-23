@@ -117,6 +117,7 @@
     - `environment` (冗余字符串, 必填)
     - `action_type` (枚举字符串: `FLAG_CREATED`, `FLAG_UPDATED`, `FLAG_TOGGLED`, `RULES_SYNCED`)
     - `operator` (固定操作者标识，如 `"admin"`)
+    - `default_value` (布尔快照，操作发生时的默认返回值；升级前的旧记录可为 `null`)
     - `diff_summary` (JSONB 结构化摘要)
     - `created_at` (时间戳)
   - 约束：由事务管理器保证与业务变更在单一事务内原子持久化。
@@ -243,7 +244,7 @@
      - Data: `[AuditLog]` 列表（按 `created_at DESC` 排序）
   9. `GET /api/v1/audit-logs?page=1&page_size=20&environment=&flag_key=&action_type=`
      - 跨 Flag 全局审计分页查询；`environment`、`flag_key`（大小写不敏感子串）、`action_type`（`FLAG_CREATED` / `FLAG_UPDATED` / `FLAG_TOGGLED` / `RULES_SYNCED`）均为可选过滤条件
-     - Data: `{ "items": [AuditLog], "total": 12, "page": 1, "page_size": 20 }`，按 `created_at DESC, id DESC` 排序；`items` 每项显式包含 `flag_id`，供前端跳转 `/flags/:id?tab=audit`
+     - Data: `{ "items": [AuditLog], "total": 12, "page": 1, "page_size": 20 }`，按 `created_at DESC, id DESC` 排序；`items` 每项显式包含 `flag_id`、`flag_key`、`environment`、`default_value`（操作时的默认返回值快照）、`action_type`、`operator`、`diff_summary` 与 `created_at`，其中 `flag_id` 供前端跳转 `/flags/:id?tab=audit`
      - 非法参数（`page < 1`、`page_size` 不在 `1..100`、未知 `environment` 或 `action_type`）返回 `VALIDATION_ERROR`
 
 ### 6. 前端状态与交互验收标准 (Frontend Acceptance Criteria)

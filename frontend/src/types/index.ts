@@ -34,6 +34,8 @@ export interface AuditLog {
   environment: Environment;
   action_type: 'FLAG_CREATED' | 'FLAG_UPDATED' | 'FLAG_TOGGLED' | 'RULES_SYNCED' | string;
   operator: string;
+  /** 操作发生时的默认返回值快照；升级前的旧记录可能为 null。 */
+  default_value: boolean | null;
   diff_summary: Record<string, unknown>;
   created_at: string;
 }

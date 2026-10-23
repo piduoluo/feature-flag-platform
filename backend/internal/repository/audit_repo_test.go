@@ -16,6 +16,10 @@ import (
 	"feature-flag-platform/internal/repository"
 )
 
+func boolPtr(value bool) *bool {
+	return &value
+}
+
 func setupAuditRepoTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 
@@ -42,31 +46,34 @@ func TestAuditRepository_ListAll_FiltersOrderAndPagination(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 	seed := []*domain.AuditLog{
 		{
-			FlagID:      101,
-			FlagKey:     prefix + "_alpha",
-			Environment: domain.EnvDevelopment,
-			ActionType:  domain.ActionFlagCreated,
-			Operator:    domain.DefaultOperator,
-			DiffSummary: json.RawMessage(`{"action":"created"}`),
-			CreatedAt:   now.Add(-2 * time.Hour),
+			FlagID:       101,
+			FlagKey:      prefix + "_alpha",
+			Environment:  domain.EnvDevelopment,
+			ActionType:   domain.ActionFlagCreated,
+			Operator:     domain.DefaultOperator,
+			DefaultValue: boolPtr(true),
+			DiffSummary:  json.RawMessage(`{"action":"created"}`),
+			CreatedAt:    now.Add(-2 * time.Hour),
 		},
 		{
-			FlagID:      102,
-			FlagKey:     prefix + "_beta",
-			Environment: domain.EnvProduction,
-			ActionType:  domain.ActionFlagToggled,
-			Operator:    domain.DefaultOperator,
-			DiffSummary: json.RawMessage(`{"action":"toggled","new_enabled":true}`),
-			CreatedAt:   now,
+			FlagID:       102,
+			FlagKey:      prefix + "_beta",
+			Environment:  domain.EnvProduction,
+			ActionType:   domain.ActionFlagToggled,
+			Operator:     domain.DefaultOperator,
+			DefaultValue: boolPtr(false),
+			DiffSummary:  json.RawMessage(`{"action":"toggled","new_enabled":true}`),
+			CreatedAt:    now,
 		},
 		{
-			FlagID:      103,
-			FlagKey:     prefix + "_gamma",
-			Environment: domain.EnvDevelopment,
-			ActionType:  domain.ActionRulesSynced,
-			Operator:    domain.DefaultOperator,
-			DiffSummary: json.RawMessage(`{"action":"rules_synced"}`),
-			CreatedAt:   now.Add(-1 * time.Hour),
+			FlagID:       103,
+			FlagKey:      prefix + "_gamma",
+			Environment:  domain.EnvDevelopment,
+			ActionType:   domain.ActionRulesSynced,
+			Operator:     domain.DefaultOperator,
+			DefaultValue: boolPtr(true),
+			DiffSummary:  json.RawMessage(`{"action":"rules_synced"}`),
+			CreatedAt:    now.Add(-1 * time.Hour),
 		},
 	}
 	for _, log := range seed {
@@ -85,6 +92,10 @@ func TestAuditRepository_ListAll_FiltersOrderAndPagination(t *testing.T) {
 		assert.Equal(t, prefix+"_alpha", logs[2].FlagKey)
 		assert.Equal(t, int64(102), logs[0].FlagID, "flag_id must be populated for detail navigation")
 		assert.NotEmpty(t, logs[0].DiffSummary)
+		require.NotNil(t, logs[0].DefaultValue, "default_value snapshot must round-trip through the repository")
+		assert.False(t, *logs[0].DefaultValue)
+		require.NotNil(t, logs[2].DefaultValue)
+		assert.True(t, *logs[2].DefaultValue)
 	})
 
 	t.Run("flag_key match is case-insensitive and partial", func(t *testing.T) {
