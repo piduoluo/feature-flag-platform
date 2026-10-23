@@ -251,7 +251,11 @@ erDiagram
 
 ## 七、AI 协同开发记录说明
 
-本项目严格按照测试题规范，全流程记录了 AI 辅助开发的交互历史与设计决策过程。详细记录已整理归档在：
-👉 **[`docs/ai/AI_COLLABORATION_LOG.md`](docs/ai/AI_COLLABORATION_LOG.md)**
+本项目由 AI 辅助完成需求拆解、实现、测试与交付：主力工具为 **Antigravity**，辅以其他 AI 工具与终端代理；工程侧使用 Orca / git worktree 管理并行工作树。过程记录按“索引 + 主日志 + 验收日志”组织：
 
-内容涵盖各阶段 Prompt 核心诉求、架构决策权衡轨迹、以及 AI 在代码一致性与防御性设计层面的具体实践。
+- **[`docs/ai/README.md`](docs/ai/README.md)**：记录范围、工具分工、阶段与证据地图
+- **[`docs/ai/AI_COLLABORATION_LOG.md`](docs/ai/AI_COLLABORATION_LOG.md)**：协作方式、关键 Prompt、纠错记录
+- **[`docs/ai/VERIFICATION_LOG.md`](docs/ai/VERIFICATION_LOG.md)**：最终验收命令、结果与数据清理
+
+记录为整理稿，不追求逐字转录；原始会话分散在多个工具中。可核对证据以 `.scratch/` 工单、git 提交、测试结果与 `output/playwright/` 截图为准。题目原文见 [`docs/task-brief.md`](docs/task-brief.md)。
+
