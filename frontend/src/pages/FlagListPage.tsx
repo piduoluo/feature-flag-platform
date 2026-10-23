@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Table,
   Button,
@@ -21,12 +21,18 @@ import {
   SearchOutlined,
   SettingOutlined,
   ThunderboltOutlined,
+  AppstoreOutlined,
+  BarsOutlined,
+  FilterOutlined,
+  CheckOutlined,
+  CopyOutlined,
 } from '@ant-design/icons';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import type { ColumnsType } from 'antd/es/table';
 import { Environment, Flag } from '../types';
 import { api, ApiError } from '../api/client';
 import { CreateFlagDrawer } from '../components/CreateFlagDrawer';
+import { toast } from '../utils/toast';
 
 const { Text, Paragraph } = Typography;
 
@@ -75,9 +81,25 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
+  // Prototype additions: View toggle & Status filter
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const statusMenuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     setSearchInput(searchText);
   }, [searchText]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
+        setStatusMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleEnvChange = (newEnv: string) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -142,39 +164,77 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     fetchFlags();
   }, [fetchFlags]);
 
+  const copyKey = (key: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(key).catch(() => {});
+    }
+    toast(`已复制 Flag Key: ${key}`, 'success');
+  };
+
+  const displayedFlags = useMemo(() => {
+    if (statusFilter === 'all') return flags;
+    return flags.filter((f) => (statusFilter === 'enabled' ? f.enabled : !f.enabled));
+  }, [flags, statusFilter]);
+
+  const formatDateTime = (timeStr: string) => {
+    try {
+      const d = new Date(timeStr);
+      const datePart = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+      const timePart = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+      return { datePart, timePart };
+    } catch {
+      return { datePart: timeStr, timePart: '' };
+    }
+  };
+
   const columns: ColumnsType<Flag> = [
     {
       title: 'Flag Key',
       dataIndex: 'key',
       key: 'key',
-      width: 175,
+      width: 190,
       render: (key: string) => (
-        <Space size="small">
-          <Text code strong copyable>
-            {key}
-          </Text>
-        </Space>
+        <span className="code-chip">
+          <span className="key-text">{key}</span>
+          <button
+            type="button"
+            className="copy-mini"
+            aria-label="复制 Key"
+            data-tip="复制 Flag Key"
+            onClick={(e) => copyKey(key, e)}
+          >
+            <CopyOutlined />
+          </button>
+        </span>
       ),
     },
     {
       title: '名称与描述',
       key: 'name_desc',
-      width: 160,
+      width: 170,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>{record.name}</div>
+          <div className="flag-name" style={{ fontWeight: 600, fontSize: 13.5, color: '#171717' }}>
+            {record.name}
+          </div>
           {record.description ? (
-            <Paragraph
-              type="secondary"
-              ellipsis={{ rows: 1 }}
-              style={{ margin: 0, fontSize: 12 }}
+            <div
+              className="flag-desc"
+              title={record.description}
+              style={{
+                fontSize: 12,
+                color: '#847e78',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: 200,
+              }}
             >
               {record.description}
-            </Paragraph>
+            </div>
           ) : (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              暂无描述
-            </Text>
+            <div style={{ fontSize: 12, color: '#aaa49f' }}>暂无描述</div>
           )}
         </div>
       ),
@@ -223,13 +283,13 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       key: 'created_at',
       width: 125,
       render: (timeStr: string) => {
-        try {
-          return new Date(timeStr).toLocaleString('zh-CN', {
-            hour12: false,
-          });
-        } catch {
-          return timeStr;
-        }
+        const { datePart, timePart } = formatDateTime(timeStr);
+        return (
+          <div style={{ fontSize: 12, lineHeight: 1.3 }}>
+            <div>{datePart}</div>
+            <div style={{ color: '#8a8580', fontSize: 11 }}>{timePart}</div>
+          </div>
+        );
       },
     },
     {
@@ -238,13 +298,13 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       key: 'updated_at',
       width: 125,
       render: (timeStr: string) => {
-        try {
-          return new Date(timeStr).toLocaleString('zh-CN', {
-            hour12: false,
-          });
-        } catch {
-          return timeStr;
-        }
+        const { datePart, timePart } = formatDateTime(timeStr);
+        return (
+          <div style={{ fontSize: 12, lineHeight: 1.3 }}>
+            <div>{datePart}</div>
+            <div style={{ color: '#8a8580', fontSize: 11 }}>{timePart}</div>
+          </div>
+        );
       },
     },
     {
@@ -296,9 +356,9 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       <Card
         variant="borderless"
         style={{
-          boxShadow:
-            '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)',
-          borderRadius: 8,
+          boxShadow: 'var(--shadow, 0 1px 2px rgba(24, 20, 17, .03))',
+          borderRadius: 9,
+          border: '1px solid var(--line, #ebe8e4)',
         }}
       >
         <div
@@ -312,7 +372,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
           }}
         >
           <div>
-            <Typography.Title level={4} style={{ margin: 0 }}>
+            <Typography.Title level={4} style={{ margin: 0, fontWeight: 650 }}>
               Feature Flag 特性开关管理
             </Typography.Title>
           </div>
@@ -322,6 +382,11 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             icon={<PlusOutlined />}
             onClick={() => setCreateDrawerOpen(true)}
             size="large"
+            style={{
+              background: 'var(--brand, #ff7d41)',
+              borderColor: 'var(--brand, #ff7d41)',
+              fontWeight: 600,
+            }}
           >
             新建 Flag
           </Button>
@@ -338,8 +403,9 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
           />
         )}
 
-        {/* Toolbar: Environment filter & Search */}
+        {/* Toolbar: Environment filter, Search, Status filter, View toggle, Refresh */}
         <div
+          className="toolbar"
           style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -349,7 +415,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             gap: 12,
           }}
         >
-          <div style={{ maxWidth: '100%', overflowX: 'auto' }}>
+          <div className="toolbar-left" style={{ maxWidth: '100%', overflowX: 'auto' }}>
             <Segmented
               value={selectedEnv}
               onChange={(val) => handleEnvChange(val as string)}
@@ -357,7 +423,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             />
           </div>
 
-          <Space>
+          <div className="toolbar-right" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Input.Search
               placeholder="按 Key 或名称搜索..."
               allowClear
@@ -367,6 +433,89 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
               onChange={(e) => handleSearchChange(e.target.value)}
               onSearch={(value) => handleSearchChange(value)}
             />
+
+            {/* Status Filter Dropdown */}
+            <div className="filter-wrap" ref={statusMenuRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className={`icon-btn ${statusFilter !== 'all' ? 'has-filter' : ''}`}
+                aria-label="筛选启停状态"
+                aria-haspopup="menu"
+                aria-expanded={statusMenuOpen}
+                data-tip="筛选启停状态"
+                onClick={() => setStatusMenuOpen(!statusMenuOpen)}
+              >
+                <FilterOutlined />
+              </button>
+
+              {statusMenuOpen && (
+                <div className="menu-pop open" role="menu" style={{ right: 0, top: 'calc(100% + 6px)' }}>
+                  <div className="menu-label">启停状态</div>
+                  <button
+                    type="button"
+                    className={`menu-opt ${statusFilter === 'all' ? 'active' : ''}`}
+                    role="menuitemradio"
+                    aria-checked={statusFilter === 'all'}
+                    onClick={() => {
+                      setStatusFilter('all');
+                      setStatusMenuOpen(false);
+                    }}
+                  >
+                    <span>全部状态</span>
+                    <span className="check"><CheckOutlined /></span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`menu-opt ${statusFilter === 'enabled' ? 'active' : ''}`}
+                    role="menuitemradio"
+                    aria-checked={statusFilter === 'enabled'}
+                    onClick={() => {
+                      setStatusFilter('enabled');
+                      setStatusMenuOpen(false);
+                    }}
+                  >
+                    <span>已启用</span>
+                    <span className="check"><CheckOutlined /></span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`menu-opt ${statusFilter === 'disabled' ? 'active' : ''}`}
+                    role="menuitemradio"
+                    aria-checked={statusFilter === 'disabled'}
+                    onClick={() => {
+                      setStatusFilter('disabled');
+                      setStatusMenuOpen(false);
+                    }}
+                  >
+                    <span>已停用</span>
+                    <span className="check"><CheckOutlined /></span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* View Toggle */}
+            <div className="view-toggle-group" role="group" aria-label="切换视图">
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="宫格视图"
+                aria-pressed={viewMode === 'grid'}
+                onClick={() => setViewMode('grid')}
+              >
+                <AppstoreOutlined />
+              </button>
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="列表视图"
+                aria-pressed={viewMode === 'list'}
+                onClick={() => setViewMode('list')}
+              >
+                <BarsOutlined />
+              </button>
+            </div>
+
             <Tooltip title="刷新列表">
               <Button
                 icon={<ReloadOutlined />}
@@ -374,57 +523,169 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                 loading={loading}
               />
             </Tooltip>
-          </Space>
+          </div>
         </div>
 
-        {/* Table */}
-        <Table<Flag>
-          rowKey="id"
-          columns={columns}
-          tableLayout="fixed"
-          scroll={{ x: 1125 }}
-          dataSource={flags}
-          loading={loading}
-          onRow={(record) => ({
-            onClick: (event) => {
-              const target = event.target as HTMLElement;
-              if (
-                target.closest('button') ||
-                target.closest('.ant-switch') ||
-                target.closest('a') ||
-                target.closest('.ant-typography-copy')
-              ) {
-                return;
-              }
-              navigate(`/flags/${record.id}`);
-            },
-            style: { cursor: 'pointer' },
-          })}
-          locale={{
-            emptyText: (
+        {/* Content: List (Table) vs Grid */}
+        {viewMode === 'grid' ? (
+          <div>
+            {displayedFlags.length > 0 ? (
+              <div className="flag-grid" aria-label="Flag 宫格视图">
+                {displayedFlags.map((flag) => (
+                  <article
+                    key={flag.id}
+                    className="flag-card"
+                    role="article"
+                    tabIndex={0}
+                    onClick={() => navigate(`/flags/${flag.id}`)}
+                  >
+                    <div className="flag-card-top">
+                      <span className="flag-card-mark" aria-hidden="true">
+                        <svg className="i" viewBox="0 0 24 24">
+                          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1v12Z" />
+                          <path d="M4 22v-7" />
+                        </svg>
+                      </span>
+                      <div className="flag-card-key" onClick={(e) => e.stopPropagation()}>
+                        <span className="code-chip">
+                          <span className="key-text">{flag.key}</span>
+                          <button
+                            type="button"
+                            className="copy-mini"
+                            aria-label="复制 Key"
+                            onClick={(e) => copyKey(flag.key, e)}
+                          >
+                            <CopyOutlined />
+                          </button>
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="icon-btn ghost sm"
+                        aria-label="在线评估"
+                        data-tip="在线评估"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(
+                            `/evaluations?flag_key=${encodeURIComponent(flag.key)}&environment=${flag.environment}&flag_id=${flag.id}`
+                          );
+                        }}
+                        style={{ marginLeft: 'auto' }}
+                      >
+                        <ThunderboltOutlined />
+                      </button>
+                    </div>
+
+                    <div className="flag-card-name" style={{ fontWeight: 600, fontSize: 14, margin: '8px 0 4px' }}>
+                      {flag.name}
+                    </div>
+
+                    <div
+                      className="flag-card-desc"
+                      style={{ fontSize: 12, color: '#847e78', minHeight: 36, marginBottom: 10 }}
+                    >
+                      {flag.description || '暂无描述'}
+                    </div>
+
+                    <div className="flag-card-meta" style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                      <Tag color={ENV_TAG_COLORS[flag.environment]}>
+                        {ENV_LABELS[flag.environment] || flag.environment}
+                      </Tag>
+                      <Badge
+                        status={flag.enabled ? 'success' : 'default'}
+                        text={flag.enabled ? '已启用' : '已停用'}
+                      />
+                    </div>
+
+                    <div
+                      className="flag-card-bottom"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingTop: 10,
+                        borderTop: '1px solid #f2f0ed',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div style={{ fontSize: 11, color: '#8a8580' }}>
+                        <span>默认值: </span>
+                        <code>{flag.default_value ? 'true' : 'false'}</code>
+                      </div>
+                      <Tooltip title={flag.enabled ? '点击停用' : '点击启用'}>
+                        <Switch
+                          size="small"
+                          checked={flag.enabled}
+                          loading={togglingId === flag.id}
+                          disabled={togglingId === flag.id}
+                          onChange={(checked) => handleInlineToggle(flag, checked)}
+                        />
+                      </Tooltip>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
-                  searchText || selectedEnv !== 'all'
+                  searchText || selectedEnv !== 'all' || statusFilter !== 'all'
                     ? '没有匹配当前筛选条件的 Feature Flag'
                     : '当前环境暂无 Feature Flag，点击右上角“新建 Flag”开启配置'
                 }
               />
-            ),
-          }}
-          pagination={{
-            current: currentPage,
-            pageSize: pageSize,
-            total: total,
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '20', '50'],
-            showTotal: (totalCount) => `共 ${totalCount} 条记录`,
-            onChange: (page, size) => {
-              setCurrentPage(page);
-              setPageSize(size);
-            },
-          }}
-        />
+            )}
+          </div>
+        ) : (
+          <Table<Flag>
+            rowKey="id"
+            columns={columns}
+            tableLayout="fixed"
+            scroll={{ x: 1125 }}
+            dataSource={displayedFlags}
+            loading={loading}
+            onRow={(record) => ({
+              onClick: (event) => {
+                const target = event.target as HTMLElement;
+                if (
+                  target.closest('button') ||
+                  target.closest('.ant-switch') ||
+                  target.closest('a') ||
+                  target.closest('.ant-typography-copy') ||
+                  target.closest('.copy-mini')
+                ) {
+                  return;
+                }
+                navigate(`/flags/${record.id}`);
+              },
+              style: { cursor: 'pointer' },
+            })}
+            locale={{
+              emptyText: (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description={
+                    searchText || selectedEnv !== 'all' || statusFilter !== 'all'
+                      ? '没有匹配当前筛选条件的 Feature Flag'
+                      : '当前环境暂无 Feature Flag，点击右上角“新建 Flag”开启配置'
+                  }
+                />
+              ),
+            }}
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: total,
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '20', '50'],
+              showTotal: (totalCount) => `共 ${totalCount} 条记录`,
+              onChange: (page, size) => {
+                setCurrentPage(page);
+                setPageSize(size);
+              },
+            }}
+          />
+        )}
       </Card>
 
       <CreateFlagDrawer
