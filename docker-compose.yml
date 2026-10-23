@@ -1,3 +1,8 @@
+# Pinned so the project works from any checkout path: Compose derives the
+# project name from the directory, and a non-ASCII path (e.g. 滴滴) normalizes
+# to an empty name, which aborts every command before it starts.
+name: feature-flag-platform
+
 services:
   postgres:
     image: postgres:16-alpine

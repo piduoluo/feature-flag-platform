@@ -1,0 +1,7 @@
+# E2E override: the host already runs PostgreSQL on 5432, so publishing the
+# compose database there aborts `docker compose up`. The backend reaches it
+# over the compose network either way; this only moves the host debug port.
+services:
+  postgres:
+    ports: !override
+      - "15432:5432"

@@ -1,5 +1,6 @@
 # Build stage
-FROM golang:1.23-alpine AS builder
+# Must satisfy the `go` directive in go.mod (1.25.0); 1.23 aborts on `go mod download`.
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
