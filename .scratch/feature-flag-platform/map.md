@@ -64,6 +64,16 @@
   - Status: resolved
   - Blocked by: 11
   - Scope: Flag 详情顶部拆为身份/操作与元数据两行，删除规则页重复默认值卡片并重写空状态语义。
+- **[13-list-filter-history-pollution.md](issues/13-list-filter-history-pollution.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 11
+  - Scope: 列表环境、状态与分页改用 replace 写入 URL，避免筛选状态堆叠浏览器历史。
+- **[14-flag-list-reference-layout.md](issues/14-flag-list-reference-layout.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 10, 11
+  - Scope: 按用户截图复刻功能开关内容区，列表行尾加入四项三点菜单。
 
 ## Decisions-so-far
 - 遵循 [docs/SPEC.md](../../docs/SPEC.md) 与 [docs/adr/](../../docs/adr/) 中的 ADR 0001~0006。
@@ -79,3 +89,5 @@
 - [Ticket 10 完成](issues/10-flag-console-header-stats-toolbar.md)：移除全局面包屑与桌面顶部栏；Flag 页统一标题、说明、服务端状态统计与筛选，重排环境/搜索/视图/刷新/新建工具栏，并以向后兼容的 `enabled` 参数与 `stats` 汇总支撑跨分页准确统计。
 - [Ticket 11 完成](issues/11-flag-detail-single-url-and-source-back.md)：Flag 详情三个 Tab 收敛到 `/flags/:id` 单 URL 并以内部状态切换；旧 query/path 深链接一次性兼容归一；左上角返回按实际来源回到列表、全局审计或评估页，列表筛选与分页随 URL 恢复；草稿跨 Tab 保留，离开拦截仅作用于真正离开详情。
 - [Ticket 12 完成](issues/12-flag-detail-header-structure-and-default-copy.md)：Flag 详情顶部拆为「身份 + 操作」与「元数据」两行，启停开关与评估按钮在状态切换时坐标不位移；删除规则页重复默认值卡片，保留独立草稿警告，重写启停两态空状态并补齐前后端语义回归测试。
+- [Ticket 13 完成](issues/13-list-filter-history-pollution.md)：功能开关列表的环境、启停状态、分页与每页条数改为 `replace` 更新 URL；筛选条件仍可恢复，但后退不再逐层退回筛选组合，而是直接离开列表。
+- [Ticket 14 完成](issues/14-flag-list-reference-layout.md)：功能开关内容区参照截图呈现标题统计、工具栏、表头与行；三点菜单直达详情、基本设置、在线评估及变更历史，保留真实数据和原有列表交互。

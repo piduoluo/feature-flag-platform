@@ -146,6 +146,22 @@ test('Ticket 11: the top-left back nav returns to the source list with its filte
   await expect(page.getByText(flagKey)).toBeVisible();
 });
 
+test('Ticket 13: list filters do not stack browser history entries', async ({ page }) => {
+  await page.goto('/audit-logs');
+  await expect(page.getByTestId('global-audit-logs-page')).toBeVisible();
+  await page.goto('/flags');
+  await page.waitForSelector('.ant-table-row');
+
+  await page.locator('.ant-segmented-item:has-text("Development")').click();
+  await expect(page).toHaveURL(/environment=development/);
+  await page.getByRole('button', { name: /已启用/ }).click();
+  await expect(page).toHaveURL(/enabled=true/);
+
+  // Both filter changes replaced the list entry, so one back leaves the list.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/audit-logs$/);
+});
+
 test('SPEC-US 27: the evaluation console accepts the deep-linked context', async ({ page }) => {
   await page.goto(`/evaluations?flag_key=${flagKey}&environment=development`);
 

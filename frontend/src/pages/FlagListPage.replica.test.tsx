@@ -107,6 +107,7 @@ describe('FlagListPage 1:1 Prototype Replica', () => {
     await waitFor(() => {
       expect(router.state.location.search).toContain('enabled=true');
     });
+    expect(router.state.historyAction).toBe('REPLACE');
     await waitFor(() => {
       expect(api.getFlags).toHaveBeenCalledWith(
         expect.objectContaining({ enabled: true, page: 1 })

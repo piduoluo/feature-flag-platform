@@ -185,91 +185,179 @@
   /* ============================================================
      Flag console heading, live stats and unified toolbar
      ============================================================ */
-  .flag-console { max-width: 1400px; margin: 0 auto; }
+  main.app-shell-content:has(> .flag-console) {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  .flag-console {
+    min-height: 100vh;
+    background: #fff;
+  }
   .flag-console-head {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 32px; margin-bottom: 22px; flex-wrap: wrap;
+    gap: 32px; min-height: 162px; padding: 28px 36px 32px;
+    border-bottom: 1px solid #edf0f4;
   }
   .flag-console-title {
-    font-size: 28px; line-height: 1.25; font-weight: 650;
-    letter-spacing: -.6px; color: var(--text);
+    margin: 0;
+    font-size: 36px; line-height: 1.25; font-weight: 700;
+    letter-spacing: -.6px; color: #0c1830;
   }
   .flag-console-subtitle {
-    margin-top: 6px; font-size: 13px; color: var(--text-3);
+    margin: 16px 0 0; font-size: 20px; color: #596780;
   }
-  .flag-stats { display: flex; align-items: stretch; gap: 2px; flex-wrap: nowrap; }
+  .flag-stats { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; }
   .flag-stat {
     position: relative; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 1px;
-    min-width: 96px; padding: 7px 18px 8px;
-    border-radius: 8px; background: transparent;
-    color: var(--text); text-align: center;
+    align-items: center; justify-content: center; gap: 6px;
+    min-width: 150px; padding: 0 18px;
+    border-radius: 0; background: transparent;
+    color: #0c1830; text-align: center;
     transition: background .15s ease, color .15s ease;
   }
   .flag-stat + .flag-stat::before {
-    content: ""; position: absolute; left: -1px; top: 12px; bottom: 12px;
-    width: 1px; background: var(--line);
+    content: ""; position: absolute; left: 0; top: 6px; bottom: 6px;
+    width: 1px; background: #e2e8f0;
   }
-  .flag-stat:hover { background: var(--surface-muted); }
-  .flag-stat.active { background: var(--brand-soft); }
+  .flag-stat:hover { background: #f8fafc; }
+  .flag-stat.active { background: transparent; }
   .flag-stat-value {
-    font-size: 36px; line-height: 1.05; font-weight: 650;
-    letter-spacing: -1px; color: var(--text);
+    font-size: 38px; line-height: 1.05; font-weight: 600;
+    letter-spacing: -1px; color: #0c1830;
     font-variant-numeric: tabular-nums;
   }
-  .flag-stat.active .flag-stat-value { color: var(--brand-ink); }
+  .flag-stat.active .flag-stat-value { color: #0c1830; }
   .flag-stat-label {
-    font-size: 18px; line-height: 1.25; color: var(--text-3);
+    font-size: 19px; line-height: 1.25; color: #596780;
     white-space: nowrap;
   }
-  .flag-stat.active .flag-stat-label { color: var(--brand-ink); font-weight: 550; }
+  .flag-stat.active .flag-stat-label { color: #596780; font-weight: 400; }
 
   .flag-console-panel {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 20px;
+    background: #fff;
+    padding: 30px 36px 48px;
   }
-  .flag-toolbar { margin-bottom: 16px; align-items: center; }
+  .toolbar.flag-toolbar { margin-bottom: 23px; align-items: center; gap: 20px; }
   .flag-toolbar-env { overflow-x: auto; scrollbar-width: none; max-width: 100%; }
   .flag-toolbar-env::-webkit-scrollbar { display: none; }
-  .flag-toolbar .flag-search { width: 300px; }
+  .flag-toolbar .flag-search { width: 394px; }
   .flag-toolbar .ant-input-affix-wrapper {
-    height: 36px; padding: 0 11px; border-radius: 6px;
-    border-color: var(--line-strong); box-shadow: none;
+    height: 52px; padding: 0 14px; border-radius: 8px;
+    border-color: #dce4ef; box-shadow: none;
   }
-  .flag-toolbar .ant-input-affix-wrapper:hover { border-color: #c9c4be; }
+  .flag-toolbar .ant-input-affix-wrapper:hover { border-color: #bac7d8; }
   .flag-toolbar .ant-input-affix-wrapper-focused { border-color: #ff9b70; box-shadow: 0 0 0 3px rgba(255, 125, 65, .1); }
-  .flag-toolbar .ant-input-prefix { color: var(--text-4); margin-right: 7px; }
-  .flag-toolbar .ant-btn { height: 36px; border-radius: 6px; box-shadow: none; }
-  .flag-toolbar .ant-btn-default { border-color: var(--line-strong); color: var(--text-2); }
+  .flag-toolbar .ant-input { font-size: 18px; color: #34445e; }
+  .flag-toolbar .ant-input::placeholder { color: #71809a; }
+  .flag-toolbar .ant-input-prefix { color: #263854; margin-right: 10px; font-size: 21px; }
+  .flag-toolbar .ant-btn { height: 52px; border-radius: 8px; box-shadow: none; font-size: 20px; }
+  .flag-toolbar .ant-btn-default { width: 52px; border-color: #dce4ef; color: #263854; }
   .flag-toolbar .flag-create-btn.ant-btn-primary {
-    background: var(--brand); border-color: var(--brand); font-weight: 600;
+    background: #ff5b1f; border-color: #ff5b1f; font-weight: 500; padding: 0 24px;
   }
   .flag-toolbar .flag-create-btn.ant-btn-primary:hover {
-    background: var(--brand-hover) !important; border-color: var(--brand-hover) !important;
+    background: #ed4f15 !important; border-color: #ed4f15 !important;
   }
-  .flag-toolbar .view-toggle-group { height: 36px; flex: 0 0 auto; }
-  .flag-toolbar .view-toggle-group .icon-btn { height: 30px; }
+  .flag-toolbar .view-toggle-group { height: 52px; flex: 0 0 auto; gap: 14px; padding: 0; border: 0; }
+  .flag-toolbar .view-toggle-group .icon-btn {
+    width: 52px; height: 52px; border: 1px solid #dce4ef; border-radius: 8px;
+    color: #263854; background: #fff; font-size: 21px;
+  }
+  .flag-toolbar .view-toggle-group .icon-btn[aria-pressed="true"] {
+    border-color: #ff5b1f; color: #263854; background: #fff;
+  }
+  .flag-toolbar-actions { gap: 16px; }
+  .flag-toolbar-env .ant-segmented { padding: 0; background: transparent; border-radius: 0; }
+  .flag-toolbar-env .ant-segmented-thumb { box-shadow: none; background: transparent; }
+  .flag-toolbar-env .ant-segmented-item { color: #34445e; font-size: 19px; }
+  .flag-toolbar-env .ant-segmented-item-label {
+    position: relative; display: flex; align-items: center; height: 58px;
+    padding: 0 15px; line-height: 1.2;
+  }
+  .flag-toolbar-env .ant-segmented-item:first-child .ant-segmented-item-label { padding-left: 7px; }
+  .flag-toolbar-env .ant-segmented-item-selected { color: #ff5b1f; background: transparent; box-shadow: none; }
+  .flag-toolbar-env .ant-segmented-item-selected .ant-segmented-item-label::after {
+    content: ""; position: absolute; right: 0; bottom: 0; left: 0;
+    height: 3px; background: #ff5b1f;
+  }
+
+  .flag-list-table .ant-table { background: #fff; color: #0c1830; }
+  .flag-list-table .ant-table-container { border: 0; }
+  .flag-list-table .ant-table-thead > tr > th {
+    height: 63px; padding: 0 24px; background: #f7f9fb;
+    color: #0c1830; font-size: 19px; font-weight: 600;
+    border-bottom: 0;
+  }
+  .flag-list-table .ant-table-thead > tr > th::before { display: none; }
+  .flag-list-table .ant-table-thead > tr > th:first-child { border-radius: 8px 0 0 8px; }
+  .flag-list-table .ant-table-thead > tr > th:last-child { border-radius: 0 8px 8px 0; }
+  .flag-list-table .ant-table-tbody > tr > td {
+    height: 115px; padding: 16px 24px; border-bottom: 1px solid #e2e8f0;
+    color: #0c1830; font-size: 19px;
+  }
+  .flag-list-table .ant-table-tbody > tr.ant-table-row:hover > td { background: #f9fafc; }
+  .flag-info { display: grid; gap: 10px; min-width: 0; }
+  .flag-info-name {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    color: #0c1830; font-size: 21px; line-height: 1.25; font-weight: 600;
+  }
+  .flag-info-key {
+    display: flex; align-items: center; gap: 14px; min-width: 0;
+    color: #596780; font-family: var(--mono); font-size: 17px; line-height: 1.3;
+  }
+  .flag-info-key .key-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .flag-info-key .copy-mini { flex: 0 0 auto; color: #596780; font-size: 19px; }
+  .flag-list-table .env-badge, .flag-list-table .status { gap: 12px; font-size: 19px; }
+  .flag-list-table .env-badge-dot, .flag-list-table .dot { width: 13px; height: 13px; }
+  .flag-list-table .status { color: #0c1830; }
+  .flag-list-table .bool-tag {
+    height: auto; padding: 0; border: 0; background: transparent;
+    color: #596780; font-size: 18px; font-weight: 400;
+  }
+  .flag-updated-at { color: #596780; white-space: nowrap; font-size: 18px; }
+  .flag-list-table .ant-switch { min-width: 58px; height: 32px; background: #cbd5e1; }
+  .flag-list-table .ant-switch.ant-switch-checked { background: #ff5b1f; }
+  .flag-list-table .ant-switch .ant-switch-handle { top: 3px; width: 26px; height: 26px; }
+  .flag-list-table .ant-switch.ant-switch-checked .ant-switch-handle { inset-inline-start: calc(100% - 29px); }
+  .flag-more-button.ant-btn { width: 42px; height: 42px; color: #0c1830; font-size: 25px; }
+  .flag-list-table .ant-table-pagination.ant-pagination {
+    display: flex; align-items: center; margin: 34px 0 0; color: #596780;
+  }
+  .flag-list-table .ant-pagination-total-text { margin-right: 22px; color: #596780; font-size: 18px; }
+  .flag-list-table .ant-pagination-item-active { border-color: #ff5b1f; }
+  .flag-list-table .ant-pagination-item-active a { color: #ff5b1f; }
+  .flag-list-table .ant-pagination-options-size-changer { min-width: 130px; }
+  .flag-more-menu .ant-dropdown-menu { min-width: 180px; padding: 6px; }
+  .flag-more-menu .ant-dropdown-menu-item { padding: 10px 12px; font-size: 14px; }
 
   @media (max-width: 900px) {
-    .flag-console-head { flex-direction: column; align-items: stretch; gap: 16px; margin-bottom: 18px; }
+    .flag-console-head { flex-direction: column; align-items: stretch; gap: 16px; }
     .flag-stats { width: 100%; }
     .flag-stat { flex: 1 1 0; min-width: 0; padding: 6px 8px; }
     .flag-toolbar { flex-direction: column; align-items: stretch; gap: 12px; }
     .flag-toolbar .flag-toolbar-actions { width: 100%; flex-wrap: wrap; }
     .flag-toolbar .flag-search { flex: 1 1 180px; width: auto; min-width: 0; }
     .flag-toolbar-env { width: 100%; }
-    .flag-toolbar-env .ant-segmented { width: 100%; }
   }
 
   @media (max-width: 700px) {
-    .flag-console-title { font-size: 22px; letter-spacing: -.4px; }
+    .flag-console-head { padding: 24px 16px; }
+    .flag-console-title { font-size: 26px; letter-spacing: -.4px; }
+    .flag-console-subtitle { font-size: 14px; margin-top: 8px; }
     .flag-stat-value { font-size: 28px; }
     .flag-stat-label { font-size: 14px; }
-    .flag-console-panel { padding: 14px; border-radius: 8px; }
+    .flag-console-panel { padding: 16px; }
     .flag-toolbar .flag-search { flex: 1 1 100%; width: 100%; }
-    .flag-toolbar-env .ant-segmented-item-label { padding: 0 7px; font-size: 12px; }
+    .flag-toolbar-env .ant-segmented-item-label { padding: 0 7px; height: 42px; font-size: 13px; }
+    .flag-toolbar .ant-input-affix-wrapper, .flag-toolbar .ant-btn,
+    .flag-toolbar .view-toggle-group, .flag-toolbar .view-toggle-group .icon-btn { height: 42px; }
+    .flag-toolbar .view-toggle-group .icon-btn, .flag-toolbar .ant-btn-default { width: 42px; }
+    .flag-toolbar-actions { gap: 8px; }
+    .flag-toolbar .flag-create-btn.ant-btn-primary { font-size: 14px; padding: 0 12px; }
+    .flag-list-table .ant-table-thead > tr > th { font-size: 15px; }
+    .flag-list-table .ant-table-tbody > tr > td { font-size: 15px; }
+    .flag-list-table .ant-table-pagination.ant-pagination { flex-wrap: wrap; justify-content: flex-end; }
   }
 
   /* ============================================================

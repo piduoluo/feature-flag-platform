@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table,
   Button,
+  Dropdown,
   Input,
   Segmented,
-  Space,
   Empty,
   Tooltip,
   Alert,
@@ -16,11 +16,11 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  SettingOutlined,
   ThunderboltOutlined,
   AppstoreOutlined,
   BarsOutlined,
   CopyOutlined,
+  EllipsisOutlined,
 } from '@ant-design/icons';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import type { ColumnsType } from 'antd/es/table';
@@ -101,7 +101,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       nextParams.delete('environment');
     }
     nextParams.delete('page');
-    setSearchParams(nextParams);
+    setSearchParams(nextParams, { replace: true });
   };
 
   const handleSearchChange = (value: string) => {
@@ -126,7 +126,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       nextParams.set('enabled', String(next === 'enabled'));
     }
     nextParams.delete('page');
-    setSearchParams(nextParams);
+    setSearchParams(nextParams, { replace: true });
   };
 
   const handlePageChange = (page: number, size: number) => {
@@ -143,16 +143,26 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     } else {
       nextParams.delete('page');
     }
-    setSearchParams(nextParams);
+    setSearchParams(nextParams, { replace: true });
   };
 
-  const openFlagDetail = (flagId: number) => {
-    navigate(`/flags/${flagId}`, {
+  const openFlagDetail = (flagId: number, tab?: 'settings' | 'audit') => {
+    navigate(`/flags/${flagId}${tab ? `?tab=${tab}` : ''}`, {
       state: {
         from: `${location.pathname}${location.search}`,
         fromLabel: '功能开关',
       },
     });
+  };
+
+  const openEvaluation = (record: Flag) => {
+    if (onNavigateToEval) {
+      onNavigateToEval(record.key, record.environment);
+    } else {
+      navigate(
+        `/evaluations?flag_key=${encodeURIComponent(record.key)}&environment=${record.environment}&flag_id=${record.id}`
+      );
+    }
   };
 
   const handleInlineToggle = async (record: Flag, checked: boolean) => {
@@ -227,7 +237,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     try {
       const d = new Date(timeStr);
       const datePart = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
-      const timePart = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+      const timePart = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       return { datePart, timePart };
     } catch {
       return { datePart: timeStr, timePart: '' };
@@ -236,52 +246,24 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
 
   const columns: ColumnsType<Flag> = [
     {
-      title: 'Flag Key',
-      dataIndex: 'key',
-      key: 'key',
-      width: 166,
-      render: (key: string) => (
-        <span className="code-chip">
-          <span className="key-text">{key}</span>
-          <button
-            type="button"
-            className="copy-mini"
-            aria-label="复制 Key"
-            data-tip="复制 Flag Key"
-            onClick={(e) => copyKey(key, e)}
-          >
-            <CopyOutlined />
-          </button>
-        </span>
-      ),
-    },
-    {
-      title: '名称与描述',
-      key: 'name_desc',
-      width: 148,
+      title: 'Flag 信息',
+      key: 'flag_info',
+      width: '32%',
       render: (_, record) => (
-        <div>
-          <div className="flag-name" style={{ fontWeight: 600, fontSize: 13.5, color: '#171717' }}>
-            {record.name}
-          </div>
-          {record.description ? (
-            <div
-              className="flag-desc"
-              title={record.description}
-              style={{
-                fontSize: 12,
-                color: '#847e78',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: 200,
-              }}
+        <div className="flag-info">
+          <div className="flag-info-name" title={record.name}>{record.name}</div>
+          <div className="flag-info-key">
+            <span className="key-text" title={record.key}>{record.key}</span>
+            <button
+              type="button"
+              className="copy-mini"
+              aria-label="复制 Key"
+              data-tip="复制 Flag Key"
+              onClick={(e) => copyKey(record.key, e)}
             >
-              {record.description}
-            </div>
-          ) : (
-            <div style={{ fontSize: 12, color: '#aaa49f' }}>暂无描述</div>
-          )}
+              <CopyOutlined />
+            </button>
+          </div>
         </div>
       ),
     },
@@ -289,93 +271,81 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '运行环境',
       dataIndex: 'environment',
       key: 'environment',
-      width: 120,
+      width: '12%',
       render: (env: Environment) => <EnvironmentBadge environment={env} />,
     },
     {
       title: '启停状态',
       dataIndex: 'enabled',
       key: 'enabled',
-      width: 100,
+      width: '12%',
       render: (enabled: boolean) => <StatusBadge enabled={enabled} />,
     },
     {
       title: '默认返回值',
       dataIndex: 'default_value',
       key: 'default_value',
-      width: 110,
+      width: '13%',
       render: (val: boolean) => <BooleanValueTag value={val} />,
     },
     {
-      title: '创建时间',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      width: 110,
-      render: (timeStr: string) => {
-        const { datePart, timePart } = formatDateTime(timeStr);
-        return (
-          <div style={{ fontSize: 12, lineHeight: 1.3 }}>
-            <div>{datePart}</div>
-            <div style={{ color: '#8a8580', fontSize: 11 }}>{timePart}</div>
-          </div>
-        );
-      },
-    },
-    {
-      title: '更新时间',
+      title: '最近更新',
       dataIndex: 'updated_at',
       key: 'updated_at',
-      width: 110,
+      width: '17%',
       render: (timeStr: string) => {
         const { datePart, timePart } = formatDateTime(timeStr);
-        return (
-          <div style={{ fontSize: 12, lineHeight: 1.3 }}>
-            <div>{datePart}</div>
-            <div style={{ color: '#8a8580', fontSize: 11 }}>{timePart}</div>
-          </div>
-        );
+        return <span className="flag-updated-at">{datePart} {timePart}</span>;
       },
     },
     {
-      title: '操作',
-      key: 'actions',
-      width: 220,
+      title: '',
+      key: 'toggle',
+      width: '8%',
       render: (_, record) => (
-        <Space size={4}>
+        <Tooltip title={record.enabled ? '点击停用' : '点击启用'}>
+          <Switch
+            checked={record.enabled}
+            loading={togglingId === record.id}
+            disabled={togglingId === record.id}
+            onChange={(checked) => handleInlineToggle(record, checked)}
+          />
+        </Tooltip>
+      ),
+    },
+    {
+      title: '',
+      key: 'more',
+      width: '6%',
+      render: (_, record) => (
+        <Dropdown
+          trigger={['click']}
+          placement="bottomRight"
+          overlayClassName="flag-more-menu"
+          menu={{
+            items: [
+              { key: 'detail', label: '查看详情' },
+              { key: 'edit', label: '编辑Flag' },
+              { key: 'evaluate', label: '在线评估' },
+              { key: 'audit', label: '查看操作历史' },
+            ],
+            onClick: ({ key, domEvent }) => {
+              domEvent.stopPropagation();
+              if (key === 'detail') openFlagDetail(record.id);
+              if (key === 'edit') openFlagDetail(record.id, 'settings');
+              if (key === 'evaluate') openEvaluation(record);
+              if (key === 'audit') openFlagDetail(record.id, 'audit');
+            },
+          }}
+        >
           <Button
-            type="link"
-            size="small"
-            icon={<SettingOutlined />}
-            onClick={() => openFlagDetail(record.id)}
-          >
-            详情
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<ThunderboltOutlined />}
-            onClick={() => {
-              if (onNavigateToEval) {
-                onNavigateToEval(record.key, record.environment);
-              } else {
-                navigate(
-                  `/evaluations?flag_key=${encodeURIComponent(record.key)}&environment=${record.environment}&flag_id=${record.id}`
-                );
-              }
-            }}
-          >
-            在线评估
-          </Button>
-          <Tooltip title={record.enabled ? '点击停用' : '点击启用'}>
-            <Switch
-              size="small"
-              checked={record.enabled}
-              loading={togglingId === record.id}
-              disabled={togglingId === record.id}
-              onChange={(checked) => handleInlineToggle(record, checked)}
-            />
-          </Tooltip>
-        </Space>
+            type="text"
+            className="flag-more-button"
+            icon={<EllipsisOutlined />}
+            aria-label={`更多操作：${record.name}`}
+            onClick={(event) => event.stopPropagation()}
+          />
+        </Dropdown>
       ),
     },
   ];
@@ -614,10 +584,11 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
           </div>
         ) : (
           <Table<Flag>
+            className="flag-list-table"
             rowKey="id"
             columns={columns}
             tableLayout="fixed"
-            scroll={{ x: 1070 }}
+            scroll={{ x: 1120 }}
             dataSource={flags}
             loading={loading}
             onRow={(record) => ({

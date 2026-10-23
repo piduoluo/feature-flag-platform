@@ -172,6 +172,7 @@ describe('FlagListPage (Ticket 02)', () => {
     await waitFor(() => {
       expect(router.state.location.search).toContain('environment=development');
     });
+    expect(router.state.historyAction).toBe('REPLACE');
 
     await waitFor(() => {
       expect(api.getFlags).toHaveBeenCalledWith(
@@ -188,6 +189,7 @@ describe('FlagListPage (Ticket 02)', () => {
     await waitFor(() => {
       expect(router.state.location.search).not.toContain('environment=development');
     });
+    expect(router.state.historyAction).toBe('REPLACE');
 
     await waitFor(() => {
       expect(api.getFlags).toHaveBeenCalledWith(
@@ -315,7 +317,7 @@ describe('FlagListPage (Ticket 02)', () => {
     });
   });
 
-  it('UI-R 04: clicking "详情" button navigates to /flags/:id fullscreen workspace', async () => {
+  it('UI-R 04: the row menu opens the Flag detail workspace', async () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [demoFlag],
       total: 1,
@@ -328,8 +330,8 @@ describe('FlagListPage (Ticket 02)', () => {
       expect(screen.getByText('checkout_v2')).toBeInTheDocument();
     });
 
-    const detailBtn = screen.getByRole('button', { name: /详情$/i });
-    fireEvent.click(detailBtn);
+    fireEvent.click(screen.getByRole('button', { name: /更多操作：新版结算页结账流/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '查看详情' }));
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/flags/1');
@@ -372,8 +374,8 @@ describe('FlagListPage (Ticket 02)', () => {
       expect(screen.getByText('checkout_v2')).toBeInTheDocument();
     });
 
-    const evalBtn = screen.getByRole('button', { name: /在线评估/i });
-    fireEvent.click(evalBtn);
+    fireEvent.click(screen.getByRole('button', { name: /更多操作：新版结算页结账流/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '在线评估' }));
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/evaluations');
@@ -381,6 +383,27 @@ describe('FlagListPage (Ticket 02)', () => {
       expect(router.state.location.search).toContain('environment=production');
       expect(router.state.location.search).toContain('flag_id=1');
     });
+  });
+
+  it.each([
+    ['编辑Flag', '基本设置'],
+    ['查看操作历史', '变更历史'],
+  ])('opens %s in the matching detail tab', async (action, tabName) => {
+    vi.mocked(api.getFlags).mockResolvedValue({
+      items: [demoFlag],
+      total: 1,
+      stats: { all: 1, enabled: 1, disabled: 0 },
+    });
+    vi.mocked(api.getAuditLogs).mockResolvedValue([]);
+
+    const { router } = renderWithRouter(['/flags']);
+    await screen.findByText('checkout_v2');
+
+    fireEvent.click(screen.getByRole('button', { name: /更多操作：新版结算页结账流/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: action }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/flags/1'));
+    await waitFor(() => expect(screen.getByRole('tab', { name: tabName })).toHaveAttribute('aria-selected', 'true'));
   });
 
   it('SPEC-US 01, 02, 03: creates Flag lifecycle, catches FLAG_KEY_CONFLICT, and supports successful creation', async () => {
@@ -467,7 +490,8 @@ describe('FlagListPage (Ticket 02)', () => {
       );
     });
 
-    fireEvent.click(await screen.findByRole('button', { name: /详情$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /更多操作：新版结算页结账流/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: '查看详情' }));
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/flags/1'));
     expect(screen.getByTestId('detail-back-nav')).toHaveTextContent('功能开关');
@@ -493,6 +517,7 @@ describe('FlagListPage (Ticket 02)', () => {
     fireEvent.click(screen.getByTitle('2'));
 
     await waitFor(() => expect(router.state.location.search).toContain('page=2'));
+    expect(router.state.historyAction).toBe('REPLACE');
     await waitFor(() => {
       expect(api.getFlags).toHaveBeenCalledWith(
         expect.objectContaining({ page: 2, page_size: 10 })
