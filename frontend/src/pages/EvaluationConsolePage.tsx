@@ -25,7 +25,6 @@ import {
   PlayCircleOutlined,
   FormatPainterOutlined,
   ClearOutlined,
-  ThunderboltOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   FlagOutlined,
@@ -567,18 +566,9 @@ export const EvaluationConsolePage: React.FC = () => {
         style={{
           marginBottom: 20,
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: 16,
+          justifyContent: 'flex-end',
         }}
       >
-        <div style={{ flex: '1 1 320px', minWidth: 0 }}>
-          <Title level={3} style={{ margin: 0 }}>
-            <ThunderboltOutlined style={{ marginRight: 8, color: '#fa8c16' }} />
-            确定性规则在线评估控制台
-          </Title>
-        </div>
         <Button icon={<FlagOutlined />} onClick={() => navigate('/flags')}>
           管理 Feature Flags
         </Button>

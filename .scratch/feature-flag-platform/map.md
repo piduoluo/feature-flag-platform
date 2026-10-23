@@ -91,6 +91,12 @@
   - Blocked by: 14, 15, 16
   - Scope: 自主优化功能开关页整体信息层级、布局比例、字体与两种视图的视觉节奏。
 
+- **[18-remove-secondary-page-headings.md](issues/18-remove-secondary-page-headings.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: None
+  - Scope: 删除在线评估与全局操作历史页顶部大标题，收掉标题遗留间距。
+
 ## Decisions-so-far
 - 遵循 [docs/SPEC.md](../../docs/SPEC.md) 与 [docs/adr/](../../docs/adr/) 中的 ADR 0001~0006。
 - 架构采用 `Handler -> Service -> Repository -> Database` 单向流，纯内存 `Engine`。
@@ -110,3 +116,4 @@
 - [Ticket 15 完成](issues/15-flag-index-card-redesign.md)：melody/flagshow 的宫格索引卡、加载骨架与键盘操作已合入；列表与宫格共用 12 / 24 / 48 分页，规则实质修改会在同一事务内刷新 Flag 更新时间。
 - [Ticket 16 完成](issues/16-merge-flagshow.md)：主分支列表复刻与 melody/flagshow 宫格改动已完成整合，前后端全量测试、生产构建和真实浏览器检查通过。
 - [Ticket 17 完成](issues/17-flag-console-layout-typography.md)：标题与统计收紧，筛选操作按容器宽度重排，统一列表和宫格字体及分页节奏；相关测试、生产构建与多尺寸浏览器检查通过，localhost:3000 已更新。
+- [Ticket 18 完成](issues/18-remove-secondary-page-headings.md)：在线评估与全局操作历史首页顶部大标题已删除；27 项相关测试、构建及真实页面验证通过，localhost:3000 已更新。

@@ -99,7 +99,7 @@ describe('GlobalAuditLogsPage 首屏', () => {
     serveAuditLogs([createdLog]);
     renderGlobalAuditLogsPage();
 
-    expect(await screen.findByRole('heading', { name: '全局操作历史' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '全局操作历史' })).not.toBeInTheDocument();
 
     const link = await screen.findByRole('link', { name: 'checkout_v2' });
     expect(link).toHaveAttribute('href', '/flags/42?tab=audit');

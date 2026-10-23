@@ -9,7 +9,7 @@ import { parseAuditDiff } from '../utils/diffParser';
 import { AuditActionBadge, AuditDiffView, auditActionMeta, formatAuditTime } from '../components/AuditDiffView';
 import { ENV_SELECT_OPTIONS, EnvironmentBadge } from '../components/EnvironmentBadge';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 const ACTION_TYPES: AuditActionType[] = ['FLAG_CREATED', 'FLAG_UPDATED', 'FLAG_TOGGLED', 'RULES_SYNCED'];
 
@@ -118,11 +118,7 @@ export const GlobalAuditLogsPage: React.FC = () => {
           boxShadow: 'var(--shadow, 0 1px 2px rgba(24, 20, 17, .03))',
         }}
       >
-        <Title level={4} style={{ marginTop: 0, marginBottom: 4 }}>
-          全局操作历史
-        </Title>
-
-        <Space wrap size={[12, 12]} style={{ marginTop: 20, marginBottom: 16 }}>
+        <Space wrap size={[12, 12]} style={{ marginBottom: 16 }}>
           <Select<Environment>
             aria-label="环境筛选"
             allowClear

@@ -106,6 +106,7 @@ describe('EvaluationConsolePage', () => {
   it('无参从侧栏进入时展示空白就绪表单', () => {
     renderConsole('/evaluations');
 
+    expect(screen.queryByRole('heading', { name: '确定性规则在线评估控制台' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('context-banner')).not.toBeInTheDocument();
     expect(screen.getByText('Development (开发环境)')).toBeInTheDocument();
     expect(screen.getByLabelText(/Flag Key/)).toHaveValue('');
