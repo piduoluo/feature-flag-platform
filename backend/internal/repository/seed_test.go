@@ -49,6 +49,21 @@ func TestSeedDemoData_Idempotency(t *testing.T) {
 	require.NoError(t, db.WithContext(ctx).Model(&domain.AuditLog{}).Where("flag_key IN ?", demoKeys).Count(&auditCount1).Error)
 	assert.Equal(t, int64(5), auditCount1, "each seeded flag should have one creation audit log")
 
+	var aiProdAudit domain.AuditLog
+	require.NoError(t, db.WithContext(ctx).
+		Where("flag_key = ? AND environment = ? AND action_type = ?", "ai_ride_assistant_enabled", domain.EnvProduction, domain.ActionFlagCreated).
+		First(&aiProdAudit).Error)
+	assert.JSONEq(t, `{
+		"action": "created",
+		"key": "ai_ride_assistant_enabled",
+		"name": "AI 行程助手",
+		"description": "仅对演示测试用户开放 AI 行程助手",
+		"environment": "production",
+		"default_value": false,
+		"enabled": true,
+		"rule_count": 1
+	}`, string(aiProdAudit.DiffSummary))
+
 	var aiProduction domain.Flag
 	require.NoError(t, db.WithContext(ctx).Preload("Rules").
 		Where("key = ? AND environment = ?", "ai_ride_assistant_enabled", domain.EnvProduction).

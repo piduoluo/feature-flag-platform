@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Card, Empty, Space, Spin, Tag, Timeline, Typography } from 'antd';
+import { Alert, Button, Empty, Space, Spin, Timeline, Typography } from 'antd';
 import { api } from '../api/client';
 import { AuditLog } from '../types';
 import { parseAuditDiff } from '../utils/diffParser';
-import { AuditDiffView, auditActionMeta, formatAuditTime } from './AuditDiffView';
+import { AuditActionBadge, AuditDiffView, formatAuditTime } from './AuditDiffView';
 
 export const FlagAuditHistoryTab: React.FC<{ flagId: number; refreshToken?: number }> = ({
   flagId,
@@ -52,26 +52,23 @@ export const FlagAuditHistoryTab: React.FC<{ flagId: number; refreshToken?: numb
       ) : !logs || logs.length === 0 ? (
         <Empty description="暂无变更记录" />
       ) : (
-        <div data-testid="audit-timeline">
+        <div data-testid="audit-timeline" className="audit-timeline-wrap">
           <Timeline
-            items={logs.map(log => {
-              const meta = auditActionMeta(log.action_type);
-              return {
-                color: meta.color,
-                children: (
-                  <Card size="small" data-testid={`audit-log-${log.id}`}>
-                    <Space wrap size={[12, 4]}>
-                      <Tag color={meta.color}>{meta.label}</Tag>
-                      <Typography.Text>操作人：{log.operator || '未知操作人'}</Typography.Text>
-                      <Typography.Text type="secondary">{formatAuditTime(log.created_at)}</Typography.Text>
-                    </Space>
-                    <div style={{ marginTop: 8 }}>
-                      <AuditDiffView diff={parseAuditDiff(log.diff_summary, log.action_type)} />
-                    </div>
-                  </Card>
-                ),
-              };
-            })}
+            items={logs.map(log => ({
+              color: 'gray',
+              children: (
+                <div className="tl-card" data-testid={`audit-log-${log.id}`}>
+                  <div className="tl-meta">
+                    <AuditActionBadge actionType={log.action_type} />
+                    <span className="operator">操作人：{log.operator || '未知操作人'}</span>
+                    <span className="time">{formatAuditTime(log.created_at)}</span>
+                  </div>
+                  <div className="tl-body">
+                    <AuditDiffView diff={parseAuditDiff(log.diff_summary, log.action_type)} />
+                  </div>
+                </div>
+              ),
+            }))}
           />
         </div>
       )}

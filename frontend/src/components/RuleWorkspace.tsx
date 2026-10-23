@@ -3,6 +3,7 @@ import { Alert, Button, Empty, Form, Input, InputNumber, Modal, Select, Switch }
 import { Rule } from '../types';
 import { moveRule, parseExpected } from '../pages/ruleDraft';
 import { stringifyJson } from '../utils/json';
+import { BooleanValueTag } from './EnvironmentBadge';
 
 interface Props {
   rules: Rule[];
@@ -97,7 +98,7 @@ export const RuleWorkspace: React.FC<Props> = ({
                 <span className="rule-op">{rule.operator}</span>
                 <code className="rule-val">{stringifyJson(rule.expected_value)}</code>
                 <span className="rule-return">
-                  命中返回值：<strong>{String(rule.return_value)}</strong>
+                  命中返回值：<BooleanValueTag value={rule.return_value} />
                 </span>
               </div>
               <div className="rule-actions">

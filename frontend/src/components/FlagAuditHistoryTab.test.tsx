@@ -171,4 +171,39 @@ describe('FlagAuditHistoryTab seed records', () => {
     expect(await screen.findByText('种子同步 1 条规则')).toBeInTheDocument();
     expect(screen.queryByText('本次同步无规则增删改。')).not.toBeInTheDocument();
   });
+
+  it('renders FLAG_CREATED with fixed 7-field order, EnvironmentBadge, and graceful fallback for missing historical fields', async () => {
+    const legacyCreatedLog: AuditLog = {
+      ...base,
+      id: 10,
+      action_type: 'FLAG_CREATED',
+      operator: 'admin',
+      created_at: '2026-01-01T08:00:00Z',
+      diff_summary: {
+        action: 'created',
+        key: 'checkout',
+        name: 'Checkout',
+        description: '',
+        environment: 'production',
+        default_value: false,
+      },
+    };
+    respondWith([legacyCreatedLog]);
+    render(<FlagAuditHistoryTab flagId={42} />);
+
+    await screen.findByTestId('flag-created-key');
+    const orderedIds = ['key', 'name', 'description', 'environment', 'default_value', 'enabled', 'rule_count'];
+    const renderedIds = Array.from(document.querySelectorAll('[data-testid^="flag-created-"]')).map(el =>
+      el.getAttribute('data-testid')?.replace('flag-created-', ''),
+    );
+    expect(renderedIds).toEqual(orderedIds);
+
+    expect(screen.getByTestId('flag-created-key')).toHaveTextContent('Flag Keycheckout');
+    expect(screen.getByTestId('flag-created-name')).toHaveTextContent('名称Checkout');
+    expect(screen.getByTestId('flag-created-description')).toHaveTextContent('描述未设置');
+    expect(screen.getByTestId('flag-created-environment')).toHaveTextContent('环境Production');
+    expect(screen.getByTestId('flag-created-default_value')).toHaveTextContent('默认返回值false');
+    expect(screen.getByTestId('flag-created-enabled')).toHaveTextContent('启停状态—');
+    expect(screen.getByTestId('flag-created-rule_count')).toHaveTextContent('初始规则数—');
+  });
 });

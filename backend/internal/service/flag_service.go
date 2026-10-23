@@ -146,6 +146,7 @@ func (s *flagService) CreateFlag(ctx context.Context, req *domain.CreateFlagRequ
 			"environment":   flag.Environment,
 			"default_value": flag.DefaultValue,
 			"enabled":       flag.Enabled,
+			"rule_count":    0,
 		}
 		diffBytes, _ := json.Marshal(diffMap)
 

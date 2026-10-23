@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams, useNavigate, useBlocker, useLocation, Navigate } from 'react-router-dom';
-import { Alert, Badge, Button, Card, Form, Input, message, Modal, Space, Spin, Switch, Tabs, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Form, Input, message, Modal, Space, Spin, Switch, Tabs, Typography } from 'antd';
 import { api } from '../api/client';
 import { Flag, Rule, UpdateFlagPayload } from '../types';
 import { DetailBackNav } from '../components/DetailBackNav';
 import { RuleWorkspace } from '../components/RuleWorkspace';
 import { FlagAuditHistoryTab } from '../components/FlagAuditHistoryTab';
+import { BooleanValueTag, EnvironmentBadge, StatusBadge } from '../components/EnvironmentBadge';
 import { rulesEqual, rulePayload } from './ruleDraft';
 import { toast } from '../utils/toast';
 
@@ -237,11 +238,8 @@ const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, in
               <Typography.Title level={3} style={{ margin: 0, fontWeight: 700 }}>
                 {savedFlag.name}
               </Typography.Title>
-              <Tag color="default">{savedFlag.environment}</Tag>
-              <Badge
-                status={savedFlag.enabled ? 'success' : 'default'}
-                text={savedFlag.enabled ? '已启用' : '已停用'}
-              />
+              <EnvironmentBadge environment={savedFlag.environment} />
+              <StatusBadge enabled={savedFlag.enabled} />
             </div>
             <div className="detail-sub">
               <Typography.Text
@@ -289,7 +287,7 @@ const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, in
         <div className="detail-meta" data-testid="detail-meta">
           规则总数：<strong>{savedFlag.rules?.length ?? 0}</strong>
           <span aria-hidden>·</span>
-          配置默认值：<Tag color="blue">{String(savedFlag.default_value)}</Tag>
+          配置默认值：<BooleanValueTag value={savedFlag.default_value} />
           <span className="detail-default-hint">
             {savedFlag.enabled ? '未命中规则时返回该值' : '停用期间评估始终返回 false'}
           </span>
