@@ -377,7 +377,7 @@ it('deep links to the audit tab and renders the structured timeline from the ser
   expect(router.state.location.pathname).toBe('/flags/42');
   expect(router.state.location.search).toBe('');
   expect(screen.getByRole('tab', { name: '变更历史' })).toHaveAttribute('aria-selected', 'true');
-  await screen.findByText('规则批量同步');
+  await screen.findByText('规则变更');
   expect(screen.getAllByText('操作人：admin')).toHaveLength(2);
   expect(screen.getByText(new Date(auditRecords[0].created_at).toLocaleString('zh-CN'))).toBeInTheDocument();
   expect(screen.getByText('beta_user')).toBeInTheDocument();

@@ -105,7 +105,7 @@ describe('GlobalAuditLogsPage 首屏', () => {
     expect(link).toHaveAttribute('href', '/flags/42?tab=audit');
 
     expect(screen.getByText('Production')).toBeInTheDocument();
-    expect(screen.getByText('创建 Flag')).toBeInTheDocument();
+    expect(screen.getByText('新建开关')).toBeInTheDocument();
     expect(screen.getByText('alice')).toBeInTheDocument();
     expect(screen.getByText(new Date(createdAt).toLocaleString('zh-CN'))).toBeInTheDocument();
     expect(screen.getByText('共 1 条记录')).toBeInTheDocument();
@@ -176,11 +176,11 @@ describe('GlobalAuditLogsPage 筛选', () => {
     await screen.findByText('共 2 条记录');
 
     fireEvent.mouseDown(screen.getByRole('combobox', { name: '操作类型筛选' }));
-    fireEvent.click(await screen.findByTitle('规则批量同步'));
+    fireEvent.click(await screen.findByTitle('规则变更'));
 
     await waitFor(() => expect(lastQuery().get('action_type')).toBe('RULES_SYNCED'));
-    await waitFor(() => expect(within(screen.getByRole('table')).queryByText('创建 Flag')).not.toBeInTheDocument());
-    expect(within(screen.getByRole('table')).getByText('规则批量同步')).toBeInTheDocument();
+    await waitFor(() => expect(within(screen.getByRole('table')).queryByText('新建开关')).not.toBeInTheDocument());
+    expect(within(screen.getByRole('table')).getByText('规则变更')).toBeInTheDocument();
     expect(screen.getByText('共 1 条记录')).toBeInTheDocument();
   });
 

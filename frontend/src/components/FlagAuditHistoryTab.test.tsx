@@ -79,8 +79,8 @@ describe('FlagAuditHistoryTab', () => {
 
     const timeline = await screen.findByTestId('audit-timeline');
     expect(timeline).toBeInTheDocument();
-    expect(screen.getByText('规则批量同步')).toBeInTheDocument();
-    expect(screen.getByText('修改基本信息')).toBeInTheDocument();
+    expect(screen.getByText('规则变更')).toBeInTheDocument();
+    expect(screen.getByText('修改信息')).toBeInTheDocument();
     expect(screen.getByText('启停切换')).toBeInTheDocument();
     expect(screen.getAllByText('操作人：admin')).toHaveLength(2);
     expect(screen.getByText('操作人：alice')).toBeInTheDocument();

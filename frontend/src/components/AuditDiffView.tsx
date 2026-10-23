@@ -26,11 +26,11 @@ export interface ActionMeta {
 }
 
 const ACTION_META: Record<string, ActionMeta> = {
-  FLAG_CREATED: { label: '创建 Flag', color: 'gray' },
-  FLAG_UPDATED: { label: '修改基本信息', color: 'gray' },
+  FLAG_CREATED: { label: '新建开关', color: 'gray' },
+  FLAG_UPDATED: { label: '修改信息', color: 'gray' },
   FLAG_TOGGLED: { label: '启停切换', color: 'gray' },
-  RULES_SYNCED: { label: '规则批量同步', color: 'gray' },
-  RULES_SEED_SYNCED: { label: '规则批量同步', color: 'gray' },
+  RULES_SYNCED: { label: '规则变更', color: 'gray' },
+  RULES_SEED_SYNCED: { label: '规则变更', color: 'gray' },
 };
 
 /** 后端 `action_type` → 表格/时间轴上的中文标签与克制中性色。 */
