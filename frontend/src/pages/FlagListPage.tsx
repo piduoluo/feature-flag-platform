@@ -27,7 +27,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { Environment, Flag, FlagStats } from '../types';
 import { api, ApiError } from '../api/client';
 import { CreateFlagDrawer } from '../components/CreateFlagDrawer';
-import { BooleanValueTag, ENV_FILTER_OPTIONS, EnvironmentBadge, StatusBadge, formatEnvironmentLabel } from '../components/EnvironmentBadge';
+import { BooleanValueTag, ENV_FILTER_OPTIONS, EnvironmentBadge, StatusBadge } from '../components/EnvironmentBadge';
 import { toast } from '../utils/toast';
 
 const STATUS_FILTERS = [
@@ -444,9 +444,6 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
               </button>
             ))}
           </div>
-          <p className="flag-result-count" aria-live="polite">
-            {selectedEnv === 'all' ? '全部环境' : formatEnvironmentLabel(selectedEnv)} · 共 {total} 条记录
-          </p>
         </div>
 
         {/* Content: List (Table) vs Grid */}
@@ -594,7 +591,6 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             total={total}
             showSizeChanger
             pageSizeOptions={['12', '24', '48']}
-            showTotal={(totalCount) => `共 ${totalCount} 条记录`}
             onChange={handlePageChange}
           />
         )}

@@ -233,7 +233,6 @@
   .flag-stat-label { color: var(--flag-muted); font-size: .875rem; line-height: 1.4; white-space: nowrap; }
   .flag-stat.active .flag-stat-value, .flag-stat.active .flag-stat-label { color: var(--flag-accent-ink); }
   .flag-stat.active .flag-stat-value { background: #ffe0cf; }
-  .flag-result-count { margin: 0; color: var(--flag-muted); font-size: .8125rem; white-space: nowrap; }
   .flag-console-panel { max-width: 1600px; margin: 0 auto; padding: var(--flag-section-space) var(--flag-page-space) 40px; }
 
   .flag-console .toolbar.flag-toolbar {
@@ -340,7 +339,6 @@
     display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 4px;
     margin: 20px 0 0; padding-top: 20px; border-top: 1px solid var(--flag-line);
   }
-  .flag-pagination .ant-pagination-total-text { margin-inline-end: auto; color: var(--flag-muted); font-size: .8125rem; }
   .flag-pagination .ant-pagination-item-active { border-color: var(--flag-accent); }
   .flag-pagination .ant-pagination-item-active a { color: var(--flag-accent-ink); }
   .flag-pagination .ant-select-selector { border-color: #d9dfe7; }
@@ -358,12 +356,10 @@
     .flag-stat { flex: 1; min-width: 0; padding: 8px 6px; gap: 6px; }
     .flag-stat-label { font-size: .8125rem; }
     .flag-stat-value { min-width: 20px; height: 20px; padding: 0 4px; }
-    .flag-result-count { align-self: flex-end; }
     .flag-console .flag-toolbar-actions { grid-template-columns: minmax(0, 1fr) 40px auto; gap: 12px; }
     .flag-toolbar .flag-search { grid-column: 1 / -1; }
     .flag-toolbar .view-toggle-group { justify-self: start; }
     .flag-toolbar-env .ant-segmented-item-label { padding-inline: 8px; font-size: .8125rem; }
-    .flag-pagination .ant-pagination-total-text { flex-basis: 100%; margin-bottom: 8px; }
     .flag-pagination .ant-pagination-options { display: block; margin-inline-start: 4px; }
     .flag-info-key .copy-mini { width: 32px; height: 32px; }
   }

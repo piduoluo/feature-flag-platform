@@ -147,7 +147,8 @@ describe('FlagListPage (Ticket 02)', () => {
     // Verify search input displays the search text from query
     const searchInput = screen.getByPlaceholderText('搜索 Flag Key 或名称...') as HTMLInputElement;
     expect(searchInput.value).toBe('demo');
-    expect(await screen.findByText('Staging · 共 1 条记录')).toBeInTheDocument();
+    expect(await screen.findByText('Staging Demo Flag')).toBeInTheDocument();
+    expect(screen.queryByText(/共 \d+ 条记录/)).not.toBeInTheDocument();
 
     // Verify URL location keeps query params intact
     expect(router.state.location.search).toContain('environment=staging');
