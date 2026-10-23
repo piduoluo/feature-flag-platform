@@ -95,4 +95,29 @@ describe('AppShell 1:1 Design & Interactions', () => {
     expect(screen.getByRole('button', { name: /折叠侧边栏/i })).toBeInTheDocument();
     expect(container.querySelector('.collapsed-brand-control')).not.toBeInTheDocument();
   });
+
+  it('dismisses the toggle tooltip once the button it points at is swapped out', () => {
+    renderRoute(['/flags']);
+    const tooltip = document.getElementById('tooltip') as HTMLElement;
+    expect(tooltip).not.toBeNull();
+    tooltip.classList.remove('show');
+
+    const collapseBtn = screen.getByRole('button', { name: /折叠侧边栏/i });
+    fireEvent.mouseOver(collapseBtn);
+    expect(tooltip).toHaveClass('show');
+    expect(tooltip).toHaveTextContent('折叠侧边栏');
+
+    // Collapsing unmounts the hovered button, which fires no mouseout; the tip
+    // used to linger with the old action's label.
+    fireEvent.click(collapseBtn);
+    expect(tooltip).not.toHaveClass('show');
+
+    const expandBtn = screen.getByRole('button', { name: /展开侧边栏/i });
+    fireEvent.mouseOver(expandBtn);
+    expect(tooltip).toHaveTextContent('展开侧边栏');
+    expect(tooltip).toHaveClass('show');
+
+    fireEvent.click(expandBtn);
+    expect(tooltip).not.toHaveClass('show');
+  });
 });
