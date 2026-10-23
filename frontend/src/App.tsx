@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { router } from './router';
+import './styles/prototype.css';
 
 export const App: React.FC = () => {
   return (
@@ -10,7 +11,9 @@ export const App: React.FC = () => {
       locale={zhCN}
       theme={{
         token: {
-          colorPrimary: '#1677ff',
+          colorPrimary: '#ff7d41',
+          colorLink: '#ff7d41',
+          colorLinkHover: '#f76d30',
           borderRadius: 6,
         },
       }}
