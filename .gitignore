@@ -19,3 +19,9 @@ dist/
 .vite/
 .env.local
 .env.*.local
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/.playwright/

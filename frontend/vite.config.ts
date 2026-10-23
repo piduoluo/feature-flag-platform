@@ -18,6 +18,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.ts',
+    // Playwright specs live in e2e/ and must not be collected by vitest.
+    exclude: ['e2e/**', '**/node_modules/**', '**/dist/**'],
     // Page-level integration tests drive the real router and antd trees; they
     // take 4-10s on an idle machine and several times longer when the suite or
     // the machine is busy. Assertion-level races are covered by
