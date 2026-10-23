@@ -71,7 +71,7 @@ describe('FlagListPage (Ticket 02)', () => {
     return { router, ...result };
   };
 
-  it('SPEC-US 35: renders demo data with initialized Flag checkout_v2 and status badges', async () => {
+  it('renders fetched Flag rows with status badges', async () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [demoFlag],
       total: 1,

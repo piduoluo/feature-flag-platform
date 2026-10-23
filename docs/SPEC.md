@@ -213,18 +213,17 @@
      - Body:
        ```json
        {
-         "flag_key": "checkout_v2",
+         "flag_key": "ai_ride_assistant_enabled",
          "environment": "production",
          "context": {
-           "country": "CN",
-           "plan": "premium"
+           "user_id": 10001
          }
        }
        ```
      - Data:
        ```json
        {
-         "flag_key": "checkout_v2",
+         "flag_key": "ai_ride_assistant_enabled",
          "environment": "production",
          "enabled": true,
          "result": true,
@@ -232,9 +231,9 @@
          "matched_rule": {
            "id": 1,
            "priority": 1,
-           "attribute_name": "country",
-           "operator": "equals",
-           "expected_value": "CN",
+           "attribute_name": "user_id",
+           "operator": "in",
+           "expected_value": [10001, 10002],
            "return_value": true
          }
        }

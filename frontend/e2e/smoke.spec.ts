@@ -43,7 +43,7 @@ test.beforeAll(async ({ request }) => {
 
 test('SPEC-US 35: the seeded demo flag is visible on a cold start', async ({ page }) => {
   await page.goto('/flags');
-  await expect(page.getByText('checkout_v2').first()).toBeVisible();
+  await expect(page.getByText('ai_ride_assistant_enabled').first()).toBeVisible();
   await expect(page.getByText(flagKey)).toBeVisible();
 });
 

@@ -135,7 +135,7 @@ export const CreateFlagDrawer: React.FC<CreateFlagDrawerProps> = ({
           ]}
           tooltip="全局功能标识，代码中调用的唯一 key，同一环境下必须唯一"
         >
-          <Input placeholder="例如: new_checkout_v2" autoFocus />
+          <Input placeholder="例如: driver_trip_summary_enabled" autoFocus />
         </Form.Item>
 
         <Form.Item

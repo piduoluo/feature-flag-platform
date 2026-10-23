@@ -29,6 +29,16 @@
   - Status: ready-for-agent
   - Blocked by: 04
   - Scope: 演示种子数据注入、Docker Compose 编排、端到端验证与自测报告。
+- **[06-responsive-layout-and-table-overflow.md](issues/06-responsive-layout-and-table-overflow.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: None
+  - Scope: 共用框架、两张表格、评估控制台与 Flag 详情页的响应式布局修复。
+- **[07-didi-demo-seed-refresh.md](issues/07-didi-demo-seed-refresh.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: None
+  - Scope: 更新 4 个虚构出行场景 Key、5 条跨环境演示 Flag，并替换当前本地数据库的旧演示数据。
 
 ## Decisions-so-far
 - 遵循 [docs/SPEC.md](../../docs/SPEC.md) 与 [docs/adr/](../../docs/adr/) 中的 ADR 0001~0006。
@@ -37,3 +47,5 @@
 - [Ticket 02 完成](issues/02-flag-detail-toggle-and-atomic-audit-log.md)：打通 Flag 详情卡片、在线编辑与一键 Switch 启停控制，实现单事务原子审计流水（FLAG_CREATED、FLAG_UPDATED、FLAG_TOGGLED）及空变更抑制与失败原子回滚验证。
 - [Ticket 03 完成](issues/03-rule-batch-sync-atomic-diff-and-workbench.md)：完成规则配置工作台、原子优先级互换（ShiftPriorities 彻底规避物理唯一索引瞬时冲突）、三向精确 Diff 审计与 RULES_SYNCED、清空规则二次确认防护与空白审计抑制。
 - [Ticket 04 完成](issues/04-evaluation-engine-and-online-console.md)：实现纯内存规则评估引擎（零 I/O 依赖）、优先级升序短路求值、严格 JSON 类型隔离（string/number/bool 严禁互通）、精确任意精度数值比较（1 等于 1.0、大整数 2^53+1 无精度损失比对、缺失/null 安全跳过），并在前端搭建具备实时 JSON 语法高亮校验拦截与鲜明三态视觉反馈卡片（RULE_MATCH / DEFAULT_FALLBACK / FLAG_DISABLED）的在线评估控制台。
+- [Ticket 06 完成](issues/06-responsive-layout-and-table-overflow.md)：手机端导航收进抽屉；列表与审计表格只在内部滚动；评估输入、结果和详情顶部按可用宽度换行，已在 390、768、1024、1440px 浏览器宽度核对。
+- [Ticket 07 完成](issues/07-didi-demo-seed-refresh.md)：当前本地库备份后仅替换旧演示数据；新种子包含 4 个 Key、5 条 Flag，覆盖跨环境差异、按用户开放、有序规则、默认回退与停用拦截。
