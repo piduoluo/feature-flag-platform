@@ -1,0 +1,1343 @@
+/* ============================================================
+   Evaluation console — replica of the hi-fi mock, with the
+   primary action switched from the mock's blue to the brand orange.
+   All selectors are scoped under .evalc-page so the shared app
+   shell and the Ant Design dropdown portals stay untouched.
+   ============================================================ */
+
+/* Like the flag console, the evaluation workspace reads as a full-width
+   two-pane console instead of the shell's 1500px reading column. */
+main.app-shell-content:has(> .evalc-page) {
+  max-width: none;
+}
+
+.evalc-page {
+  --ev-ink: #111827;
+  --ev-ink-2: #1f2937;
+  --ev-muted: #6b7280;
+  --ev-subtle: #8b95a5;
+  --ev-line: #e8ecf2;
+  --ev-line-soft: #eef1f6;
+  --ev-field: #d9dfe8;
+  --ev-field-hover: #c5cdd9;
+  --ev-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
+
+  width: 100%;
+  max-width: 1680px;
+  margin: 0 auto;
+  min-height: calc(100vh - 76px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ---------- Deep-link banner ---------- */
+.evalc-banner {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  min-height: 46px;
+  padding: 10px 16px;
+  background: #fff;
+  border: 1px solid var(--ev-line);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .03);
+  font-size: 13px;
+  color: var(--ev-muted);
+}
+
+.evalc-banner-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.evalc-banner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-line);
+  color: var(--brand-ink);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.evalc-banner-badge .anticon {
+  font-size: 12px;
+}
+
+.evalc-banner-text {
+  color: var(--ev-muted);
+}
+
+.evalc-banner-text strong {
+  color: var(--ev-ink);
+  font-family: var(--ev-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.evalc-banner-env {
+  color: var(--ev-subtle);
+}
+
+.evalc-banner-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ev-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color .15s ease;
+}
+
+.evalc-banner-link:hover {
+  color: var(--brand-ink);
+}
+
+/* ---------- Two-column shell ---------- */
+.evalc-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.evalc-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid var(--ev-line);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 4px 14px rgba(16, 24, 40, .03);
+  overflow: hidden;
+}
+
+.evalc-card-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  height: 72px;
+  padding: 0 30px;
+  border-bottom: 1px solid var(--ev-line-soft);
+}
+
+.evalc-card-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  color: var(--ev-ink);
+}
+
+.evalc-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 26px 30px 28px;
+}
+
+/* ---------- Form fields ---------- */
+.evalc-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.evalc-label {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ev-ink-2);
+}
+
+.evalc-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.evalc-req {
+  color: #e5484d;
+  margin-left: 2px;
+  font-weight: 600;
+}
+
+.evalc-hint {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ev-subtle);
+  white-space: nowrap;
+}
+
+/* Environment select */
+.evalc-page .evalc-env-select.ant-select {
+  width: 100%;
+  height: 46px;
+  margin-top: 10px;
+  font-size: 14.5px;
+}
+
+.evalc-page .evalc-env-select .ant-select-selector {
+  height: 46px !important;
+  padding: 0 14px !important;
+  border-color: var(--ev-field) !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.evalc-page .evalc-env-select .ant-select-selection-item,
+.evalc-page .evalc-env-select .ant-select-selection-placeholder {
+  line-height: 44px !important;
+  font-size: 14.5px;
+  padding-inline-end: 26px;
+}
+
+.evalc-page .evalc-env-select .ant-select-selection-item {
+  color: var(--ev-ink-2);
+}
+
+.evalc-page .evalc-env-select .ant-select-selection-placeholder {
+  color: #a7afbd;
+}
+
+.evalc-page .evalc-env-select .ant-select-arrow {
+  inset-inline-end: 14px;
+  color: #9aa4b2;
+  font-size: 12px;
+}
+
+.evalc-page .evalc-env-select:hover .ant-select-selector {
+  border-color: var(--ev-field-hover) !important;
+}
+
+.evalc-page .evalc-env-select.ant-select-focused .ant-select-selector {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(255, 125, 65, .12) !important;
+}
+
+/* Flag Key combobox */
+.evalc-field-flag {
+  margin-top: 26px;
+}
+
+.evalc-combo {
+  position: relative;
+}
+
+.evalc-combo-icon {
+  position: absolute;
+  left: 14px;
+  top: 33px;
+  z-index: 1;
+  font-size: 15px;
+  color: #9aa4b2;
+  pointer-events: none;
+  transition: color .15s ease;
+}
+
+.evalc-combo:focus-within .evalc-combo-icon {
+  color: var(--brand-ink);
+}
+
+.evalc-page .evalc-flag-autocomplete.ant-select {
+  width: 100%;
+  height: 46px;
+  margin-top: 10px;
+  font-size: 14.5px;
+}
+
+.evalc-page .evalc-flag-autocomplete .ant-select-selector {
+  height: 46px !important;
+  padding: 0 34px 0 38px !important;
+  border-color: var(--ev-field) !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.evalc-page .evalc-flag-autocomplete .ant-select-selection-search {
+  inset-inline-start: 0;
+}
+
+.evalc-page .evalc-flag-autocomplete .ant-select-selection-search-input {
+  height: 44px !important;
+  padding-inline-start: 38px;
+  font-size: 14.5px;
+  color: var(--ev-ink-2);
+}
+
+.evalc-page .evalc-flag-autocomplete .ant-select-selection-placeholder {
+  inset-inline-start: 0;
+  padding-inline-start: 38px;
+  line-height: 44px !important;
+  color: #a7afbd;
+}
+
+.evalc-page .evalc-flag-autocomplete .ant-select-clear {
+  inset-inline-end: 12px;
+  background: #fff;
+}
+
+.evalc-page .evalc-flag-autocomplete:hover .ant-select-selector {
+  border-color: var(--ev-field-hover) !important;
+}
+
+.evalc-page .evalc-flag-autocomplete.ant-select-focused .ant-select-selector {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(255, 125, 65, .12) !important;
+}
+
+.evalc-divider {
+  flex: 0 0 auto;
+  height: 1px;
+  margin: 26px 0 24px;
+  background: var(--ev-line-soft);
+}
+
+.evalc-field-context {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ---------- Context JSON editor ---------- */
+.ctx-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 240px;
+  min-width: 0;
+  margin-top: 10px;
+}
+
+.ctx-editor-shell {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+  border: 1px solid #e2e7ef;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.ctx-editor:hover .ctx-editor-shell {
+  border-color: #d3dae5;
+}
+
+.ctx-editor-shell:focus-within {
+  border-color: #ffb08a;
+  box-shadow: 0 0 0 3px rgba(255, 125, 65, .1);
+}
+
+.ctx-editor.is-invalid .ctx-editor-shell {
+  border-color: #e2695e;
+}
+
+.ctx-editor.is-invalid .ctx-editor-shell:focus-within {
+  box-shadow: 0 0 0 3px rgba(194, 64, 58, .1);
+}
+
+.ctx-editor-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 46px;
+  padding: 0 12px 0 16px;
+  background: #f7f9fc;
+  border-bottom: 1px solid #e8ecf2;
+}
+
+.ctx-editor-kind {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  color: #4b5563;
+}
+
+.ctx-editor-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ctx-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background .15s ease, color .15s ease;
+}
+
+.ctx-tool:hover:not(:disabled) {
+  background: #eef2f8;
+  color: #111827;
+}
+
+.ctx-tool:disabled {
+  color: #b6bdc8;
+  cursor: not-allowed;
+}
+
+.ctx-tool-icon {
+  display: inline-flex;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.ctx-tool:hover:not(:disabled) .ctx-tool-icon {
+  color: #374151;
+}
+
+.ctx-tool-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 5px;
+  background: #e1e6ee;
+}
+
+.ctx-editor-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.ctx-editor-gutter {
+  position: relative;
+  flex: 0 0 46px;
+  width: 46px;
+  overflow: hidden;
+  background: #f3f5fa;
+  border-right: 1px solid #edf0f6;
+}
+
+/* Out of flow on purpose: the numbers must never stretch the editor to the
+   height of the document, the textarea owns scrolling instead. */
+.ctx-editor-gutter-layer {
+  position: absolute;
+  top: 14px;
+  right: 0;
+  left: 0;
+  font-family: var(--ev-mono);
+  font-size: 12.5px;
+  line-height: 23px;
+  color: #8b95a5;
+  text-align: right;
+}
+
+.ctx-editor-gutter-layer > div {
+  height: 23px;
+  padding-right: 14px;
+}
+
+.ctx-editor-code {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+}
+
+.ctx-editor-highlight,
+.ctx-editor-input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 14px 16px;
+  font-family: var(--ev-mono);
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 23px;
+  letter-spacing: 0;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.ctx-editor-highlight {
+  overflow: hidden;
+  color: #334155;
+  pointer-events: none;
+}
+
+.ctx-editor-highlight code {
+  font: inherit;
+}
+
+.ctx-token-key {
+  color: #1f2937;
+}
+
+.ctx-token-string {
+  color: #2563eb;
+}
+
+.ctx-token-number {
+  color: #b45309;
+}
+
+.ctx-token-literal {
+  color: #7c3aed;
+}
+
+.ctx-token-punct {
+  color: #64748b;
+}
+
+.ctx-editor-input {
+  width: 100%;
+  height: 100%;
+  /* Transparent glyphs sit exactly on top of the highlighted layer so native
+     caret, selection, IME composition and undo keep working. */
+  overflow: auto;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: #111827;
+}
+
+.ctx-editor-input::placeholder {
+  color: #a4adbb;
+  -webkit-text-fill-color: #a4adbb;
+}
+
+.ctx-editor-input:focus-visible {
+  outline: none;
+}
+
+/* While an IME composition is in progress Chrome paints the pre-edit text in
+   the textarea itself; reveal it and pause the highlight layer underneath. */
+.ctx-editor.is-composing .ctx-editor-highlight {
+  visibility: hidden;
+}
+
+.ctx-editor.is-composing .ctx-editor-input {
+  color: #1f2937;
+  -webkit-text-fill-color: #1f2937;
+}
+
+.ctx-editor-input::selection {
+  background: rgba(37, 99, 235, .16);
+}
+
+.ctx-editor-resize {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  touch-action: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M11 1 1 11M11 6 6 11' stroke='%23aab3c0' stroke-width='1.1' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.ctx-editor-error {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 9px;
+  padding: 10px 12px;
+  background: #fff7f6;
+  border: 1px solid #f4d6d2;
+  border-radius: 8px;
+}
+
+.ctx-editor-error-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: #e2695e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.ctx-editor-error-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #a53c32;
+}
+
+.ctx-editor-error-message {
+  margin-top: 2px;
+  font-family: var(--ev-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #b4534a;
+  word-break: break-word;
+}
+
+/* ---------- Primary action (mock blue → brand orange) ---------- */
+.evalc-submit.ant-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 52px;
+  margin-top: 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  box-shadow: 0 1px 2px rgba(185, 76, 28, .2);
+}
+
+.evalc-submit.ant-btn-primary {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.evalc-submit.ant-btn-primary:not(:disabled):hover,
+.evalc-submit.ant-btn-primary:not(:disabled):focus-visible {
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+}
+
+.evalc-submit.ant-btn .anticon {
+  font-size: 18px;
+}
+
+.evalc-submit.ant-btn:disabled {
+  background: #fdf2ec;
+  border-color: #f6e0d3;
+  color: #c4937b;
+  box-shadow: none;
+}
+
+.evalc-submit.ant-btn:disabled:hover {
+  background: #fdf2ec;
+  border-color: #f6e0d3;
+  color: #c4937b;
+}
+
+/* ---------- Result panel ---------- */
+.evalc-result-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 26px 30px 28px;
+}
+
+.evalc-result-inset {
+  flex: 1;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  text-align: center;
+  background: linear-gradient(180deg, #f9fbfd 0%, #f6f8fc 58%, #f7f9fc 100%);
+  border: 1px solid #eff2f7;
+  border-radius: 10px;
+}
+
+.evalc-empty-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 128px;
+  height: 118px;
+  margin-bottom: 20px;
+}
+
+.evalc-empty-art::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 226px;
+  height: 226px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(207, 219, 238, .42) 0%,
+    rgba(229, 237, 248, .2) 46%,
+    rgba(247, 249, 252, 0) 70%
+  );
+  pointer-events: none;
+}
+
+.evalc-empty-icon {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  color: #55637a;
+}
+
+.evalc-empty-text {
+  max-width: 470px;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  letter-spacing: .01em;
+  color: #6b7280;
+}
+
+.evalc-result-loading {
+  gap: 16px;
+}
+
+.evalc-spinner {
+  width: 30px;
+  height: 30px;
+  border: 2.5px solid #e3e8f0;
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: evalcSpin .8s linear infinite;
+}
+
+.evalc-loading-text {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+@keyframes evalcSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Failed request banner */
+.evalc-alert {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  background: #fff7f6;
+  border: 1px solid #f4d6d2;
+  border-radius: 8px;
+}
+
+.evalc-alert-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  font-size: 16px;
+  color: #c2403a;
+}
+
+.evalc-alert-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #a53c32;
+}
+
+.evalc-alert-desc {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #b4534a;
+  word-break: break-word;
+}
+
+.evalc-alert-close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  border-radius: 5px;
+  color: #a86b64;
+  font-size: 12px;
+  line-height: 1;
+  transition: background .15s ease, color .15s ease;
+}
+
+.evalc-alert-close:hover {
+  background: #fbe6e3;
+  color: #8f2f27;
+}
+
+/* Decision states */
+.evalc-result-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.evalc-result-stage > .evalc-verdict {
+  flex: 0 0 auto;
+  max-height: 100%;
+  margin: auto 0;
+  overflow: auto;
+}
+
+.evalc-result-stage > .evalc-result-inset {
+  flex: 1;
+}
+
+.evalc-verdict {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+  padding: 22px 22px 24px;
+  border: 1px solid;
+  border-radius: 10px;
+}
+
+.evalc-verdict--green {
+  background: #f5faf7;
+  border-color: #d8e9de;
+}
+
+.evalc-verdict--amber {
+  background: #fdf9ef;
+  border-color: #efdfbd;
+}
+
+.evalc-verdict--blue {
+  background: #f5f8fc;
+  border-color: #dbe4f0;
+}
+
+.evalc-verdict--neutral {
+  background: #fafafa;
+  border-color: #e7e7e7;
+}
+
+.evalc-verdict-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  font-size: 26px;
+}
+
+.evalc-verdict--green .evalc-verdict-icon {
+  color: #168653;
+}
+
+.evalc-verdict--amber .evalc-verdict-icon {
+  color: #a2650f;
+}
+
+.evalc-verdict--blue .evalc-verdict-icon {
+  color: #3f6b97;
+}
+
+.evalc-verdict--neutral .evalc-verdict-icon {
+  color: #8b95a5;
+}
+
+.evalc-verdict-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.evalc-verdict-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.evalc-verdict-title {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.35;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+.evalc-verdict--green .evalc-verdict-title {
+  color: #166b46;
+}
+
+.evalc-verdict--amber .evalc-verdict-title {
+  color: #8a5a12;
+}
+
+.evalc-verdict--blue .evalc-verdict-title {
+  color: #33597f;
+}
+
+.evalc-verdict--neutral .evalc-verdict-title {
+  color: #33302d;
+}
+
+.evalc-verdict-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-family: var(--ev-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+
+.evalc-verdict--green .evalc-verdict-tag {
+  background: #ecf7f1;
+  border-color: #cfe6d8;
+  color: #1d6f47;
+}
+
+.evalc-verdict--amber .evalc-verdict-tag {
+  background: #fbf3e2;
+  border-color: #f0e0bd;
+  color: #8a5a12;
+}
+
+.evalc-verdict--blue .evalc-verdict-tag {
+  background: #eef4fb;
+  border-color: #d7e2ef;
+  color: #33597f;
+}
+
+.evalc-verdict--neutral .evalc-verdict-tag {
+  background: #f5f4f1;
+  border-color: #e6e3de;
+  color: #4d4843;
+}
+
+.evalc-verdict-desc {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #5b6472;
+}
+
+.evalc-verdict-desc code {
+  padding: 1px 5px;
+  border: 1px solid #e6e3de;
+  border-radius: 4px;
+  background: #fbfaf8;
+  font-family: var(--ev-mono);
+  font-size: 11.5px;
+  color: #3f3b37;
+}
+
+.evalc-value-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding: 14px 18px;
+  background: #fff;
+  border: 1px solid;
+  border-radius: 8px;
+}
+
+.evalc-verdict--green .evalc-value-card {
+  border-color: #cfe6d8;
+}
+
+.evalc-verdict--amber .evalc-value-card {
+  border-color: #f0e0bd;
+}
+
+.evalc-verdict--blue .evalc-value-card {
+  border-color: #d7e2ef;
+}
+
+.evalc-verdict--neutral .evalc-value-card {
+  border-color: #e7e7e7;
+}
+
+.evalc-value-label {
+  font-size: 11px;
+  color: #918b85;
+}
+
+.evalc-value {
+  margin-top: 2px;
+  font-family: var(--ev-mono);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.evalc-value--green {
+  color: #168653;
+}
+
+.evalc-value--red {
+  color: #c2403a;
+}
+
+.evalc-value--muted {
+  color: #8a8580;
+}
+
+.evalc-value-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.evalc-verdict--green .evalc-value-pill {
+  background: #ecf7f1;
+  border-color: #cfe6d8;
+  color: #1d6f47;
+}
+
+.evalc-verdict--amber .evalc-value-pill {
+  background: #fbf3e2;
+  border-color: #f0e0bd;
+  color: #8a5a12;
+}
+
+.evalc-verdict--blue .evalc-value-pill {
+  background: #eef4fb;
+  border-color: #d7e2ef;
+  color: #33597f;
+}
+
+.evalc-value-pill--danger {
+  background: #fdf2f0 !important;
+  border-color: #f0d3ce !important;
+  color: #a53c32 !important;
+}
+
+/* Matched rule breakdown */
+.evalc-rule-detail {
+  margin-top: 16px;
+  background: #fff;
+  border: 1px solid #d9eadf;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.evalc-rule-detail-head {
+  padding: 10px 14px;
+  background: #f5faf7;
+  border-bottom: 1px solid #d9eadf;
+  color: #1d6f47;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.evalc-rule-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.evalc-rule-table th,
+.evalc-rule-table td {
+  padding: 10px 12px;
+  border-right: 1px solid #f0eeeb;
+  border-bottom: 1px solid #f0eeeb;
+  text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.evalc-rule-table tr:last-child th,
+.evalc-rule-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.evalc-rule-table th:last-child,
+.evalc-rule-table td:last-child {
+  border-right: 0;
+}
+
+.evalc-rule-table th {
+  width: 24%;
+  background: #fcfbf9;
+  color: #8a8580;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.evalc-rule-table td {
+  font-size: 12px;
+  color: #3f3b37;
+}
+
+.evalc-rule-table code {
+  font-family: var(--ev-mono);
+  font-size: 11.5px;
+  color: #2f2b27;
+  word-break: break-all;
+}
+
+.evalc-rule-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid #e1ddf7;
+  border-radius: 5px;
+  background: #f5f3fb;
+  color: #5747a4;
+  font-family: var(--ev-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.evalc-rule-op {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid #dbe5f0;
+  border-radius: 5px;
+  background: #f2f6fb;
+  color: #3f6b97;
+  font-family: var(--ev-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.evalc-rule-bool {
+  font-family: var(--ev-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.evalc-rule-bool--true {
+  color: #168653;
+}
+
+.evalc-rule-bool--false {
+  color: #c2403a;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1200px) {
+  .evalc-page {
+    min-height: 0;
+  }
+
+  .evalc-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .evalc-card-head {
+    height: 64px;
+    padding: 0 22px;
+  }
+
+  .evalc-card-title {
+    font-size: 20px;
+  }
+
+  .evalc-card-body,
+  .evalc-result-body {
+    padding: 20px 22px 22px;
+  }
+
+  .evalc-result-inset {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 640px) {
+  .evalc-page {
+    gap: 14px;
+  }
+
+  .evalc-grid {
+    gap: 14px;
+  }
+
+  .evalc-card {
+    border-radius: 10px;
+  }
+
+  .evalc-card-head {
+    height: 58px;
+    padding: 0 18px;
+  }
+
+  .evalc-card-title {
+    font-size: 18px;
+  }
+
+  .evalc-card-body,
+  .evalc-result-body {
+    padding: 16px 16px 18px;
+  }
+
+  .evalc-banner {
+    padding: 10px 12px;
+  }
+
+  .ctx-editor {
+    min-height: 230px;
+  }
+
+  .ctx-editor-bar {
+    padding: 0 8px 0 12px;
+  }
+
+  .ctx-editor-kind {
+    display: none;
+  }
+
+  .ctx-editor-tools {
+    margin-left: auto;
+  }
+
+  .ctx-editor-gutter {
+    flex-basis: 40px;
+    width: 40px;
+  }
+
+  .ctx-editor-gutter-layer > div {
+    padding-right: 10px;
+  }
+
+  .evalc-result-inset {
+    min-height: 300px;
+    padding: 24px;
+  }
+
+  .evalc-empty-art::before {
+    width: 180px;
+    height: 180px;
+  }
+
+  .evalc-submit.ant-btn {
+    height: 46px;
+    font-size: 15px;
+  }
+
+  .evalc-verdict {
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .evalc-verdict-title {
+    font-size: 17px;
+  }
+
+  .evalc-verdict-icon {
+    font-size: 22px;
+  }
+
+  .evalc-value {
+    font-size: 23px;
+  }
+
+  /* Rule breakdown: 2 columns become stacked label/value pairs so the
+     Chinese labels never wrap into one character per line. */
+  .evalc-rule-table,
+  .evalc-rule-table tbody,
+  .evalc-rule-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .evalc-rule-table tr {
+    display: grid;
+    grid-template-columns: 116px minmax(0, 1fr);
+    border-bottom: 1px solid #f0eeeb;
+  }
+
+  .evalc-rule-table tr:last-child {
+    border-bottom: 0;
+  }
+
+  .evalc-rule-table th,
+  .evalc-rule-table td {
+    width: auto;
+    padding: 7px 10px;
+    border-right: 0;
+    border-bottom: 0;
+  }
+
+  .evalc-rule-table th {
+    background: #fcfbf9;
+    font-size: 10px;
+    line-height: 1.45;
+  }
+
+  .evalc-rule-table td {
+    align-self: center;
+  }
+}
+
+@media (max-width: 400px) {
+  .ctx-editor-bar {
+    padding: 0 6px;
+  }
+
+  .ctx-editor-tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .ctx-tool {
+    padding: 0 5px;
+    font-size: 12.5px;
+    gap: 4px;
+  }
+
+  .ctx-tool-sep {
+    margin: 0 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evalc-spinner {
+    animation-duration: 1.6s;
+  }
+}
