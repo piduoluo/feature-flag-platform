@@ -15,16 +15,18 @@ const basicValues = (flag: Flag): UpdateFlagPayload => ({
 });
 
 export const FlagDetailPage: React.FC = () => {
-  const { id } = useParams();
-  return <FlagWorkspace key={id} id={Number(id)} />;
+  const { id, tab } = useParams();
+  return <FlagWorkspace key={`${id}-${tab ?? 'default'}`} id={Number(id)} paramTab={tab} />;
 };
 
-const FlagWorkspace: React.FC<{ id: number }> = ({ id }) => {
+const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramTab }) => {
   const navigate = useNavigate();
   const bypass = useRef(false);
   const [evaluationPrompt, setEvaluationPrompt] = useState(false);
   const [query, setQuery] = useSearchParams();
-  const tab = ['rules', 'audit', 'settings'].includes(query.get('tab') || '') ? query.get('tab')! : 'rules';
+  const tab = ['rules', 'audit', 'settings'].includes(paramTab || query.get('tab') || '')
+    ? (paramTab || query.get('tab')!)
+    : 'rules';
   const [savedFlag, setSavedFlag] = useState<Flag>();
   const [basicDraft, setBasicDraft] = useState<UpdateFlagPayload>();
   const [rulesDraft, setRulesDraft] = useState<Rule[]>();
@@ -58,12 +60,17 @@ const FlagWorkspace: React.FC<{ id: number }> = ({ id }) => {
     if (basic) form.setFieldsValue(basic);
   }, [basic, form]);
 
-  const changeTab = (key: string) =>
-    setQuery((previous) => {
-      const next = new URLSearchParams(previous);
-      next.set('tab', key);
-      return next;
-    });
+  const changeTab = (key: string) => {
+    if (paramTab) {
+      navigate(`/flags/${id}/${key}`);
+    } else {
+      setQuery((previous) => {
+        const next = new URLSearchParams(previous);
+        next.set('tab', key);
+        return next;
+      });
+    }
+  };
 
   const isBasicDirty = !!savedFlag && JSON.stringify(basic) !== JSON.stringify(basicValues(savedFlag));
   const rules = rulesDraft ?? savedFlag?.rules ?? [];

@@ -34,7 +34,6 @@ import { api, ApiError } from '../api/client';
 import { CreateFlagDrawer } from '../components/CreateFlagDrawer';
 import { toast } from '../utils/toast';
 
-const { Text, Paragraph } = Typography;
 
 const ENV_TAG_COLORS: Record<Environment, string> = {
   development: 'blue',

@@ -53,9 +53,9 @@ function isEnvironment(value: string | null): value is Environment {
  * Unknown or malformed parameters are ignored instead of failing the page.
  */
 function resolveEntryQuery(searchParams: URLSearchParams) {
-  const environmentParam = searchParams.get('environment');
-  const flagKey = (searchParams.get('flag_key') ?? '').trim();
-  const flagIdParam = searchParams.get('flag_id') ?? '';
+  const environmentParam = searchParams.get('environment') || searchParams.get('env');
+  const flagKey = (searchParams.get('flag_key') || searchParams.get('key') || '').trim();
+  const flagIdParam = searchParams.get('flag_id') || searchParams.get('id') || '';
   const flagId = /^\d+$/.test(flagIdParam) ? Number(flagIdParam) : null;
 
   return {

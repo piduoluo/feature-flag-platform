@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Button, Empty, Form, Input, Modal, Select, Space, Switch, Tag } from 'antd';
+import { Alert, Button, Empty, Form, Input, Modal, Select, Switch, Tag } from 'antd';
 import { Rule } from '../types';
 import { moveRule, parseExpected } from '../pages/ruleDraft';
 

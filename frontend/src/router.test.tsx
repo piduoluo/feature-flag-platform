@@ -32,6 +32,7 @@ describe('Router & AppShell Integration', () => {
       page: 1,
       page_size: 20,
     });
+    vi.mocked(api.getAuditLogs).mockResolvedValue([]);
   });
 
   const renderRoute = (initialEntries: string[] = ['/']) => {
@@ -152,5 +153,30 @@ describe('Router & AppShell Integration', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/flags');
     });
+  });
+
+  it('redirects /evaluation to /evaluations while preserving search params', async () => {
+    const { router } = renderRoute(['/evaluation?key=checkout&env=staging']);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/evaluations');
+    });
+    expect(router.state.location.search).toBe('?key=checkout&env=staging');
+  });
+
+  it('redirects /audit to /audit-logs while preserving search params', async () => {
+    const { router } = renderRoute(['/audit?flag_key=checkout']);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/audit-logs');
+    });
+    expect(router.state.location.search).toBe('?flag_key=checkout');
+  });
+
+  it('supports deep route /flags/:id/:tab', async () => {
+    const { router } = renderRoute(['/flags/42/audit']);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/flags/42/audit');
+    });
+    expect(api.getFlag).toHaveBeenCalledWith(42);
+    expect(screen.getByTestId('flag-detail-page')).toBeInTheDocument();
   });
 });
