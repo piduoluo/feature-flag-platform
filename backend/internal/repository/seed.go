@@ -130,7 +130,33 @@ func SeedDemoData(db *gorm.DB) error {
 			}
 
 			if count > 0 {
-				// Already exists, skip idempotently
+				// Already exists, ensure legacy seeded FLAG_CREATED audit record has aligned fields idempotently
+				var existingFlag domain.Flag
+				if err := tx.Where("key = ? AND environment = ?", sf.Key, sf.Environment).First(&existingFlag).Error; err == nil {
+					var createdLog domain.AuditLog
+					if err := tx.Where("flag_id = ? AND action_type = ?", existingFlag.ID, domain.ActionFlagCreated).
+						Order("id ASC").First(&createdLog).Error; err == nil {
+						var diffMap map[string]interface{}
+						if err := json.Unmarshal(createdLog.DiffSummary, &diffMap); err == nil && diffMap != nil {
+							_, hasAction := diffMap["action"]
+							_, hasDesc := diffMap["description"]
+							_, hasEnabled := diffMap["enabled"]
+							if !hasAction || !hasDesc || !hasEnabled {
+								alignedDiff, _ := json.Marshal(map[string]interface{}{
+									"action":        "created",
+									"key":           existingFlag.Key,
+									"name":          sf.Name,
+									"description":   sf.Description,
+									"environment":   existingFlag.Environment,
+									"default_value": sf.DefaultValue,
+									"enabled":       sf.Enabled,
+									"rule_count":    len(sf.Rules),
+								})
+								_ = tx.Model(&createdLog).Update("diff_summary", alignedDiff).Error
+							}
+						}
+					}
+				}
 				continue
 			}
 
@@ -163,10 +189,13 @@ func SeedDemoData(db *gorm.DB) error {
 
 			// Insert initial audit log
 			initialDiff, _ := json.Marshal(map[string]interface{}{
+				"action":        "created",
 				"key":           flag.Key,
 				"name":          flag.Name,
+				"description":   flag.Description,
 				"environment":   flag.Environment,
 				"default_value": flag.DefaultValue,
+				"enabled":       flag.Enabled,
 				"rule_count":    len(sf.Rules),
 			})
 

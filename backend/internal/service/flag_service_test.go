@@ -54,6 +54,21 @@ func TestFlagService_CreateFlag_Success(t *testing.T) {
 	assert.Equal(t, domain.EnvDevelopment, created.Environment)
 	assert.False(t, created.Enabled, "New flags should default to disabled")
 	assert.True(t, created.DefaultValue)
+
+	logs, err := flagService.GetAuditLogs(ctx, created.ID)
+	require.NoError(t, err)
+	require.Len(t, logs, 1)
+	assert.Equal(t, domain.ActionFlagCreated, logs[0].ActionType)
+	assert.JSONEq(t, fmt.Sprintf(`{
+		"action": "created",
+		"key": %q,
+		"name": "Test Flag Name",
+		"description": "Optional description for test",
+		"environment": "development",
+		"default_value": true,
+		"enabled": false,
+		"rule_count": 0
+	}`, uniqueKey), string(logs[0].DiffSummary))
 }
 
 func TestFlagService_CreateFlag_SameKeyDifferentEnv_Success(t *testing.T) {

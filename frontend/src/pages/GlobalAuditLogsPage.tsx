@@ -1,29 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Card, Empty, Input, Select, Space, Spin, Table, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Empty, Input, Select, Space, Spin, Table, Typography } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import type { ColumnsType } from 'antd/es/table';
 import { api } from '../api/client';
 import { AuditActionType, AuditLog, Environment } from '../types';
 import { parseAuditDiff } from '../utils/diffParser';
-import { AuditDiffView, auditActionMeta, formatAuditTime } from '../components/AuditDiffView';
+import { AuditActionBadge, AuditDiffView, auditActionMeta, formatAuditTime } from '../components/AuditDiffView';
+import { ENV_SELECT_OPTIONS, EnvironmentBadge } from '../components/EnvironmentBadge';
 
 const { Text, Title } = Typography;
-
-const ENV_TAG_COLORS: Record<string, string> = {
-  development: 'blue',
-  staging: 'orange',
-  production: 'magenta',
-};
-
-const ENV_LABELS: Record<string, string> = {
-  development: 'Development',
-  staging: 'Staging',
-  production: 'Production',
-};
-
-const ENV_OPTIONS: { value: Environment; label: string }[] = (Object.keys(ENV_LABELS) as Environment[])
-  .map(value => ({ value, label: ENV_LABELS[value] }));
 
 const ACTION_TYPES: AuditActionType[] = ['FLAG_CREATED', 'FLAG_UPDATED', 'FLAG_TOGGLED', 'RULES_SYNCED'];
 
@@ -79,8 +65,8 @@ export const GlobalAuditLogsPage: React.FC = () => {
       key: 'flag_key',
       width: 220,
       render: (value: string, record) => (
-        <Link to={`/flags/${record.flag_id}?tab=audit`}>
-          <Text code>{value}</Text>
+        <Link to={`/flags/${record.flag_id}?tab=audit`} className="audit-key">
+          <code className="inline-code">{value}</code>
         </Link>
       ),
     },
@@ -88,22 +74,15 @@ export const GlobalAuditLogsPage: React.FC = () => {
       title: '环境',
       dataIndex: 'environment',
       key: 'environment',
-      width: 130,
-      render: (value: string) => (
-        <Tag color={ENV_TAG_COLORS[value] ?? 'default'}>
-          {ENV_LABELS[value] ?? value}
-        </Tag>
-      ),
+      width: 140,
+      render: (value: string) => <EnvironmentBadge environment={value} />,
     },
     {
       title: '动作',
       dataIndex: 'action_type',
       key: 'action_type',
       width: 150,
-      render: (value: string) => {
-        const meta = auditActionMeta(value);
-        return <Tag color={meta.color}>{meta.label}</Tag>;
-      },
+      render: (value: string) => <AuditActionBadge actionType={value} />,
     },
     {
       title: '操作人',
@@ -117,13 +96,20 @@ export const GlobalAuditLogsPage: React.FC = () => {
       dataIndex: 'created_at',
       key: 'created_at',
       width: 190,
-      render: (value: string) => formatAuditTime(value),
+      render: (value: string) => <span className="audit-muted">{formatAuditTime(value)}</span>,
     },
   ];
 
   return (
     <div data-testid="global-audit-logs-page" style={{ maxWidth: 1400, margin: '0 auto' }}>
-      <Card variant="borderless" style={{ borderRadius: 8 }}>
+      <Card
+        variant="borderless"
+        style={{
+          borderRadius: 9,
+          border: '1px solid var(--line, #ebe8e4)',
+          boxShadow: 'var(--shadow, 0 1px 2px rgba(24, 20, 17, .03))',
+        }}
+      >
         <Title level={4} style={{ marginTop: 0, marginBottom: 4 }}>
           全局操作历史
         </Title>
@@ -135,7 +121,7 @@ export const GlobalAuditLogsPage: React.FC = () => {
             placeholder="全部环境"
             style={{ width: 160 }}
             value={environment}
-            options={ENV_OPTIONS}
+            options={ENV_SELECT_OPTIONS}
             onChange={(value) => { setEnvironment(value); setPage(1); }}
           />
           <Select<AuditActionType>
@@ -179,6 +165,7 @@ export const GlobalAuditLogsPage: React.FC = () => {
           ) : (
             <Table<AuditLog>
               rowKey="id"
+              className="audit-log-table"
               columns={columns}
               tableLayout="fixed"
               scroll={{ x: 900 }}
@@ -195,8 +182,9 @@ export const GlobalAuditLogsPage: React.FC = () => {
                     {expanded ? '−' : '+'}
                   </button>
                 ),
+                expandedRowClassName: () => 'audit-detail-row',
                 expandedRowRender: (record) => (
-                  <div data-testid={`audit-diff-${record.id}`}>
+                  <div data-testid={`audit-diff-${record.id}`} className="audit-detail">
                     <AuditDiffView diff={parseAuditDiff(record.diff_summary, record.action_type)} />
                   </div>
                 ),

@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams, useNavigate, useBlocker } from 'react-router-dom';
-import { Alert, Button, Card, Form, Input, message, Modal, Space, Spin, Switch, Tabs, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Form, Input, message, Modal, Space, Spin, Switch, Tabs, Typography } from 'antd';
 import { api } from '../api/client';
 import { Flag, Rule, UpdateFlagPayload } from '../types';
 import { RuleWorkspace } from '../components/RuleWorkspace';
 import { FlagAuditHistoryTab } from '../components/FlagAuditHistoryTab';
+import { BooleanValueTag, EnvironmentBadge } from '../components/EnvironmentBadge';
 import { rulesEqual, rulePayload } from './ruleDraft';
 import { toast } from '../utils/toast';
 
@@ -178,11 +179,11 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
       <div className="detail-head" style={{ marginBottom: 20 }}>
         <div className="detail-head-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
           <div className="detail-main">
-            <div className="detail-title-row" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div className="detail-title-row" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <Typography.Title level={3} style={{ margin: 0, fontWeight: 700 }}>
                 {savedFlag.name}
               </Typography.Title>
-              <Tag color="default">{savedFlag.environment}</Tag>
+              <EnvironmentBadge environment={savedFlag.environment} />
             </div>
             <div className="detail-sub" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
               <Typography.Text
@@ -200,12 +201,14 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
                 最后更新：{new Date(savedFlag.updated_at).toLocaleString('zh-CN')}
               </Typography.Text>
             </div>
-            <div className="detail-meta" style={{ marginTop: 12, fontSize: 13, color: '#6d6761' }}>
-              规则总数：<strong style={{ color: '#3f3b37', fontWeight: 600 }}>{savedFlag.rules?.length ?? 0}</strong>
-              <span style={{ margin: '0 6px', color: '#8a8580' }}>·</span>
-              已生效默认返回值：<Tag color="blue">{String(savedFlag.default_value)}</Tag>
-              <span style={{ margin: '0 6px', color: '#8a8580' }}>·</span>
-              最后修改：{new Date(savedFlag.updated_at).toLocaleString('zh-CN')}
+            <div className="detail-meta" style={{ marginTop: 12, fontSize: 13, color: '#6d6761', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+              <span>规则总数：<strong style={{ color: '#3f3b37', fontWeight: 600 }}>{savedFlag.rules?.length ?? 0}</strong></span>
+              <span style={{ color: '#8a8580' }}>·</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                已生效默认返回值：<BooleanValueTag value={savedFlag.default_value} />
+              </span>
+              <span style={{ color: '#8a8580' }}>·</span>
+              <span>最后修改：{new Date(savedFlag.updated_at).toLocaleString('zh-CN')}</span>
             </div>
           </div>
 

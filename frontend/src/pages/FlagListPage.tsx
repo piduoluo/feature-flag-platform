@@ -4,12 +4,10 @@ import {
   Button,
   Input,
   Segmented,
-  Tag,
   Space,
   Card,
   Typography,
   Empty,
-  Badge,
   Tooltip,
   Alert,
   Switch,
@@ -33,28 +31,8 @@ import type { ColumnsType } from 'antd/es/table';
 import { Environment, Flag } from '../types';
 import { api, ApiError } from '../api/client';
 import { CreateFlagDrawer } from '../components/CreateFlagDrawer';
+import { BooleanValueTag, ENV_FILTER_OPTIONS, EnvironmentBadge, StatusBadge } from '../components/EnvironmentBadge';
 import { toast } from '../utils/toast';
-
-
-const ENV_TAG_COLORS: Record<Environment, string> = {
-  development: 'blue',
-  staging: 'orange',
-  production: 'magenta',
-};
-
-const ENV_LABELS: Record<string, string> = {
-  all: '全部环境',
-  development: 'Development',
-  staging: 'Staging',
-  production: 'Production',
-};
-
-const ENV_OPTIONS = [
-  { label: '全部环境', value: 'all' },
-  { label: 'Development', value: 'development' },
-  { label: 'Staging', value: 'staging' },
-  { label: 'Production', value: 'production' },
-];
 
 interface FlagListPageProps {
   onNavigateToEval?: (flagKey: string, env: Environment) => void;
@@ -260,39 +238,22 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '运行环境',
       dataIndex: 'environment',
       key: 'environment',
-      width: 110,
-      render: (env: Environment) => (
-        <Tag color={ENV_TAG_COLORS[env]} style={{ fontWeight: 500 }}>
-          {ENV_LABELS[env] || env}
-        </Tag>
-      ),
+      width: 120,
+      render: (env: Environment) => <EnvironmentBadge environment={env} />,
     },
     {
       title: '启停状态',
       dataIndex: 'enabled',
       key: 'enabled',
       width: 100,
-      render: (enabled: boolean) => (
-        <Badge
-          status={enabled ? 'success' : 'default'}
-          text={
-            <span style={{ fontWeight: 500 }}>
-              {enabled ? '已启用' : '已停用'}
-            </span>
-          }
-        />
-      ),
+      render: (enabled: boolean) => <StatusBadge enabled={enabled} />,
     },
     {
       title: '默认返回值',
       dataIndex: 'default_value',
       key: 'default_value',
       width: 110,
-      render: (val: boolean) => (
-        <Tag color={val ? 'cyan' : 'default'}>
-          {val ? 'true' : 'false'}
-        </Tag>
-      ),
+      render: (val: boolean) => <BooleanValueTag value={val} />,
     },
     {
       title: '创建时间',
@@ -436,7 +397,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             <Segmented
               value={selectedEnv}
               onChange={(val) => handleEnvChange(val as string)}
-              options={ENV_OPTIONS}
+              options={ENV_FILTER_OPTIONS}
             />
           </div>
 
@@ -605,14 +566,9 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                       {flag.description || '暂无描述'}
                     </div>
 
-                    <div className="flag-card-meta" style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                      <Tag color={ENV_TAG_COLORS[flag.environment]}>
-                        {ENV_LABELS[flag.environment] || flag.environment}
-                      </Tag>
-                      <Badge
-                        status={flag.enabled ? 'success' : 'default'}
-                        text={flag.enabled ? '已启用' : '已停用'}
-                      />
+                    <div className="flag-card-meta" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12 }}>
+                      <EnvironmentBadge environment={flag.environment} />
+                      <StatusBadge enabled={flag.enabled} />
                     </div>
 
                     <div
@@ -626,10 +582,10 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                       }}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div style={{ fontSize: 11, color: '#8a8580' }}>
-                        <span>默认值: </span>
-                        <code>{flag.default_value ? 'true' : 'false'}</code>
-                        <span style={{ marginLeft: 8 }}>· {formatDateTime(flag.updated_at).datePart}</span>
+                      <div style={{ fontSize: 11, color: '#8a8580', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <span>默认值:</span>
+                        <BooleanValueTag value={flag.default_value} />
+                        <span style={{ marginLeft: 4 }}>· {formatDateTime(flag.updated_at).datePart}</span>
                       </div>
                       <Tooltip title={flag.enabled ? '点击停用' : '点击启用'}>
                         <Switch

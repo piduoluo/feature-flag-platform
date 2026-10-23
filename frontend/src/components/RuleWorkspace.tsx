@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Alert, Button, Empty, Form, Input, Modal, Select, Switch, Tag } from 'antd';
+import { Alert, Button, Empty, Form, Input, Modal, Select, Switch } from 'antd';
 import { Rule } from '../types';
 import { moveRule, parseExpected } from '../pages/ruleDraft';
+import { BooleanValueTag } from './EnvironmentBadge';
 
 interface Props {
   rules: Rule[];
@@ -69,7 +70,7 @@ export const RuleWorkspace: React.FC<Props> = ({
                 <span className="rule-op">{rule.operator}</span>
                 <code className="rule-val">{JSON.stringify(rule.expected_value)}</code>
                 <span className="rule-return">
-                  命中返回值：<strong>{String(rule.return_value)}</strong>
+                  命中返回值：<BooleanValueTag value={rule.return_value} />
                 </span>
               </div>
               <div className="rule-actions">
@@ -101,7 +102,7 @@ export const RuleWorkspace: React.FC<Props> = ({
 
       <div className="default-card">
         <span className="default-card-label">默认返回值（已生效）</span>
-        <Tag color={defaultValue ? 'green' : 'default'}>{String(defaultValue)}</Tag>
+        <BooleanValueTag value={defaultValue} />
         {defaultDirty && (
           <Alert type="warning" showIcon message="基本设置中有未生效草稿" style={{ marginLeft: 8 }} />
         )}
