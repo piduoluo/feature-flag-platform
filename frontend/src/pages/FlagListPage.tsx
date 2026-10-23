@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table,
   Button,
@@ -6,8 +6,6 @@ import {
   Segmented,
   Tag,
   Space,
-  Card,
-  Typography,
   Empty,
   Badge,
   Tooltip,
@@ -24,13 +22,11 @@ import {
   ThunderboltOutlined,
   AppstoreOutlined,
   BarsOutlined,
-  FilterOutlined,
-  CheckOutlined,
   CopyOutlined,
 } from '@ant-design/icons';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import type { ColumnsType } from 'antd/es/table';
-import { Environment, Flag } from '../types';
+import { Environment, Flag, FlagStats } from '../types';
 import { api, ApiError } from '../api/client';
 import { CreateFlagDrawer } from '../components/CreateFlagDrawer';
 import { toast } from '../utils/toast';
@@ -56,6 +52,14 @@ const ENV_OPTIONS = [
   { label: 'Production', value: 'production' },
 ];
 
+const STATUS_FILTERS = [
+  { key: 'all', label: '全部 Flag' },
+  { key: 'enabled', label: '已启用' },
+  { key: 'disabled', label: '已停用' },
+] as const;
+
+type StatusFilter = (typeof STATUS_FILTERS)[number]['key'];
+
 interface FlagListPageProps {
   onNavigateToEval?: (flagKey: string, env: Environment) => void;
 }
@@ -63,6 +67,7 @@ interface FlagListPageProps {
 export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const envParam = searchParams.get('environment');
   const selectedEnv =
@@ -70,18 +75,24 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       ? envParam
       : 'all';
   const searchText = searchParams.get('search') || '';
+  const enabledParam = searchParams.get('enabled');
+  const statusFilter: StatusFilter =
+    enabledParam === 'true' ? 'enabled' : enabledParam === 'false' ? 'disabled' : 'all';
+  const pageParam = Number(searchParams.get('page'));
+  const currentPage = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+  const sizeParam = Number(searchParams.get('page_size'));
+  const pageSize = [10, 20, 50].includes(sizeParam) ? sizeParam : 10;
 
   const [searchInput, setSearchInput] = useState(searchText);
   const [flags, setFlags] = useState<Flag[]>([]);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<FlagStats>({ all: 0, enabled: 0, disabled: 0 });
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
 
-  // Prototype additions: View toggle & Status filter
+  // View preference is local presentation state; list contents remain server-owned.
   const [viewMode, setViewModeState] = useState<'list' | 'grid'>(() => {
     try {
       const saved = localStorage.getItem('flag_list_view_mode');
@@ -100,23 +111,9 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       // ignore
     }
   };
-  const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
-  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
-  const statusMenuRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     setSearchInput(searchText);
   }, [searchText]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
-        setStatusMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const handleEnvChange = (newEnv: string) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -125,7 +122,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     } else {
       nextParams.delete('environment');
     }
-    setCurrentPage(1);
+    nextParams.delete('page');
     setSearchParams(nextParams);
   };
 
@@ -138,8 +135,46 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     } else {
       nextParams.delete('search');
     }
-    setCurrentPage(1);
+    nextParams.delete('page');
     setSearchParams(nextParams, { replace: true });
+  };
+
+  const handleStatusChange = (next: StatusFilter) => {
+    if (next === statusFilter) return;
+    const nextParams = new URLSearchParams(searchParams);
+    if (next === 'all') {
+      nextParams.delete('enabled');
+    } else {
+      nextParams.set('enabled', String(next === 'enabled'));
+    }
+    nextParams.delete('page');
+    setSearchParams(nextParams);
+  };
+
+  const handlePageChange = (page: number, size: number) => {
+    const nextParams = new URLSearchParams(searchParams);
+    const nextSize = [10, 20, 50].includes(size) ? size : pageSize;
+    if (nextSize !== 10) {
+      nextParams.set('page_size', String(nextSize));
+    } else {
+      nextParams.delete('page_size');
+    }
+    const nextPage = nextSize !== pageSize ? 1 : page;
+    if (nextPage > 1) {
+      nextParams.set('page', String(nextPage));
+    } else {
+      nextParams.delete('page');
+    }
+    setSearchParams(nextParams);
+  };
+
+  const openFlagDetail = (flagId: number) => {
+    navigate(`/flags/${flagId}`, {
+      state: {
+        from: `${location.pathname}${location.search}`,
+        fromLabel: '功能开关',
+      },
+    });
   };
 
   const handleInlineToggle = async (record: Flag, checked: boolean) => {
@@ -147,7 +182,23 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     try {
       const updated = await api.toggleFlag(record.id, checked);
       message.success(`Flag [${record.key}] 已${checked ? '启用' : '停用'}`);
-      setFlags((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+
+      if (updated.enabled !== record.enabled) {
+        const delta = updated.enabled ? 1 : -1;
+        setStats((prev) => ({
+          ...prev,
+          enabled: prev.enabled + delta,
+          disabled: prev.disabled - delta,
+        }));
+      }
+
+      if (statusFilter !== 'all' && updated.enabled !== (statusFilter === 'enabled')) {
+        // The row no longer matches the active status filter.
+        setFlags((prev) => prev.filter((f) => f.id !== updated.id));
+        setTotal((prev) => Math.max(0, prev - 1));
+      } else {
+        setFlags((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+      }
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : '切换启停状态失败';
       message.error(msg);
@@ -163,11 +214,13 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       const result = await api.getFlags({
         environment: selectedEnv === 'all' ? undefined : (selectedEnv as Environment),
         search: searchText.trim() || undefined,
+        enabled: statusFilter === 'all' ? undefined : statusFilter === 'enabled',
         page: currentPage,
         page_size: pageSize,
       });
       setFlags(result.items || []);
       setTotal(result.total || 0);
+      setStats(result.stats);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '获取 Feature Flag 列表失败';
       setFetchError(msg);
@@ -175,24 +228,22 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     } finally {
       setLoading(false);
     }
-  }, [selectedEnv, searchText, currentPage, pageSize]);
+  }, [selectedEnv, searchText, statusFilter, currentPage, pageSize]);
 
   useEffect(() => {
     fetchFlags();
   }, [fetchFlags]);
 
-  const copyKey = (key: string, e?: React.MouseEvent) => {
+  const copyKey = async (key: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(key).catch(() => {});
+    try {
+      if (!navigator.clipboard) throw new Error('Clipboard API unavailable');
+      await navigator.clipboard.writeText(key);
+      toast(`已复制 Flag Key: ${key}`, 'success');
+    } catch {
+      toast('复制失败，请手动复制 Flag Key', 'error');
     }
-    toast(`已复制 Flag Key: ${key}`, 'success');
   };
-
-  const displayedFlags = useMemo(() => {
-    if (statusFilter === 'all') return flags;
-    return flags.filter((f) => (statusFilter === 'enabled' ? f.enabled : !f.enabled));
-  }, [flags, statusFilter]);
 
   const formatDateTime = (timeStr: string) => {
     try {
@@ -210,7 +261,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: 'Flag Key',
       dataIndex: 'key',
       key: 'key',
-      width: 190,
+      width: 166,
       render: (key: string) => (
         <span className="code-chip">
           <span className="key-text">{key}</span>
@@ -229,7 +280,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     {
       title: '名称与描述',
       key: 'name_desc',
-      width: 170,
+      width: 148,
       render: (_, record) => (
         <div>
           <div className="flag-name" style={{ fontWeight: 600, fontSize: 13.5, color: '#171717' }}>
@@ -260,7 +311,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '运行环境',
       dataIndex: 'environment',
       key: 'environment',
-      width: 110,
+      width: 112,
       render: (env: Environment) => (
         <Tag color={ENV_TAG_COLORS[env]} style={{ fontWeight: 500 }}>
           {ENV_LABELS[env] || env}
@@ -271,7 +322,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '启停状态',
       dataIndex: 'enabled',
       key: 'enabled',
-      width: 100,
+      width: 94,
       render: (enabled: boolean) => (
         <Badge
           status={enabled ? 'success' : 'default'}
@@ -298,7 +349,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      width: 125,
+      width: 110,
       render: (timeStr: string) => {
         const { datePart, timePart } = formatDateTime(timeStr);
         return (
@@ -313,7 +364,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '更新时间',
       dataIndex: 'updated_at',
       key: 'updated_at',
-      width: 125,
+      width: 110,
       render: (timeStr: string) => {
         const { datePart, timePart } = formatDateTime(timeStr);
         return (
@@ -334,7 +385,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             type="link"
             size="small"
             icon={<SettingOutlined />}
-            onClick={() => navigate(`/flags/${record.id}`)}
+            onClick={() => openFlagDetail(record.id)}
           >
             详情
           </Button>
@@ -369,46 +420,32 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
   ];
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-      <Card
-        variant="borderless"
-        style={{
-          boxShadow: 'var(--shadow, 0 1px 2px rgba(24, 20, 17, .03))',
-          borderRadius: 9,
-          border: '1px solid var(--line, #ebe8e4)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 20,
-            flexWrap: 'wrap',
-            gap: 16,
-          }}
-        >
-          <div>
-            <Typography.Title level={4} style={{ margin: 0, fontWeight: 650 }}>
-              Feature Flag 特性开关管理
-            </Typography.Title>
-          </div>
-
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setCreateDrawerOpen(true)}
-            size="large"
-            style={{
-              background: 'var(--brand, #ff7d41)',
-              borderColor: 'var(--brand, #ff7d41)',
-              fontWeight: 600,
-            }}
-          >
-            新建 Flag
-          </Button>
+    <div className="flag-console">
+      <header className="flag-console-head">
+        <div className="flag-console-heading">
+          <h1 className="flag-console-title">功能开关管理</h1>
+          <p className="flag-console-subtitle">
+            管理各环境的功能开关，支持灰度发布与快速回滚。
+          </p>
         </div>
 
+        <div className="flag-stats" role="group" aria-label="Flag 状态统计">
+          {STATUS_FILTERS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={`flag-stat${statusFilter === item.key ? ' active' : ''}`}
+              aria-pressed={statusFilter === item.key}
+              onClick={() => handleStatusChange(item.key)}
+            >
+              <span className="flag-stat-value">{stats[item.key]}</span>
+              <span className="flag-stat-label">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </header>
+
+      <section className="flag-console-panel" aria-label="功能开关列表">
         {fetchError && (
           <Alert
             type="error"
@@ -420,19 +457,9 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
           />
         )}
 
-        {/* Toolbar: Environment filter, Search, Status filter, View toggle, Refresh */}
-        <div
-          className="toolbar"
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 16,
-            flexWrap: 'wrap',
-            gap: 12,
-          }}
-        >
-          <div className="toolbar-left" style={{ maxWidth: '100%', overflowX: 'auto' }}>
+        {/* Toolbar: environment on the left; search, view, refresh and create on the right. */}
+        <div className="toolbar flag-toolbar">
+          <div className="toolbar-left flag-toolbar-env">
             <Segmented
               value={selectedEnv}
               onChange={(val) => handleEnvChange(val as string)}
@@ -440,78 +467,16 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             />
           </div>
 
-          <div className="toolbar-right" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Input.Search
-              placeholder="按 Key 或名称搜索..."
+          <div className="toolbar-right flag-toolbar-actions">
+            <Input
+              className="flag-search"
+              placeholder="搜索 Flag Key 或名称..."
               allowClear
-              enterButton={<SearchOutlined />}
-              style={{ width: 260 }}
+              prefix={<SearchOutlined />}
               value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
-              onSearch={(value) => handleSearchChange(value)}
             />
 
-            {/* Status Filter Dropdown */}
-            <div className="filter-wrap" ref={statusMenuRef} style={{ position: 'relative' }}>
-              <button
-                type="button"
-                className={`icon-btn ${statusFilter !== 'all' ? 'has-filter' : ''}`}
-                aria-label="筛选启停状态"
-                aria-haspopup="menu"
-                aria-expanded={statusMenuOpen}
-                data-tip="筛选启停状态"
-                onClick={() => setStatusMenuOpen(!statusMenuOpen)}
-              >
-                <FilterOutlined />
-              </button>
-
-              {statusMenuOpen && (
-                <div className="menu-pop open" role="menu" style={{ right: 0, top: 'calc(100% + 6px)' }}>
-                  <div className="menu-label">启停状态</div>
-                  <button
-                    type="button"
-                    className={`menu-opt ${statusFilter === 'all' ? 'active' : ''}`}
-                    role="menuitemradio"
-                    aria-checked={statusFilter === 'all'}
-                    onClick={() => {
-                      setStatusFilter('all');
-                      setStatusMenuOpen(false);
-                    }}
-                  >
-                    <span>全部状态</span>
-                    <span className="check"><CheckOutlined /></span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`menu-opt ${statusFilter === 'enabled' ? 'active' : ''}`}
-                    role="menuitemradio"
-                    aria-checked={statusFilter === 'enabled'}
-                    onClick={() => {
-                      setStatusFilter('enabled');
-                      setStatusMenuOpen(false);
-                    }}
-                  >
-                    <span>已启用</span>
-                    <span className="check"><CheckOutlined /></span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`menu-opt ${statusFilter === 'disabled' ? 'active' : ''}`}
-                    role="menuitemradio"
-                    aria-checked={statusFilter === 'disabled'}
-                    onClick={() => {
-                      setStatusFilter('disabled');
-                      setStatusMenuOpen(false);
-                    }}
-                  >
-                    <span>已停用</span>
-                    <span className="check"><CheckOutlined /></span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* View Toggle */}
             <div className="view-toggle-group" role="group" aria-label="切换视图">
               <button
                 type="button"
@@ -536,26 +501,36 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             <Tooltip title="刷新列表">
               <Button
                 icon={<ReloadOutlined />}
+                aria-label="刷新列表"
                 onClick={() => fetchFlags()}
                 loading={loading}
               />
             </Tooltip>
+
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              className="flag-create-btn"
+              onClick={() => setCreateDrawerOpen(true)}
+            >
+              新建 Flag
+            </Button>
           </div>
         </div>
 
         {/* Content: List (Table) vs Grid */}
         {viewMode === 'grid' ? (
           <div>
-            {displayedFlags.length > 0 ? (
+            {flags.length > 0 ? (
               <>
                 <div className="flag-grid" aria-label="Flag 宫格视图">
-                {displayedFlags.map((flag) => (
+                {flags.map((flag) => (
                   <article
                     key={flag.id}
                     className="flag-card"
                     role="article"
                     tabIndex={0}
-                    onClick={() => navigate(`/flags/${flag.id}`)}
+                    onClick={() => openFlagDetail(flag.id)}
                   >
                     <div className="flag-card-top">
                       <span className="flag-card-mark" aria-hidden="true">
@@ -644,7 +619,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                   </article>
                 ))}
               </div>
-              {displayedFlags.length > 0 && (
+              {flags.length > 0 && (
                 <div
                   style={{
                     display: 'flex',
@@ -656,18 +631,15 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                   }}
                 >
                   <div style={{ fontSize: 13, color: '#8a8580' }}>
-                    共 {statusFilter === 'all' ? total : displayedFlags.length} 条记录
+                    共 {total} 条记录
                   </div>
                   <Pagination
                     current={currentPage}
                     pageSize={pageSize}
-                    total={statusFilter === 'all' ? total : displayedFlags.length}
+                    total={total}
                     showSizeChanger
                     pageSizeOptions={['10', '20', '50']}
-                    onChange={(p, size) => {
-                      setCurrentPage(size === pageSize ? p : 1);
-                      setPageSize(size);
-                    }}
+                    onChange={handlePageChange}
                     size="small"
                   />
                 </div>
@@ -689,8 +661,8 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             rowKey="id"
             columns={columns}
             tableLayout="fixed"
-            scroll={{ x: 1125 }}
-            dataSource={displayedFlags}
+            scroll={{ x: 1070 }}
+            dataSource={flags}
             loading={loading}
             onRow={(record) => ({
               onClick: (event) => {
@@ -704,7 +676,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                 ) {
                   return;
                 }
-                navigate(`/flags/${record.id}`);
+                openFlagDetail(record.id);
               },
               style: { cursor: 'pointer' },
             })}
@@ -727,14 +699,11 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
               showSizeChanger: true,
               pageSizeOptions: ['10', '20', '50'],
               showTotal: (totalCount) => `共 ${totalCount} 条记录`,
-              onChange: (page, size) => {
-                setCurrentPage(page);
-                setPageSize(size);
-              },
+              onChange: handlePageChange,
             }}
           />
         )}
-      </Card>
+      </section>
 
       <CreateFlagDrawer
         open={createDrawerOpen}

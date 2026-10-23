@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Button, Card, Empty, Input, Select, Space, Spin, Table, Tag, Typography } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import type { ColumnsType } from 'antd/es/table';
 import { api } from '../api/client';
 import { AuditActionType, AuditLog, Environment } from '../types';
@@ -32,6 +32,7 @@ const ACTION_OPTIONS: { value: AuditActionType; label: string }[] = ACTION_TYPES
   .map(value => ({ value, label: auditActionMeta(value).label }));
 
 export const GlobalAuditLogsPage: React.FC = () => {
+  const location = useLocation();
   const [environment, setEnvironment] = useState<Environment>();
   const [actionType, setActionType] = useState<AuditActionType>();
   const [flagKeyInput, setFlagKeyInput] = useState('');
@@ -79,7 +80,13 @@ export const GlobalAuditLogsPage: React.FC = () => {
       key: 'flag_key',
       width: 220,
       render: (value: string, record) => (
-        <Link to={`/flags/${record.flag_id}?tab=audit`}>
+        <Link
+          to={`/flags/${record.flag_id}?tab=audit`}
+          state={{
+            from: `${location.pathname}${location.search}`,
+            fromLabel: '全局操作历史',
+          }}
+        >
           <Text code>{value}</Text>
         </Link>
       ),

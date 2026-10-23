@@ -25,6 +25,7 @@ describe('Router & AppShell Integration', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [],
       total: 0,
+      stats: { all: 0, enabled: 0, disabled: 0 },
     });
     vi.mocked(api.getGlobalAuditLogs).mockResolvedValue({
       items: [],
@@ -48,10 +49,10 @@ describe('Router & AppShell Integration', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/flags');
     });
-    expect(screen.getByText('Feature Flag 特性开关管理')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '功能开关管理' })).toBeInTheDocument();
   });
 
-  it('renders sidebar navigation with correct active state and dynamic breadcrumb for "/flags"', async () => {
+  it('renders sidebar navigation with correct active state for "/flags"', async () => {
     renderRoute(['/flags']);
 
     // Check AppShell branding
@@ -66,55 +67,48 @@ describe('Router & AppShell Integration', () => {
     expect(screen.getByRole('menuitem', { name: /规则评估/i })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /全局操作历史/i })).toBeInTheDocument();
 
-    // Check dynamic breadcrumb
-    const breadcrumb = screen.getByTestId('app-breadcrumb');
-    expect(breadcrumb).toHaveTextContent('功能开关');
+    // The global breadcrumb is gone; the page owns its single title.
+    expect(screen.queryByTestId('app-breadcrumb')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '功能开关管理' })).toBeInTheDocument();
   });
 
-  it('renders dynamic breadcrumb and active sidebar state for "/evaluations"', async () => {
+  it('renders active sidebar state and page title for "/evaluations"', async () => {
     renderRoute(['/evaluations']);
 
     const evalMenuItem = screen.getByRole('menuitem', { name: /规则评估/i });
     expect(evalMenuItem).toHaveClass('ant-menu-item-selected');
 
-    const breadcrumb = screen.getByTestId('app-breadcrumb');
-    expect(breadcrumb).toHaveTextContent('规则评估');
+    expect(screen.queryByTestId('app-breadcrumb')).not.toBeInTheDocument();
     expect(screen.getByText('确定性规则在线评估控制台')).toBeInTheDocument();
   });
 
-  it('renders dynamic breadcrumb and active sidebar state for "/audit-logs"', async () => {
+  it('renders active sidebar state and page content for "/audit-logs"', async () => {
     renderRoute(['/audit-logs']);
 
     const auditMenuItem = screen.getByRole('menuitem', { name: /全局操作历史/i });
     expect(auditMenuItem).toHaveClass('ant-menu-item-selected');
 
-    const breadcrumb = screen.getByTestId('app-breadcrumb');
-    expect(breadcrumb).toHaveTextContent('全局操作历史');
+    expect(screen.queryByTestId('app-breadcrumb')).not.toBeInTheDocument();
     expect(screen.getByTestId('global-audit-logs-page')).toBeInTheDocument();
   });
 
-  it('renders dynamic multi-level breadcrumb with clickable link for "/flags/:id"', async () => {
+  it('renders the Flag detail page without a global breadcrumb for "/flags/:id"', async () => {
     const { router } = renderRoute(['/flags/42']);
 
     // Sidebar should keep "功能开关" selected
     const flagsMenuItem = screen.getByRole('menuitem', { name: /功能开关/i });
     expect(flagsMenuItem).toHaveClass('ant-menu-item-selected');
 
-    // Breadcrumb should have link to "功能开关" and leaf "详情"
-    const breadcrumb = screen.getByTestId('app-breadcrumb');
-    expect(breadcrumb).toHaveTextContent('功能开关');
-    expect(breadcrumb).toHaveTextContent('详情');
-
-    const flagLink = screen.getByRole('link', { name: '功能开关' });
-    expect(flagLink).toBeInTheDocument();
-    expect(flagLink).toHaveAttribute('href', '/flags');
+    // No global breadcrumb, and no invented back-link in the shell.
+    expect(screen.queryByTestId('app-breadcrumb')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '功能开关' })).not.toBeInTheDocument();
 
     // The deep link loads the requested Flag.
     await screen.findByRole('heading', { name: 'Checkout' });
     expect(api.getFlag).toHaveBeenCalledWith(42);
 
-    // Clicking breadcrumb link navigates back to /flags
-    fireEvent.click(flagLink);
+    // Sidebar navigation remains the way back to the list.
+    fireEvent.click(flagsMenuItem);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/flags');
     });
@@ -129,7 +123,6 @@ describe('Router & AppShell Integration', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/evaluations');
     });
-    expect(screen.getByTestId('app-breadcrumb')).toHaveTextContent('规则评估');
 
     // Click "全局操作历史"
     const auditMenuItem = screen.getByRole('menuitem', { name: /全局操作历史/i });
@@ -137,7 +130,7 @@ describe('Router & AppShell Integration', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/audit-logs');
     });
-    expect(screen.getByTestId('app-breadcrumb')).toHaveTextContent('全局操作历史');
+    expect(screen.getByTestId('global-audit-logs-page')).toBeInTheDocument();
 
     // Click "功能开关"
     const flagsMenuItem = screen.getByRole('menuitem', { name: /功能开关/i });
@@ -145,7 +138,7 @@ describe('Router & AppShell Integration', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/flags');
     });
-    expect(screen.getByTestId('app-breadcrumb')).toHaveTextContent('功能开关');
+    expect(screen.getByRole('heading', { name: '功能开关管理' })).toBeInTheDocument();
   });
 
   it('redirects unknown path to "/flags"', async () => {
@@ -171,12 +164,14 @@ describe('Router & AppShell Integration', () => {
     expect(router.state.location.search).toBe('?flag_key=checkout');
   });
 
-  it('supports deep route /flags/:id/:tab', async () => {
+  it('normalizes the legacy /flags/:id/:tab route to one canonical URL', async () => {
     const { router } = renderRoute(['/flags/42/audit']);
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/flags/42/audit');
+      expect(router.state.location.pathname).toBe('/flags/42');
     });
+    expect(router.state.location.search).toBe('');
     expect(api.getFlag).toHaveBeenCalledWith(42);
     expect(screen.getByTestId('flag-detail-page')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '变更历史' })).toHaveAttribute('aria-selected', 'true');
   });
 });

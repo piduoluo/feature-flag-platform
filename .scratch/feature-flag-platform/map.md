@@ -39,6 +39,31 @@
   - Status: resolved
   - Blocked by: None
   - Scope: 更新 4 个虚构出行场景 Key、5 条跨环境演示 Flag，并替换当前本地数据库的旧演示数据。
+- **[08-frontend-contract-alignment.md](issues/08-frontend-contract-alignment.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: None
+  - Scope: 移除无后端依据的前端入口，修复无损 JSON、优先级、分页筛选、状态说明与刷新行为。
+- **[09-product-logo-and-sidebar-hover-control.md](issues/09-product-logo-and-sidebar-hover-control.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: None
+  - Scope: 使用真实产品 Logo，并修复桌面侧栏折叠态仅在 Logo 悬停或聚焦时显示展开按钮。
+- **[10-flag-console-header-stats-toolbar.md](issues/10-flag-console-header-stats-toolbar.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 08, 09
+  - Scope: 移除全局面包屑，重排 Flag 页面标题、实时状态统计和工具栏，并扩展列表接口支持状态统计与筛选。
+- **[11-flag-detail-single-url-and-source-back.md](issues/11-flag-detail-single-url-and-source-back.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 10
+  - Scope: Flag 详情 Tab 收敛为单 URL，增加来源感知返回导航，并保留列表筛选、分页和未保存草稿。
+- **[12-flag-detail-header-structure-and-default-copy.md](issues/12-flag-detail-header-structure-and-default-copy.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 11
+  - Scope: Flag 详情顶部拆为身份/操作与元数据两行，删除规则页重复默认值卡片并重写空状态语义。
 
 ## Decisions-so-far
 - 遵循 [docs/SPEC.md](../../docs/SPEC.md) 与 [docs/adr/](../../docs/adr/) 中的 ADR 0001~0006。
@@ -49,3 +74,8 @@
 - [Ticket 04 完成](issues/04-evaluation-engine-and-online-console.md)：实现纯内存规则评估引擎（零 I/O 依赖）、优先级升序短路求值、严格 JSON 类型隔离（string/number/bool 严禁互通）、精确任意精度数值比较（1 等于 1.0、大整数 2^53+1 无精度损失比对、缺失/null 安全跳过），并在前端搭建具备实时 JSON 语法高亮校验拦截与鲜明三态视觉反馈卡片（RULE_MATCH / DEFAULT_FALLBACK / FLAG_DISABLED）的在线评估控制台。
 - [Ticket 06 完成](issues/06-responsive-layout-and-table-overflow.md)：手机端导航收进抽屉；列表与审计表格只在内部滚动；评估输入、结果和详情顶部按可用宽度换行，已在 390、768、1024、1440px 浏览器宽度核对。
 - [Ticket 07 完成](issues/07-didi-demo-seed-refresh.md)：当前本地库备份后仅替换旧演示数据；新种子包含 4 个 Key、5 条 Flag，覆盖跨环境差异、按用户开放、有序规则、默认回退与停用拦截。
+- [Ticket 08 完成](issues/08-frontend-contract-alignment.md)：前端按现有 Go API 和业务文档完成契约收敛；移除无后端依据的入口，补齐无损 JSON、显式优先级、服务端搜索、状态语义和刷新行为，后端契约保持不变。
+- [Ticket 09 完成](issues/09-product-logo-and-sidebar-hover-control.md)：桌面侧栏与移动端导航改用真实产品 Logo；折叠态默认展示 Logo，仅在 Logo 区域悬停或键盘聚焦时原位显示展开按钮。
+- [Ticket 10 完成](issues/10-flag-console-header-stats-toolbar.md)：移除全局面包屑与桌面顶部栏；Flag 页统一标题、说明、服务端状态统计与筛选，重排环境/搜索/视图/刷新/新建工具栏，并以向后兼容的 `enabled` 参数与 `stats` 汇总支撑跨分页准确统计。
+- [Ticket 11 完成](issues/11-flag-detail-single-url-and-source-back.md)：Flag 详情三个 Tab 收敛到 `/flags/:id` 单 URL 并以内部状态切换；旧 query/path 深链接一次性兼容归一；左上角返回按实际来源回到列表、全局审计或评估页，列表筛选与分页随 URL 恢复；草稿跨 Tab 保留，离开拦截仅作用于真正离开详情。
+- [Ticket 12 完成](issues/12-flag-detail-header-structure-and-default-copy.md)：Flag 详情顶部拆为「身份 + 操作」与「元数据」两行，启停开关与评估按钮在状态切换时坐标不位移；删除规则页重复默认值卡片，保留独立草稿警告，重写启停两态空状态并补齐前后端语义回归测试。

@@ -12,6 +12,7 @@ import {
   Rule,
   UpdateFlagPayload,
 } from '../types';
+import { parseJson, stringifyJson } from '../utils/json';
 
 export class ApiError extends Error {
   code: string;
@@ -36,7 +37,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 
   let jsonResult: ApiResponse<T>;
   try {
-    jsonResult = await response.json();
+    jsonResult = parseJson(await response.text()) as ApiResponse<T>;
   } catch (err) {
     throw new ApiError('NETWORK_ERROR', '服务器响应异常，无法解析 JSON', response.status);
   }
@@ -57,6 +58,7 @@ export const api = {
     const params = new URLSearchParams();
     if (query?.environment) params.append('environment', query.environment);
     if (query?.search) params.append('search', query.search);
+    if (query?.enabled !== undefined) params.append('enabled', String(query.enabled));
     if (query?.page) params.append('page', String(query.page));
     if (query?.page_size) params.append('page_size', String(query.page_size));
 
@@ -67,7 +69,7 @@ export const api = {
   createFlag: async (payload: CreateFlagPayload): Promise<Flag> => {
     return request<Flag>('/api/v1/flags', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: stringifyJson(payload),
     });
   },
 
@@ -78,14 +80,14 @@ export const api = {
   updateFlag: async (id: number, payload: UpdateFlagPayload): Promise<Flag> => {
     return request<Flag>(`/api/v1/flags/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(payload),
+      body: stringifyJson(payload),
     });
   },
 
   toggleFlag: async (id: number, enabled: boolean): Promise<Flag> => {
     return request<Flag>(`/api/v1/flags/${id}/toggle`, {
       method: 'PATCH',
-      body: JSON.stringify({ enabled }),
+      body: stringifyJson({ enabled }),
     });
   },
 
@@ -108,7 +110,7 @@ export const api = {
   syncRules: async (flagId: number, rules: Rule[]): Promise<Rule[]> => {
     return request<Rule[]>(`/api/v1/flags/${flagId}/rules`, {
       method: 'PUT',
-      body: JSON.stringify({
+      body: stringifyJson({
         rules: rules.map((r) => ({
           ...(r.id ? { id: r.id } : {}),
           attribute_name: r.attribute_name,
@@ -124,7 +126,7 @@ export const api = {
   evaluate: async (payload: EvaluationPayload): Promise<EvaluationResult> => {
     return request<EvaluationResult>('/api/v1/evaluations', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: stringifyJson(payload),
     });
   },
 };

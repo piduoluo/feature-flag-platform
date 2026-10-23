@@ -1,27 +1,30 @@
 import { Rule, RuleOperator } from '../types';
+import { isJsonNumber, parseJson, stringifyJson } from '../utils/json';
 
 export function moveRule(rules: Rule[], index: number, direction: number): Rule[] {
   const target = index + direction;
   if (target < 0 || target >= rules.length) return rules;
   const next = [...rules];
-  [next[index], next[target]] = [next[target], next[index]];
+  const currentPriority = next[index].priority;
+  const targetPriority = next[target].priority;
+  [next[index], next[target]] = [
+    { ...next[target], priority: currentPriority },
+    { ...next[index], priority: targetPriority },
+  ];
   return next;
 }
 
-// Array order owns priority; server metadata and numeric priority gaps are not edits.
-export const rulePayload = (rules: Rule[]): Rule[] => rules.map((rule, index) => ({
+export const rulePayload = (rules: Rule[]): Rule[] => rules.map((rule) => ({
   id: rule.id, attribute_name: rule.attribute_name, operator: rule.operator,
-  expected_value: rule.expected_value, return_value: rule.return_value, priority: index + 1,
+  expected_value: rule.expected_value, return_value: rule.return_value, priority: rule.priority,
 }));
-export const rulesEqual = (left: Rule[], right: Rule[]) => JSON.stringify(rulePayload(left)) === JSON.stringify(rulePayload(right));
+export const rulesEqual = (left: Rule[], right: Rule[]) =>
+  stringifyJson(rulePayload(left)) === stringifyJson(rulePayload(right));
 
 export function parseExpected(operator: RuleOperator, text: string): unknown {
-  const value: unknown = JSON.parse(text);
-  const values = Array.isArray(value) ? value : [value];
-  if (values.some(item => typeof item === 'number' && Number.isInteger(item) && !Number.isSafeInteger(item))) {
-    throw new Error('整数超出浏览器可精确表示范围，请使用安全整数，避免规则值失真');
-  }
-  const scalar = (item: unknown) => typeof item === 'string' || typeof item === 'boolean' || (typeof item === 'number' && Number.isFinite(item));
+  const value = parseJson(text);
+  const scalar = (item: unknown) =>
+    typeof item === 'string' || typeof item === 'boolean' || isJsonNumber(item);
   if (operator === 'equals' ? scalar(value) : Array.isArray(value) && value.length > 0 && value.every(scalar)) return value;
   throw new Error(operator === 'equals' ? 'equals 仅允许字符串、数字或布尔值' : 'in 需要非空标量 JSON 数组');
 }

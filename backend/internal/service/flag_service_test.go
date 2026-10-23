@@ -163,11 +163,13 @@ func TestFlagService_ListFlags_FilterAndSearch(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = flagService.CreateFlag(ctx, &domain.CreateFlagRequest{
+	prodFlag, err := flagService.CreateFlag(ctx, &domain.CreateFlagRequest{
 		Key:         prodKey,
 		Name:        "Searchable Checkout Prod",
 		Environment: domain.EnvProduction,
 	})
+	require.NoError(t, err)
+	_, err = flagService.ToggleFlag(ctx, prodFlag.ID, &domain.ToggleFlagRequest{Enabled: boolPtr(true)})
 	require.NoError(t, err)
 
 	// Filter by development environment
@@ -178,6 +180,7 @@ func TestFlagService_ListFlags_FilterAndSearch(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), devList.Total)
 	assert.Equal(t, devKey, devList.Items[0].Key)
+	assert.Equal(t, domain.FlagStats{All: 1, Enabled: 0, Disabled: 1}, devList.Stats)
 
 	// Search across environments with prefix
 	searchList, err := flagService.ListFlags(ctx, domain.FlagListQuery{
@@ -185,6 +188,17 @@ func TestFlagService_ListFlags_FilterAndSearch(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, searchList.Total, int64(2))
+	assert.Equal(t, domain.FlagStats{All: 2, Enabled: 1, Disabled: 1}, searchList.Stats)
+
+	enabled := true
+	enabledList, err := flagService.ListFlags(ctx, domain.FlagListQuery{
+		Search:  prefix,
+		Enabled: &enabled,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), enabledList.Total)
+	assert.Equal(t, prodKey, enabledList.Items[0].Key)
+	assert.Equal(t, domain.FlagStats{All: 2, Enabled: 1, Disabled: 1}, enabledList.Stats)
 }
 
 func TestFlagService_UpdateFlag_Success(t *testing.T) {

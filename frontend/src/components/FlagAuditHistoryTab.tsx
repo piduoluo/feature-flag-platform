@@ -5,7 +5,10 @@ import { AuditLog } from '../types';
 import { parseAuditDiff } from '../utils/diffParser';
 import { AuditDiffView, auditActionMeta, formatAuditTime } from './AuditDiffView';
 
-export const FlagAuditHistoryTab: React.FC<{ flagId: number }> = ({ flagId }) => {
+export const FlagAuditHistoryTab: React.FC<{ flagId: number; refreshToken?: number }> = ({
+  flagId,
+  refreshToken = 0,
+}) => {
   const [logs, setLogs] = useState<AuditLog[]>();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -29,7 +32,7 @@ export const FlagAuditHistoryTab: React.FC<{ flagId: number }> = ({ flagId }) =>
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [flagId, reloadToken]);
+  }, [flagId, refreshToken, reloadToken]);
 
   return (
     <div data-testid="flag-audit-history-tab">

@@ -375,7 +375,7 @@ describe('GlobalAuditLogsPage 三态与直达跳转', () => {
     expect(attempts).toBe(2);
   });
 
-  it('点击 Flag Key 链接通过 SPA 路由直达 /flags/:id?tab=audit，不整页刷新', async () => {
+  it('点击 Flag Key 链接通过 SPA 路由直达 Flag 变更历史，且只使用一个详情 URL', async () => {
     serveAuditLogs([createdLog]);
     serveFlagDetail();
     const router = renderGlobalAuditLogsPage();
@@ -386,8 +386,10 @@ describe('GlobalAuditLogsPage 三态与直达跳转', () => {
     fireEvent.click(link);
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/flags/42'));
-    expect(router.state.location.search).toBe('?tab=audit');
+    expect(router.state.location.search).toBe('');
     expect(await screen.findByTestId('flag-detail-page')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '变更历史' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('detail-back-nav')).toHaveTextContent('全局操作历史');
     // 详情页变更历史 Tab 由同一套共享 Diff 契约渲染。
     expect(await screen.findByText('暂无变更记录')).toBeInTheDocument();
   });

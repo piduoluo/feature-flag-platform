@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, useSearchParams, useNavigate, useBlocker } from 'react-router-dom';
-import { Alert, Button, Card, Form, Input, message, Modal, Space, Spin, Switch, Tabs, Tag, Typography } from 'antd';
+import { useParams, useSearchParams, useNavigate, useBlocker, useLocation, Navigate } from 'react-router-dom';
+import { Alert, Badge, Button, Card, Form, Input, message, Modal, Space, Spin, Switch, Tabs, Tag, Typography } from 'antd';
 import { api } from '../api/client';
 import { Flag, Rule, UpdateFlagPayload } from '../types';
+import { DetailBackNav } from '../components/DetailBackNav';
 import { RuleWorkspace } from '../components/RuleWorkspace';
 import { FlagAuditHistoryTab } from '../components/FlagAuditHistoryTab';
 import { rulesEqual, rulePayload } from './ruleDraft';
@@ -14,24 +15,62 @@ const basicValues = (flag: Flag): UpdateFlagPayload => ({
   default_value: flag.default_value,
 });
 
+const DETAIL_TABS = ['rules', 'audit', 'settings'] as const;
+type DetailTab = (typeof DETAIL_TABS)[number];
+
+const isDetailTab = (value: unknown): value is DetailTab =>
+  typeof value === 'string' && (DETAIL_TABS as readonly string[]).includes(value);
+
+interface FlagDetailLocationState {
+  /** 进入详情前的完整站内地址，用于左上角返回到实际来源页。 */
+  from?: string;
+  /** 来源页在返回导航上的名称。 */
+  fromLabel?: string;
+}
+
 export const FlagDetailPage: React.FC = () => {
   const { id, tab } = useParams();
-  return <FlagWorkspace key={id} id={Number(id)} paramTab={tab} />;
+  const [query] = useSearchParams();
+  const location = useLocation();
+  const state = (location.state ?? {}) as FlagDetailLocationState;
+
+  // Legacy path URLs such as /flags/42/audit used to be separate history
+  // entries. Normalize them once through the same one-shot ?tab= entry that
+  // bookmarks use; the workspace then strips the query.
+  if (isDetailTab(tab)) {
+    const next = new URLSearchParams(query);
+    next.set('tab', tab);
+    return (
+      <Navigate
+        to={`/flags/${id}${next.toString() ? `?${next.toString()}` : ''}`}
+        replace
+        state={state}
+      />
+    );
+  }
+
+  const queryTab = query.get('tab');
+  const initialTab: DetailTab = isDetailTab(queryTab) ? queryTab : 'rules';
+
+  return <FlagWorkspace key={id} id={Number(id)} initialTab={initialTab} />;
 };
 
-const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramTab }) => {
+const FlagWorkspace: React.FC<{ id: number; initialTab: DetailTab }> = ({ id, initialTab }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const bypass = useRef(false);
   const [evaluationPrompt, setEvaluationPrompt] = useState(false);
   const [query, setQuery] = useSearchParams();
-  const tab = ['rules', 'audit', 'settings'].includes(paramTab || query.get('tab') || '')
-    ? (paramTab || query.get('tab')!)
-    : 'rules';
+  const [activeTab, setActiveTab] = useState<DetailTab>(initialTab);
+  const navState = (location.state ?? {}) as FlagDetailLocationState;
+  const backTarget = typeof navState.from === 'string' && navState.from.startsWith('/') ? navState.from : undefined;
+  const backLabel = typeof navState.fromLabel === 'string' && navState.fromLabel ? navState.fromLabel : '功能开关';
   const [savedFlag, setSavedFlag] = useState<Flag>();
   const [basicDraft, setBasicDraft] = useState<UpdateFlagPayload>();
   const [rulesDraft, setRulesDraft] = useState<Rule[]>();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [auditRefreshToken, setAuditRefreshToken] = useState(0);
   const pending = useRef(false);
   const [form] = Form.useForm();
 
@@ -60,17 +99,29 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
     if (basic) form.setFieldsValue(basic);
   }, [basic, form]);
 
+  // Tabs are view state of this record, not separate pages: switching them
+  // must not push history entries or discard either draft.
   const changeTab = (key: string) => {
-    if (paramTab) {
-      navigate(`/flags/${id}/${key}`);
-    } else {
-      setQuery((previous) => {
-        const next = new URLSearchParams(previous);
-        next.set('tab', key);
-        return next;
-      });
-    }
+    if (isDetailTab(key)) setActiveTab(key);
   };
+
+  const goBackToSource = () => {
+    const historyIndex = (window.history.state as { idx?: number } | null)?.idx;
+    if (backTarget && typeof historyIndex === 'number' && historyIndex > 0) {
+      navigate(-1);
+      return;
+    }
+    navigate(backTarget ?? '/flags');
+  };
+
+  // Strip a legacy ?tab=... query without adding a history entry. The tab is
+  // already captured in activeTab above.
+  useEffect(() => {
+    if (!query.has('tab')) return;
+    const next = new URLSearchParams(query);
+    next.delete('tab');
+    setQuery(next, { replace: true, state: location.state });
+  }, [query, setQuery]);
 
   const isBasicDirty = !!savedFlag && JSON.stringify(basic) !== JSON.stringify(basicValues(savedFlag));
   const rules = rulesDraft ?? savedFlag?.rules ?? [];
@@ -134,6 +185,7 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
     const updated = await api.updateFlag(id, values);
     setSavedFlag(updated);
     setBasicDraft(undefined);
+    setAuditRefreshToken((token) => token + 1);
     message.success('基本设置已保存');
     toast('基本设置已保存', 'success');
   }
@@ -143,6 +195,7 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
     const updated = await api.syncRules(id, rulePayload(rules));
     setSavedFlag((previous) => (previous ? { ...previous, rules: updated ?? [] } : previous));
     setRulesDraft(undefined);
+    setAuditRefreshToken((token) => token + 1);
     message.success('规则配置已保存');
     toast('规则配置已保存', 'success');
   }
@@ -164,7 +217,8 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
 
   if (!savedFlag) {
     return (
-      <div data-testid="flag-detail-page">
+      <div data-testid="flag-detail-page" className="detail-page" style={{ maxWidth: 1400, margin: '0 auto' }}>
+        <DetailBackNav label={backLabel} onClick={goBackToSource} />
         {error ? <Alert type="error" message={error} /> : <Spin />}
       </div>
     );
@@ -172,19 +226,24 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
 
   return (
     <div data-testid="flag-detail-page" className="detail-page" style={{ maxWidth: 1400, margin: '0 auto' }}>
+      <DetailBackNav label={backLabel} onClick={goBackToSource} />
       {error && <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />}
 
       {/* Detail Head */}
       <div className="detail-head" style={{ marginBottom: 20 }}>
-        <div className="detail-head-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+        <div className="detail-head-row" data-testid="detail-head-row">
           <div className="detail-main">
-            <div className="detail-title-row" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div className="detail-title-row" data-testid="detail-title-row">
               <Typography.Title level={3} style={{ margin: 0, fontWeight: 700 }}>
                 {savedFlag.name}
               </Typography.Title>
               <Tag color="default">{savedFlag.environment}</Tag>
+              <Badge
+                status={savedFlag.enabled ? 'success' : 'default'}
+                text={savedFlag.enabled ? '已启用' : '已停用'}
+              />
             </div>
-            <div className="detail-sub" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+            <div className="detail-sub">
               <Typography.Text
                 code
                 copyable={{
@@ -195,23 +254,12 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
               >
                 {savedFlag.key}
               </Typography.Text>
-              <span className="sep" style={{ color: '#d6d0ca' }}>·</span>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                最后更新：{new Date(savedFlag.updated_at).toLocaleString('zh-CN')}
-              </Typography.Text>
-            </div>
-            <div className="detail-meta" style={{ marginTop: 12, fontSize: 13, color: '#6d6761' }}>
-              规则总数：<strong style={{ color: '#3f3b37', fontWeight: 600 }}>{savedFlag.rules?.length ?? 0}</strong>
-              <span style={{ margin: '0 6px', color: '#8a8580' }}>·</span>
-              已生效默认返回值：<Tag color="blue">{String(savedFlag.default_value)}</Tag>
-              <span style={{ margin: '0 6px', color: '#8a8580' }}>·</span>
-              最后修改：{new Date(savedFlag.updated_at).toLocaleString('zh-CN')}
             </div>
           </div>
 
-          <div className="detail-side" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div className="detail-side" data-testid="detail-actions">
             <Space>
-              <span className="detail-switch-label" style={{ fontSize: 13, color: '#5f5a55' }}>启停控制</span>
+              <span className="detail-switch-label">启停控制</span>
               <Switch
                 aria-label="启停控制"
                 checked={savedFlag.enabled}
@@ -220,6 +268,7 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
                 onChange={(enabled) =>
                   run(async () => {
                     setSavedFlag(await api.toggleFlag(id, enabled));
+                    setAuditRefreshToken((token) => token + 1);
                     message.success('启停状态已更新');
                     toast('启停状态已更新', 'success');
                   })
@@ -236,11 +285,22 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
             </Button>
           </div>
         </div>
+
+        <div className="detail-meta" data-testid="detail-meta">
+          规则总数：<strong>{savedFlag.rules?.length ?? 0}</strong>
+          <span aria-hidden>·</span>
+          配置默认值：<Tag color="blue">{String(savedFlag.default_value)}</Tag>
+          <span className="detail-default-hint">
+            {savedFlag.enabled ? '未命中规则时返回该值' : '停用期间评估始终返回 false'}
+          </span>
+          <span aria-hidden>·</span>
+          最后修改：{new Date(savedFlag.updated_at).toLocaleString('zh-CN')}
+        </div>
       </div>
 
       {/* Tabs */}
       <Tabs
-        activeKey={tab}
+        activeKey={activeTab}
         onChange={changeTab}
         items={[
           {
@@ -250,8 +310,8 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
               <RuleWorkspace
                 rules={rules}
                 onChange={setRulesDraft}
-                defaultValue={savedFlag.default_value}
                 defaultDirty={basic?.default_value !== savedFlag.default_value}
+                flagEnabled={savedFlag.enabled}
                 disabled={busy}
               />
             ),
@@ -259,7 +319,7 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
           {
             key: 'audit',
             label: '变更历史',
-            children: <FlagAuditHistoryTab flagId={id} />,
+            children: <FlagAuditHistoryTab flagId={id} refreshToken={auditRefreshToken} />,
           },
           {
             key: 'settings',
@@ -285,9 +345,14 @@ const FlagWorkspace: React.FC<{ id: number; paramTab?: string }> = ({ id, paramT
                     <Input placeholder="输入 Flag 名称" />
                   </Form.Item>
                   <Form.Item name="description" label="描述">
-                    <Input.TextArea rows={3} placeholder="输入 Flag 描述" maxLength={500} showCount />
+                    <Input.TextArea rows={3} placeholder="输入 Flag 描述" />
                   </Form.Item>
-                  <Form.Item name="default_value" label="默认返回值" valuePropName="checked">
+                  <Form.Item
+                    name="default_value"
+                    label="默认返回值"
+                    valuePropName="checked"
+                    extra="持久化配置值（即配置默认值）：未命中规则时生效；Flag 停用期间不参与评估，评估始终返回 false，且停用不会修改该配置值。"
+                  >
                     <Switch />
                   </Form.Item>
                   <Button

@@ -22,7 +22,7 @@ vi.mock('../api/client', () => ({
 describe('AppShell 1:1 Design & Interactions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(api.getFlags).mockResolvedValue({ items: [], total: 0 });
+    vi.mocked(api.getFlags).mockResolvedValue({ items: [], total: 0, stats: { all: 0, enabled: 0, disabled: 0 } });
     vi.mocked(api.getGlobalAuditLogs).mockResolvedValue({ items: [], total: 0, page: 1, page_size: 20 });
     const toastRoot = document.getElementById('toastRoot');
     if (toastRoot) toastRoot.innerHTML = '';
@@ -33,38 +33,32 @@ describe('AppShell 1:1 Design & Interactions', () => {
     return render(<RouterProvider router={router} />);
   };
 
-  it('renders design system branding and sidebar elements', () => {
+  it('renders confirmed product branding without unsupported vendor/version copy', () => {
     renderRoute(['/flags']);
 
+    const productLogo = screen.getByRole('img', { name: 'FeatureFlag Logo' });
+    expect(productLogo).toHaveAttribute('src', expect.stringContaining('feature-flag-logo-light.png'));
     expect(screen.getByText('Feature Flag')).toBeInTheDocument();
     expect(screen.getByText('灰度规则平台')).toBeInTheDocument();
-    expect(screen.getByText('滴滴研发工具')).toBeInTheDocument();
-    expect(screen.getByText('v1.0')).toBeInTheDocument();
-
-    const breadcrumb = screen.getByTestId('app-breadcrumb');
-    expect(breadcrumb).toHaveTextContent('研发平台');
-    expect(breadcrumb).toHaveTextContent('Feature Flag');
-    expect(breadcrumb).toHaveTextContent('功能开关');
+    expect(screen.queryByText('滴滴研发工具')).not.toBeInTheDocument();
+    expect(screen.queryByText('v1.0')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /admin/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('个人设置')).not.toBeInTheDocument();
+    expect(screen.queryByText('退出登录')).not.toBeInTheDocument();
   });
 
-  it('toggles user menu dropdown with admin information', async () => {
-    renderRoute(['/flags']);
+  it('removes the global breadcrumb and desktop top bar, keeping a mobile nav control', () => {
+    const { container } = renderRoute(['/flags']);
 
-    const userButton = screen.getByRole('button', { name: /admin/i });
-    expect(userButton).toBeInTheDocument();
+    expect(screen.queryByTestId('app-breadcrumb')).not.toBeInTheDocument();
+    expect(screen.queryByText('研发平台')).not.toBeInTheDocument();
+    expect(container.querySelector('.app-shell-header')).toBeNull();
+    expect(container.querySelector('.ant-layout-header')).toBeNull();
 
-    // Initially menu is closed
-    expect(screen.queryByText('超级管理员')).not.toBeInTheDocument();
-
-    // Click to open
-    fireEvent.click(userButton);
-    expect(screen.getByText('超级管理员')).toBeInTheDocument();
-    expect(screen.getByText('个人设置')).toBeInTheDocument();
-    expect(screen.getByText('退出登录')).toBeInTheDocument();
-
-    // Clicking personal settings shows toast
-    fireEvent.click(screen.getByText('个人设置'));
-    expect(document.getElementById('toastRoot')).toHaveTextContent('个人设置已打开');
+    // The hamburger only exists for the narrow layout; CSS hides it on desktop.
+    expect(screen.getByRole('button', { name: '打开导航菜单' })).toBeInTheDocument();
+    expect(container.querySelector('.app-shell-mobile-bar')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '功能开关管理' })).toBeInTheDocument();
   });
 
   it('triggers toast notifications and limits stack size to 3', () => {
@@ -83,17 +77,22 @@ describe('AppShell 1:1 Design & Interactions', () => {
   });
 
   it('supports desktop sidebar collapse and expansion', () => {
-    renderRoute(['/flags']);
+    const { container } = renderRoute(['/flags']);
 
     const collapseBtn = screen.getByRole('button', { name: /折叠侧边栏/i });
     fireEvent.click(collapseBtn);
 
-    // After collapsing, expand button appears
-    const expandBtn = screen.getByRole('button', { name: /展开侧边栏/i });
-    expect(expandBtn).toBeInTheDocument();
+    const sidebar = container.querySelector('.app-shell-sidebar');
+    const logoControl = container.querySelector('.collapsed-brand-control');
+    expect(sidebar).toHaveClass('collapsed');
+    expect(logoControl).toContainElement(screen.getByRole('img', { name: 'FeatureFlag Logo' }));
 
-    // Click to expand again
+    // The expand button shares the logo's 36px hover/focus target.
+    const expandBtn = screen.getByRole('button', { name: /展开侧边栏/i });
+    expect(logoControl).toContainElement(expandBtn);
+
     fireEvent.click(expandBtn);
     expect(screen.getByRole('button', { name: /折叠侧边栏/i })).toBeInTheDocument();
+    expect(container.querySelector('.collapsed-brand-control')).not.toBeInTheDocument();
   });
 });

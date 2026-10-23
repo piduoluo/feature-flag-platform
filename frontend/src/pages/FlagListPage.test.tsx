@@ -58,6 +58,7 @@ describe('FlagListPage (Ticket 02)', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [],
       total: 0,
+      stats: { all: 0, enabled: 0, disabled: 0 },
     });
     // Detail navigation tests mount FlagDetailPage, which immediately calls getFlag(id).
     vi.mocked(api.getFlag).mockResolvedValue(demoFlag);
@@ -75,11 +76,12 @@ describe('FlagListPage (Ticket 02)', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [demoFlag],
       total: 1,
+      stats: { all: 1, enabled: 1, disabled: 0 },
     });
 
     renderWithRouter(['/flags']);
 
-    expect(screen.getByText('Feature Flag 特性开关管理')).toBeInTheDocument();
+    expect(screen.getByText('功能开关管理')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /新建 Flag/i })).toBeInTheDocument();
 
     await waitFor(() => {
@@ -96,7 +98,7 @@ describe('FlagListPage (Ticket 02)', () => {
       expect(screen.getByText('checkout_v2')).toBeInTheDocument();
       expect(screen.getByText('新版结算页结账流')).toBeInTheDocument();
       expect(screen.getAllByText('Production').length).toBeGreaterThan(0);
-      expect(screen.getByText('已启用')).toBeInTheDocument();
+      expect(screen.getAllByText('已启用').length).toBeGreaterThan(0);
       expect(screen.getAllByText('false').length).toBeGreaterThan(0);
     });
   });
@@ -105,6 +107,7 @@ describe('FlagListPage (Ticket 02)', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [],
       total: 0,
+      stats: { all: 0, enabled: 0, disabled: 0 },
     });
 
     renderWithRouter(['/flags']);
@@ -124,6 +127,7 @@ describe('FlagListPage (Ticket 02)', () => {
         },
       ],
       total: 1,
+      stats: { all: 1, enabled: 1, disabled: 0 },
     });
 
     const { router } = renderWithRouter(['/flags?environment=staging&search=demo']);
@@ -140,7 +144,7 @@ describe('FlagListPage (Ticket 02)', () => {
     });
 
     // Verify search input displays the search text from query
-    const searchInput = screen.getByPlaceholderText('按 Key 或名称搜索...') as HTMLInputElement;
+    const searchInput = screen.getByPlaceholderText('搜索 Flag Key 或名称...') as HTMLInputElement;
     expect(searchInput.value).toBe('demo');
 
     // Verify URL location keeps query params intact
@@ -152,6 +156,7 @@ describe('FlagListPage (Ticket 02)', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [],
       total: 0,
+      stats: { all: 0, enabled: 0, disabled: 0 },
     });
 
     const { router } = renderWithRouter(['/flags']);
@@ -197,6 +202,7 @@ describe('FlagListPage (Ticket 02)', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [],
       total: 0,
+      stats: { all: 0, enabled: 0, disabled: 0 },
     });
 
     const { router } = renderWithRouter(['/flags']);
@@ -205,7 +211,7 @@ describe('FlagListPage (Ticket 02)', () => {
       expect(api.getFlags).toHaveBeenCalled();
     });
 
-    const searchInput = screen.getByPlaceholderText('按 Key 或名称搜索...');
+    const searchInput = screen.getByPlaceholderText('搜索 Flag Key 或名称...');
     fireEvent.change(searchInput, { target: { value: 'checkout_v2' } });
 
     await waitFor(() => {
@@ -240,6 +246,7 @@ describe('FlagListPage (Ticket 02)', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [{ ...demoFlag, enabled: false }],
       total: 1,
+      stats: { all: 1, enabled: 0, disabled: 1 },
     });
 
     const updatedEntity: Flag = {
@@ -253,7 +260,7 @@ describe('FlagListPage (Ticket 02)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('checkout_v2')).toBeInTheDocument();
-      expect(screen.getByText('已停用')).toBeInTheDocument();
+      expect(screen.getAllByText('已停用').length).toBeGreaterThan(0);
     });
 
     const switchBtn = screen.getByRole('switch');
@@ -267,7 +274,7 @@ describe('FlagListPage (Ticket 02)', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('已启用')).toBeInTheDocument();
+      expect(screen.getAllByText('已启用').length).toBeGreaterThan(0);
       expect(switchBtn).toHaveAttribute('aria-checked', 'true');
     });
   });
@@ -276,6 +283,7 @@ describe('FlagListPage (Ticket 02)', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [{ ...demoFlag, enabled: false }],
       total: 1,
+      stats: { all: 1, enabled: 0, disabled: 1 },
     });
 
     vi.mocked(api.toggleFlag).mockRejectedValueOnce(
@@ -286,7 +294,7 @@ describe('FlagListPage (Ticket 02)', () => {
 
     await waitFor(() => {
       expect(screen.getByText('checkout_v2')).toBeInTheDocument();
-      expect(screen.getByText('已停用')).toBeInTheDocument();
+      expect(screen.getAllByText('已停用').length).toBeGreaterThan(0);
     });
 
     const switchBtn = screen.getByRole('switch');
@@ -302,7 +310,7 @@ describe('FlagListPage (Ticket 02)', () => {
     // Should display error message and remain '已停用'
     await waitFor(() => {
       expect(screen.getByText('网络繁忙，切换开关状态失败')).toBeInTheDocument();
-      expect(screen.getByText('已停用')).toBeInTheDocument();
+      expect(screen.getAllByText('已停用').length).toBeGreaterThan(0);
       expect(switchBtn).toHaveAttribute('aria-checked', 'false');
     });
   });
@@ -311,6 +319,7 @@ describe('FlagListPage (Ticket 02)', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [demoFlag],
       total: 1,
+      stats: { all: 1, enabled: 1, disabled: 0 },
     });
 
     const { router } = renderWithRouter(['/flags']);
@@ -332,6 +341,7 @@ describe('FlagListPage (Ticket 02)', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [demoFlag],
       total: 1,
+      stats: { all: 1, enabled: 1, disabled: 0 },
     });
 
     const { router } = renderWithRouter(['/flags']);
@@ -353,6 +363,7 @@ describe('FlagListPage (Ticket 02)', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [demoFlag],
       total: 1,
+      stats: { all: 1, enabled: 1, disabled: 0 },
     });
 
     const { router } = renderWithRouter(['/flags']);
@@ -376,6 +387,7 @@ describe('FlagListPage (Ticket 02)', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [demoFlag],
       total: 1,
+      stats: { all: 1, enabled: 1, disabled: 0 },
     });
 
     renderWithRouter(['/flags']);
@@ -433,5 +445,58 @@ describe('FlagListPage (Ticket 02)', () => {
 
     // Verify api.getFlags was called again to refresh
     expect(api.getFlags).toHaveBeenCalledTimes(2);
+  });
+
+  it('restores the original list URL, filters and page after returning from a detail', async () => {
+    vi.mocked(api.getFlags).mockResolvedValue({
+      items: [demoFlag],
+      total: 12,
+      stats: { all: 12, enabled: 1, disabled: 11 },
+    });
+
+    const { router } = renderWithRouter(['/flags?environment=production&search=checkout&page=2']);
+
+    await waitFor(() => {
+      expect(api.getFlags).toHaveBeenCalledWith(
+        expect.objectContaining({
+          environment: 'production',
+          search: 'checkout',
+          page: 2,
+          page_size: 10,
+        })
+      );
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: /详情$/i }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/flags/1'));
+    expect(screen.getByTestId('detail-back-nav')).toHaveTextContent('功能开关');
+
+    fireEvent.click(screen.getByTestId('detail-back-nav'));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/flags'));
+    expect(router.state.location.search).toContain('environment=production');
+    expect(router.state.location.search).toContain('search=checkout');
+    expect(router.state.location.search).toContain('page=2');
+  });
+
+  it('writes pagination into the list URL so the browser can restore it', async () => {
+    vi.mocked(api.getFlags).mockResolvedValue({
+      items: [demoFlag],
+      total: 12,
+      stats: { all: 12, enabled: 1, disabled: 11 },
+    });
+
+    const { router } = renderWithRouter(['/flags']);
+    await screen.findByText('checkout_v2');
+
+    fireEvent.click(screen.getByTitle('2'));
+
+    await waitFor(() => expect(router.state.location.search).toContain('page=2'));
+    await waitFor(() => {
+      expect(api.getFlags).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 2, page_size: 10 })
+      );
+    });
   });
 });

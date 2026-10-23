@@ -43,6 +43,27 @@
   flex: 1;
 }
 
+.brand-logo-frame {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  overflow: hidden;
+  flex: 0 0 36px;
+  background: #ffffff;
+}
+
+.brand-logo-image {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 50px;
+  height: 50px;
+  max-width: none;
+  transform: translate(-50%, -50%);
+  transition: opacity .15s ease;
+}
+
 .collapse-toggle {
   margin-left: auto;
   opacity: .6;
@@ -53,16 +74,30 @@
   opacity: 1;
 }
 
-.app-shell-sidebar.collapsed .brand:hover .brand-mark {
-  display: none;
-}
-
 .expand-toggle {
-  display: none;
+  position: absolute;
+  inset: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease;
 }
 
-.app-shell-sidebar.collapsed .brand:hover .expand-toggle {
-  display: inline-grid;
+.collapsed-brand-control:hover .brand-logo-image,
+.collapsed-brand-control:focus-within .brand-logo-image {
+  opacity: 0;
+}
+
+.collapsed-brand-control:hover .expand-toggle,
+.collapsed-brand-control:focus-within .expand-toggle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-logo-image,
+  .expand-toggle {
+    transition: none;
+  }
 }
 
 /* Ant Design Menu 1:1 Styling */
@@ -118,41 +153,12 @@
   stroke: #d95f25 !important;
 }
 
-.sidebar-foot {
-  margin-top: auto;
-  padding: 14px 18px;
-  border-top: 1px solid var(--line, #ebe8e4);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #97918b;
-  font-size: 11px;
-  letter-spacing: .01em;
-  flex: 0 0 auto;
-}
-
-.app-shell-sidebar.collapsed .sidebar-foot {
-  justify-content: center;
-  padding: 14px 8px;
-}
-
-.topbar.app-shell-header {
-  height: 64px;
-  padding: 0 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(255, 255, 255, .94);
-  border-bottom: 1px solid var(--line, #ebe8e4);
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  backdrop-filter: saturate(160%) blur(10px);
-  -webkit-backdrop-filter: saturate(160%) blur(10px);
+.app-shell-mobile-bar {
+  display: none;
 }
 
 .app-shell-content {
-  padding: 24px;
+  padding: 28px 24px 48px;
   min-width: 0;
 }
 
@@ -169,13 +175,22 @@
     margin-left: 0 !important;
   }
 
-  .app-shell-header {
+  .app-shell-mobile-bar {
+    display: flex;
+    align-items: center;
+    height: 56px;
     padding: 0 16px;
+    background: rgba(255, 255, 255, .94);
+    border-bottom: 1px solid var(--line, #ebe8e4);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    backdrop-filter: saturate(160%) blur(10px);
+    -webkit-backdrop-filter: saturate(160%) blur(10px);
   }
 
   .app-shell-menu-button {
     display: inline-grid;
-    margin-right: 8px;
   }
 
   .app-shell-content {

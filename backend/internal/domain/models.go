@@ -121,14 +121,23 @@ type ToggleFlagRequest struct {
 type FlagListQuery struct {
 	Environment Environment `form:"environment"`
 	Search      string      `form:"search"`
+	Enabled     *bool       `form:"enabled"`
 	Page        int         `form:"page,default=1"`
 	PageSize    int         `form:"page_size,default=20"`
 }
 
+// FlagStats summarizes the environment/search result before status filtering.
+type FlagStats struct {
+	All      int64 `json:"all" gorm:"column:all_count"`
+	Enabled  int64 `json:"enabled" gorm:"column:enabled_count"`
+	Disabled int64 `json:"disabled" gorm:"column:disabled_count"`
+}
+
 // FlagListResult paginated list of flags.
 type FlagListResult struct {
-	Items []*Flag `json:"items"`
-	Total int64   `json:"total"`
+	Items []*Flag   `json:"items"`
+	Total int64     `json:"total"`
+	Stats FlagStats `json:"stats"`
 }
 
 // RuleItemPayload represents a single rule definition in sync request.

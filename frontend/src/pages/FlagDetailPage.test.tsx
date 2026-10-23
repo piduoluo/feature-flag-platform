@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, beforeEach, afterEach, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, act, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, cleanup, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routeConfig } from '../router';
 import { http, HttpResponse } from 'msw';
@@ -28,7 +28,7 @@ beforeEach(() => {
     if (url.endsWith('/rules')) { flag = { ...flag, rules: body!.rules }; data = flag.rules; }
     else if (method === 'PUT' || method === 'PATCH') { flag = { ...flag, ...body }; data = flag; }
     else if (url.endsWith('audit-logs')) data = [];
-    else if (url === '/api/v1/flags') data = { items: [], total: 0 };
+    else if (url === '/api/v1/flags') data = { items: [], total: 0, stats: { all: 0, enabled: 0, disabled: 0 } };
     return HttpResponse.json({ code: 'SUCCESS', data });
   };
   server.use(
@@ -49,16 +49,53 @@ async function open(path = '/flags/42?tab=settings') {
   await screen.findByRole('heading', { name: 'Checkout' });
   return router;
 }
-it('saves settings independently through the HTTP contract and synchronizes the tab URL', async () => {
+it('saves settings independently and switches tabs without changing the URL', async () => {
   const router = await open();
+  // The legacy ?tab=settings entry is normalized to the canonical detail URL.
+  expect(router.state.location.pathname).toBe('/flags/42');
+  expect(router.state.location.search).toBe('');
+
   fireEvent.change(screen.getByLabelText('Flag 名称'), { target: { value: 'New Checkout' } });
   fireEvent.click(screen.getByRole('button', { name: '保存设置' }));
   await screen.findByRole('heading', { name: 'New Checkout' });
   expect(requests.filter(r => r.method === 'PUT')).toEqual([{ url: '/api/v1/flags/42', method: 'PUT', body: { name: 'New Checkout', description: '', default_value: false } }]);
+
   fireEvent.click(screen.getByRole('tab', { name: '规则配置' }));
-  expect(router.state.location.search).toBe('?tab=rules');
+  expect(router.state.location.pathname).toBe('/flags/42');
+  expect(router.state.location.search).toBe('');
+  expect(screen.getByRole('tab', { name: '规则配置' })).toHaveAttribute('aria-selected', 'true');
 });
-it('keeps reordering local, clears reverted edits, and serializes continuous priorities only on save', async () => {
+it('defaults to rules on the canonical URL and normalizes the legacy path route', async () => {
+  const canonical = await open('/flags/42');
+  expect(canonical.state.location.pathname).toBe('/flags/42');
+  expect(canonical.state.location.search).toBe('');
+  expect(screen.getByRole('tab', { name: '规则配置' })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByTestId('detail-back-nav')).toHaveTextContent('功能开关');
+
+  cleanup();
+  const legacy = createMemoryRouter(routeConfig, { initialEntries: ['/flags/42/audit'] });
+  render(<RouterProvider router={legacy} />);
+  await screen.findByRole('heading', { name: 'Checkout' });
+  expect(legacy.state.location.pathname).toBe('/flags/42');
+  expect(legacy.state.location.search).toBe('');
+  expect(screen.getByRole('tab', { name: '变更历史' })).toHaveAttribute('aria-selected', 'true');
+});
+
+it('browser back from any tab returns to the source page in one step', async () => {
+  const router = createMemoryRouter(routeConfig, { initialEntries: ['/flags', '/flags/42'], initialIndex: 1 });
+  render(<RouterProvider router={router} />);
+  await screen.findByRole('heading', { name: 'Checkout' });
+
+  fireEvent.click(screen.getByRole('tab', { name: '变更历史' }));
+  fireEvent.click(screen.getByRole('tab', { name: '基本设置' }));
+  expect(router.state.location.pathname).toBe('/flags/42');
+  expect(router.state.location.search).toBe('');
+
+  await act(async () => { await router.navigate(-1); });
+  await waitFor(() => expect(router.state.location.pathname).toBe('/flags'));
+});
+
+it('keeps reordering local, clears reverted edits, and swaps persisted priorities only on save', async () => {
   await open('/flags/42');
   fireEvent.click(screen.getByRole('button', { name: '下移规则 1' }));
   expect(screen.getByRole('button', { name: '保存规则配置' })).toBeVisible();
@@ -68,7 +105,7 @@ it('keeps reordering local, clears reverted edits, and serializes continuous pri
   fireEvent.click(screen.getByRole('button', { name: '下移规则 1' }));
   fireEvent.click(screen.getByRole('button', { name: '保存规则配置' }));
   await waitFor(() => expect(screen.queryByRole('button', { name: '保存规则配置' })).not.toBeInTheDocument());
-  expect(requests.find(r => r.method === 'PUT')?.body.rules.map((r: any) => [r.id, r.priority])).toEqual([[2, 1], [1, 2]]);
+  expect(requests.find(r => r.method === 'PUT')?.body.rules.map((r: any) => [r.id, r.priority])).toEqual([[2, 10], [1, 20]]);
 });
 it('clearing is a confirmed draft until explicitly saved', async () => {
   await open('/flags/42');
@@ -83,7 +120,7 @@ it('retains both drafts across tabs and saves basic settings before rules when e
   fireEvent.change(screen.getByLabelText('Flag 名称'), { target: { value: 'Changed' } });
   fireEvent.click(screen.getByLabelText('默认返回值'));
   fireEvent.click(screen.getByRole('tab', { name: '规则配置' }));
-  expect(screen.getByText('基本设置中有未生效草稿')).toBeVisible();
+  expect(screen.getByText('基本设置中有未保存的默认值草稿，保存后才会影响评估结果')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: '下移规则 1' }));
   fireEvent.click(screen.getByRole('button', { name: '前往在线评估' }));
   fireEvent.click(screen.getByRole('button', { name: '保存并前往' }));
@@ -100,27 +137,40 @@ it.each(['/42', '/rules'])('preserves failed drafts and focuses the failed domai
   fireEvent.click(screen.getByRole('button', { name: '保存并前往' }));
   await screen.findByText(suffix === '/42' ? '保存失败' : '基本设置已保存，但规则配置保存失败，规则草稿已保留：保存失败');
   expect(router.state.location.pathname).toBe('/flags/42');
-  expect(router.state.location.search).toBe(suffix === '/42' ? '?tab=settings' : '?tab=rules');
+  expect(router.state.location.search).toBe('');
+  expect(screen.getByRole('tab', { name: suffix === '/42' ? /基本设置/ : /规则配置/ })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByRole('tab', { name: '规则配置 *' })).toBeInTheDocument();
   expect(screen.getByRole('tab', { name: suffix === '/42' ? '基本设置 *' : '基本设置' })).toBeInTheDocument();
   expect(requests.filter(r => r.method === 'PUT')).toHaveLength(suffix === '/42' ? 1 : 2);
 });
-it('blocks leaving dirty detail but lets tab history preserve drafts and warns before unload', async () => {
-  const router = await open();
+it('preserves drafts across tab switches without blocking, then guards leaving the flag', async () => {
+  const router = createMemoryRouter(routeConfig, { initialEntries: ['/flags', '/flags/42?tab=settings'], initialIndex: 1 });
+  render(<RouterProvider router={router} />);
+  await screen.findByRole('heading', { name: 'Checkout' });
+
   fireEvent.change(screen.getByLabelText('Flag 名称'), { target: { value: 'Changed' } });
   const event = new Event('beforeunload', { cancelable: true });
   window.dispatchEvent(event);
   expect(event.defaultPrevented).toBe(true);
+
+  // Switching tabs is not navigation: no prompt, no URL/history entry.
   fireEvent.click(screen.getByRole('tab', { name: '规则配置' }));
-  await act(async () => { await router.navigate(-1); });
-  expect(router.state.location.search).toBe('?tab=settings');
+  expect(router.state.location.pathname).toBe('/flags/42');
+  expect(router.state.location.search).toBe('');
+  expect(screen.queryByText('离开当前 Flag？')).not.toBeInTheDocument();
+
+  // The basic draft survives the round trip.
+  fireEvent.click(screen.getByRole('tab', { name: /基本设置/ }));
   expect(screen.getByLabelText('Flag 名称')).toHaveValue('Changed');
-  fireEvent.click(screen.getByRole('link', { name: '功能开关' }));
+
+  // Only actually leaving the detail page is guarded.
+  await act(async () => { await router.navigate(-1); });
   await waitFor(() => expect(screen.getByText('离开当前 Flag？')).toBeVisible());
   fireEvent.click(screen.getByRole('button', { name: '继续编辑' }));
   expect(router.state.location.pathname).toBe('/flags/42');
-  fireEvent.click(screen.getByRole('link', { name: '功能开关' }));
-  fireEvent.click(screen.getByRole('button', { name: '放弃修改并离开' }));
+
+  await act(async () => { await router.navigate(-1); });
+  fireEvent.click(await screen.findByRole('button', { name: '放弃修改并离开' }));
   await waitFor(() => expect(router.state.location.pathname).toBe('/flags'));
 });
 it('uses the toggle response, prevents repeated requests and preserves local basic draft', async () => {
@@ -134,6 +184,10 @@ it('uses the toggle response, prevents repeated requests and preserves local bas
   expect(control).toBeDisabled();
   await act(async () => release());
   await waitFor(() => expect(control).toHaveAttribute('aria-checked', 'true'));
+  const meta = screen.getByTestId('detail-meta');
+  expect(meta).toHaveTextContent('规则总数：2');
+  expect(meta).toHaveTextContent('配置默认值');
+  expect(within(meta).getByText('false')).toBeInTheDocument();
   expect(screen.getByLabelText('Flag 名称')).toHaveValue('Draft');
   fail = '/toggle'; fireEvent.click(control);
   await screen.findByText('保存失败');
@@ -148,10 +202,99 @@ it('validates rule JSON before accepting a new draft, then permits discarding it
   await screen.findByText('equals 仅允许字符串、数字或布尔值');
   fireEvent.change(screen.getByLabelText('期望值（JSON）'), { target: { value: '18' } });
   fireEvent.click(screen.getByRole('button', { name: /确\s*认/ }));
-  await screen.findByText('规则 03');
+  await screen.findByText(/规则 03/);
   expect(requests.filter(r => r.method === 'PUT')).toHaveLength(0);
   fireEvent.click(screen.getByRole('button', { name: '放弃修改' }));
-  expect(screen.queryByText('规则 03')).not.toBeInTheDocument();
+  expect(screen.queryByText(/规则 03/)).not.toBeInTheDocument();
+});
+
+it('edits an explicit positive priority and rejects a duplicate', async () => {
+  await open('/flags/42');
+  fireEvent.click(screen.getAllByRole('button', { name: '编辑规则' })[0]);
+  const priority = screen.getByLabelText('优先级');
+  expect(priority).toHaveValue('10');
+  fireEvent.change(priority, { target: { value: '20' } });
+  fireEvent.click(screen.getByRole('button', { name: /确\s*认/ }));
+  await screen.findByText('同一 Flag 下优先级不能重复');
+  fireEvent.change(priority, { target: { value: '15' } });
+  fireEvent.click(screen.getByRole('button', { name: /确\s*认/ }));
+  await screen.findByText(/优先级 15/);
+});
+
+it('explains disabled evaluation semantics and leaves description length to the API contract', async () => {
+  await open('/flags/42');
+  const meta = screen.getByTestId('detail-meta');
+  expect(meta).toHaveTextContent('配置默认值');
+  expect(within(meta).getByText('false')).toBeInTheDocument();
+  expect(meta).toHaveTextContent('停用期间评估始终返回 false');
+  expect(screen.queryByText(/配置的默认返回值（停用期间不参与评估）/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/默认返回值（Flag 停用期间不参与评估）/)).not.toBeInTheDocument();
+  expect(document.querySelector('.default-card')).toBeNull();
+  fireEvent.click(screen.getByRole('tab', { name: '基本设置' }));
+  expect(screen.getByLabelText('描述')).not.toHaveAttribute('maxlength');
+});
+
+it('keeps the persisted configured default visible when the flag is disabled', async () => {
+  flag = { ...flag, enabled: false, default_value: true };
+  await open('/flags/42');
+  const meta = screen.getByTestId('detail-meta');
+  expect(meta).toHaveTextContent('配置默认值');
+  expect(within(meta).getByText('true')).toBeInTheDocument();
+  expect(meta).toHaveTextContent('停用期间评估始终返回 false');
+});
+
+it('keeps identity and actions in the first row and metadata in its own second row', async () => {
+  flag = { ...flag, enabled: true };
+  await open('/flags/42');
+
+  const titleRow = screen.getByTestId('detail-title-row');
+  expect(within(titleRow).getByRole('heading', { name: 'Checkout' })).toBeInTheDocument();
+  expect(within(titleRow).getByText('已启用')).toBeInTheDocument();
+
+  const actions = screen.getByTestId('detail-actions');
+  expect(within(actions).getByRole('switch', { name: '启停控制' })).toBeInTheDocument();
+  expect(within(actions).getByRole('button', { name: '前往在线评估' })).toBeInTheDocument();
+
+  const headRow = screen.getByTestId('detail-head-row');
+  const meta = screen.getByTestId('detail-meta');
+  expect(headRow).not.toContainElement(meta);
+  expect(headRow.nextElementSibling).toBe(meta);
+});
+
+it.each([
+  { enabled: true, defaultValue: true },
+  { enabled: true, defaultValue: false },
+  { enabled: false, defaultValue: true },
+  { enabled: false, defaultValue: false },
+])(
+  'renders the rules empty state for enabled=$enabled and default_value=$defaultValue',
+  async ({ enabled, defaultValue }) => {
+    flag = { ...flag, enabled, default_value: defaultValue, rules: [] };
+    await open('/flags/42');
+    const empty = screen.getByTestId('rules-empty-state');
+    if (enabled) {
+      expect(empty).toHaveTextContent('暂无灰度规则');
+      expect(empty).toHaveTextContent('当前没有配置灰度规则，评估时将返回 Flag 的配置默认值。');
+    } else {
+      expect(empty).toHaveTextContent('当前 Flag 已停用');
+      expect(empty).toHaveTextContent(
+        'Flag 停用期间，评估将始终返回 false。重新启用后，将按照灰度规则进行评估；未命中任何规则时，返回配置默认值。',
+      );
+    }
+  },
+);
+
+it('refreshes an already mounted audit history after a successful mutation', async () => {
+  await open('/flags/42?tab=audit');
+  await screen.findByText('暂无变更记录');
+  const auditRequests = () => requests.filter(request => request.url.endsWith('/audit-logs')).length;
+  const before = auditRequests();
+
+  fireEvent.click(screen.getByRole('tab', { name: '基本设置' }));
+  fireEvent.change(screen.getByLabelText('Flag 名称'), { target: { value: 'Changed' } });
+  fireEvent.click(screen.getByRole('button', { name: '保存设置' }));
+
+  await waitFor(() => expect(auditRequests()).toBeGreaterThan(before));
 });
 it('reverting settings removes guards; evaluation cancel and discard send no writes', async () => {
   const router = await open();
@@ -231,7 +374,8 @@ it('deep links to the audit tab and renders the structured timeline from the ser
 
   const router = await open('/flags/42?tab=audit');
 
-  expect(router.state.location.search).toBe('?tab=audit');
+  expect(router.state.location.pathname).toBe('/flags/42');
+  expect(router.state.location.search).toBe('');
   expect(screen.getByRole('tab', { name: '变更历史' })).toHaveAttribute('aria-selected', 'true');
   await screen.findByText('规则批量同步');
   expect(screen.getAllByText('操作人：admin')).toHaveLength(2);

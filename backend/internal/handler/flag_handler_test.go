@@ -158,6 +158,17 @@ func TestFlagHandler_ListFlags(t *testing.T) {
 	require.True(t, ok)
 	assert.Contains(t, dataMap, "items")
 	assert.Contains(t, dataMap, "total")
+	assert.Contains(t, dataMap, "stats")
+}
+
+func TestFlagHandler_ListFlags_InvalidEnabledFilter(t *testing.T) {
+	router := setupTestServer(t)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/flags?enabled=unknown", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestFlagHandler_GetFlag_NotFound(t *testing.T) {

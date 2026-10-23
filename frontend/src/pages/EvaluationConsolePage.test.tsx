@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider, useParams } from 'react-router-dom'
 import { EvaluationConsolePage } from './EvaluationConsolePage';
 import { api, ApiError } from '../api/client';
 import { EvaluationResult, Flag } from '../types';
+import { stringifyJson } from '../utils/json';
 
 vi.mock('../api/client', () => ({
   api: {
@@ -64,7 +65,7 @@ function renderConsole(initialEntry: string) {
 describe('EvaluationConsolePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(api.getFlags).mockResolvedValue({ items: [checkoutFlag], total: 1 });
+    vi.mocked(api.getFlags).mockResolvedValue({ items: [checkoutFlag], total: 1, stats: { all: 1, enabled: 1, disabled: 0 } });
   });
 
   it('回填深层链接中的环境与 Flag Key，并可从横幅返回 Flag 详情', async () => {
@@ -76,8 +77,8 @@ describe('EvaluationConsolePage', () => {
     expect(screen.getByLabelText(/Flag Key/)).toHaveValue('checkout_v2');
     expect(screen.getByText('Production (生产环境)')).toBeInTheDocument();
 
-    const backLink = screen.getByRole('link', { name: /返回 Flag 详情/ });
-    await waitFor(() => expect(backLink).toHaveAttribute('href', '/flags/1'));
+    const backLink = await screen.findByRole('link', { name: /返回 Flag 详情/ });
+    expect(backLink).toHaveAttribute('href', '/flags/1');
 
     fireEvent.click(backLink);
     const detailStub = await screen.findByTestId('flag-detail-stub');
@@ -90,6 +91,7 @@ describe('EvaluationConsolePage', () => {
     const flagKeyInput = screen.getByLabelText(/Flag Key/);
     fireEvent.change(flagKeyInput, { target: { value: 'other_flag' } });
     expect(flagKeyInput).toHaveValue('other_flag');
+    expect(screen.getByRole('link', { name: /返回 Flag 列表/ })).toHaveAttribute('href', '/flags');
 
     fireEvent.mouseDown(screen.getByLabelText(/Environment/));
     fireEvent.click(await screen.findByText('Staging (预发环境)'));
@@ -123,7 +125,7 @@ describe('EvaluationConsolePage', () => {
     expect(textarea.className).toContain('ant-input-status-error');
     const errorAlert = screen.getByTestId('context-json-error');
     expect(errorAlert).toHaveTextContent('JSON 语法错误（第 3 行）');
-    expect(errorAlert).toHaveTextContent("Expected ',' or '}'");
+    expect(errorAlert).toHaveTextContent("Comma ',' expected after value");
     expect(evaluateButton).toBeDisabled();
 
     fireEvent.change(textarea, { target: { value: '{\n  "a": 1,\n  "b": 2\n}' } });
@@ -177,6 +179,37 @@ describe('EvaluationConsolePage', () => {
     expect(evaluateButton).toBeEnabled();
   });
 
+  it('通过现有列表接口按当前输入检索候选 Flag', async () => {
+    renderConsole('/evaluations');
+
+    fireEvent.change(screen.getByLabelText(/Flag Key/), { target: { value: 'rare_flag' } });
+
+    await waitFor(() => {
+      expect(api.getFlags).toHaveBeenCalledWith({
+        environment: 'development',
+        search: 'rare_flag',
+        page: 1,
+        page_size: 20,
+      });
+    });
+  });
+
+  it('无损提交超出 2^53 的评估上下文整数', async () => {
+    vi.mocked(api.evaluate).mockResolvedValue(evaluation({ environment: 'development' }));
+    renderConsole('/evaluations');
+    fireEvent.change(screen.getByLabelText(/Flag Key/), { target: { value: 'checkout_v2' } });
+    fireEvent.change(screen.getByLabelText(/Context JSON/), {
+      target: { value: '{"user_id":9007199254740993}' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /发起在线评估/ }));
+
+    await waitFor(() => expect(api.evaluate).toHaveBeenCalledTimes(1));
+    expect(stringifyJson(vi.mocked(api.evaluate).mock.calls[0][0])).toContain(
+      '"context":{"user_id":9007199254740993}'
+    );
+  });
+
   it('规则命中时展示绿色卡片、命中原因与规则明细', async () => {
     vi.mocked(api.evaluate).mockResolvedValue(
       evaluation({
@@ -198,11 +231,11 @@ describe('EvaluationConsolePage', () => {
 
     const card = await screen.findByTestId('result-card-rule-match');
     expect(card).toHaveTextContent('命中灰度规则 (RULE_MATCH)');
-    expect(card).toHaveTextContent('功能放量开放 (true)');
+    expect(card).toHaveTextContent('返回 true');
     expect(card).toHaveTextContent('#1');
     expect(card).toHaveTextContent('country');
     expect(card).toHaveTextContent('equals');
-    expect(card).toHaveTextContent('CN');
+    expect(card).toHaveTextContent('"CN"');
   });
 
   it('未命中规则时展示中性卡片并说明回退默认值', async () => {
@@ -213,7 +246,7 @@ describe('EvaluationConsolePage', () => {
 
     const card = await screen.findByTestId('result-card-default-fallback');
     expect(card).toHaveTextContent('回退至默认返回值 (DEFAULT_FALLBACK)');
-    expect(card).toHaveTextContent('未命中任何规则，回退至 Flag 默认值');
+    expect(card).toHaveTextContent('未命中任何规则，回退至当前 Flag 的默认返回值');
     expect(card).toHaveTextContent('false');
   });
 

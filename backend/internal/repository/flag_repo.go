@@ -14,7 +14,7 @@ type FlagRepository interface {
 	Create(ctx context.Context, tx *gorm.DB, flag *domain.Flag) error
 	GetByID(ctx context.Context, id int64) (*domain.Flag, error)
 	GetByKeyAndEnv(ctx context.Context, key, env string) (*domain.Flag, error)
-	List(ctx context.Context, query domain.FlagListQuery) ([]*domain.Flag, int64, error)
+	List(ctx context.Context, query domain.FlagListQuery) ([]*domain.Flag, int64, domain.FlagStats, error)
 	Update(ctx context.Context, tx *gorm.DB, flag *domain.Flag) error
 	WithTransaction(ctx context.Context, fn func(tx *gorm.DB) error) error
 }
@@ -72,21 +72,38 @@ func (r *flagRepository) GetByKeyAndEnv(ctx context.Context, key, env string) (*
 	return &flag, nil
 }
 
-func (r *flagRepository) List(ctx context.Context, query domain.FlagListQuery) ([]*domain.Flag, int64, error) {
-	db := r.db.WithContext(ctx).Model(&domain.Flag{})
+func (r *flagRepository) List(ctx context.Context, query domain.FlagListQuery) ([]*domain.Flag, int64, domain.FlagStats, error) {
+	baseQuery := r.db.WithContext(ctx).Model(&domain.Flag{})
 
 	if query.Environment != "" {
-		db = db.Where("environment = ?", query.Environment)
+		baseQuery = baseQuery.Where("environment = ?", query.Environment)
 	}
 
 	if query.Search != "" {
 		searchPattern := "%" + strings.ToLower(query.Search) + "%"
-		db = db.Where("LOWER(key) LIKE ? OR LOWER(name) LIKE ?", searchPattern, searchPattern)
+		baseQuery = baseQuery.Where("LOWER(key) LIKE ? OR LOWER(name) LIKE ?", searchPattern, searchPattern)
+	}
+
+	var stats domain.FlagStats
+	// Clone the statement so the aggregate Select does not leak into the
+	// paginated list query below.
+	statsQuery := baseQuery.Session(&gorm.Session{})
+	if err := statsQuery.
+		Select(`COUNT(*) AS all_count,
+			COALESCE(SUM(CASE WHEN enabled THEN 1 ELSE 0 END), 0) AS enabled_count,
+			COALESCE(SUM(CASE WHEN enabled THEN 0 ELSE 1 END), 0) AS disabled_count`).
+		Scan(&stats).Error; err != nil {
+		return nil, 0, domain.FlagStats{}, err
+	}
+
+	listQuery := baseQuery
+	if query.Enabled != nil {
+		listQuery = listQuery.Where("enabled = ?", *query.Enabled)
 	}
 
 	var total int64
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
+	if err := listQuery.Count(&total).Error; err != nil {
+		return nil, 0, domain.FlagStats{}, err
 	}
 
 	page := query.Page
@@ -100,15 +117,15 @@ func (r *flagRepository) List(ctx context.Context, query domain.FlagListQuery) (
 	offset := (page - 1) * pageSize
 
 	flags := make([]*domain.Flag, 0)
-	err := db.Order("created_at DESC, id DESC").
+	err := listQuery.Order("created_at DESC, id DESC").
 		Offset(offset).
 		Limit(pageSize).
 		Find(&flags).Error
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, domain.FlagStats{}, err
 	}
 
-	return flags, total, nil
+	return flags, total, stats, nil
 }
 
 func (r *flagRepository) Update(ctx context.Context, tx *gorm.DB, flag *domain.Flag) error {

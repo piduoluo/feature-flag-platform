@@ -39,6 +39,8 @@ describe('CreateFlagDrawer', () => {
     expect(screen.getByLabelText(/Flag 名称/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/运行环境/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/默认返回值/i)).toBeInTheDocument();
+    expect(screen.getByText(/新建 Flag 默认处于停用状态/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/描述/i)).not.toHaveAttribute('maxlength');
   });
 
   it('validates empty inputs and blocks submission', async () => {

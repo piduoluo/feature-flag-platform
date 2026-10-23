@@ -173,7 +173,7 @@ func (s *flagService) CreateFlag(ctx context.Context, req *domain.CreateFlagRequ
 }
 
 func (s *flagService) ListFlags(ctx context.Context, query domain.FlagListQuery) (*domain.FlagListResult, error) {
-	flags, total, err := s.flagRepo.List(ctx, query)
+	flags, total, stats, err := s.flagRepo.List(ctx, query)
 	if err != nil {
 		return nil, domain.NewInternalError(fmt.Sprintf("failed to list flags: %v", err))
 	}
@@ -181,6 +181,7 @@ func (s *flagService) ListFlags(ctx context.Context, query domain.FlagListQuery)
 	return &domain.FlagListResult{
 		Items: flags,
 		Total: total,
+		Stats: stats,
 	}, nil
 }
 

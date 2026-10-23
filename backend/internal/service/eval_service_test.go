@@ -228,4 +228,49 @@ func TestEvaluationService_FullLifecycleEvaluation(t *testing.T) {
 	assert.True(t, resFallback.Result)
 	assert.Equal(t, domain.ReasonDefaultFallback, resFallback.Reason)
 	assert.Nil(t, resFallback.MatchedRule)
+
+	// Case E: Disabling again must not mutate the persisted default value or
+	// rules, and a context that would match Rule 1 must still short-circuit.
+	disabled := false
+	_, err = flagService.ToggleFlag(ctx, createdFlag.ID, &domain.ToggleFlagRequest{Enabled: &disabled})
+	require.NoError(t, err)
+
+	persistedWhileDisabled, err := flagService.GetFlagByID(ctx, createdFlag.ID)
+	require.NoError(t, err)
+	assert.True(t, persistedWhileDisabled.DefaultValue)
+	assert.Len(t, persistedWhileDisabled.Rules, 2)
+
+	resDisabledAgain, err := evalService.Evaluate(ctx, &domain.EvaluationRequest{
+		FlagKey:     flagKey,
+		Environment: domain.EnvStaging,
+		Context:     map[string]interface{}{"country": "CN"},
+	})
+	require.NoError(t, err)
+	assert.False(t, resDisabledAgain.Enabled)
+	assert.False(t, resDisabledAgain.Result)
+	assert.Equal(t, domain.ReasonFlagDisabled, resDisabledAgain.Reason)
+	assert.Nil(t, resDisabledAgain.MatchedRule)
+
+	// Case F: Re-enabling must preserve the default and rules, and rule
+	// evaluation must pick up again without any reconfiguration.
+	enabledAgain := true
+	_, err = flagService.ToggleFlag(ctx, createdFlag.ID, &domain.ToggleFlagRequest{Enabled: &enabledAgain})
+	require.NoError(t, err)
+
+	persistedAfterReenable, err := flagService.GetFlagByID(ctx, createdFlag.ID)
+	require.NoError(t, err)
+	assert.True(t, persistedAfterReenable.DefaultValue)
+	assert.Len(t, persistedAfterReenable.Rules, 2)
+
+	resReenabled, err := evalService.Evaluate(ctx, &domain.EvaluationRequest{
+		FlagKey:     flagKey,
+		Environment: domain.EnvStaging,
+		Context:     map[string]interface{}{"vip": json.Number("1")},
+	})
+	require.NoError(t, err)
+	assert.True(t, resReenabled.Enabled)
+	assert.True(t, resReenabled.Result)
+	assert.Equal(t, domain.ReasonRuleMatch, resReenabled.Reason)
+	require.NotNil(t, resReenabled.MatchedRule)
+	assert.Equal(t, 2, resReenabled.MatchedRule.Priority)
 }

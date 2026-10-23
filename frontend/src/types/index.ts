@@ -72,13 +72,23 @@ export interface SyncRulesPayload {
 export interface FlagListQuery {
   environment?: string;
   search?: string;
+  /** 按启停状态筛选；统计汇总不受该参数影响。 */
+  enabled?: boolean;
   page?: number;
   page_size?: number;
+}
+
+/** GET /api/v1/flags 在环境与搜索条件上的启停统计，不受 enabled 筛选影响。 */
+export interface FlagStats {
+  all: number;
+  enabled: number;
+  disabled: number;
 }
 
 export interface FlagListResult {
   items: Flag[];
   total: number;
+  stats: FlagStats;
 }
 
 /** 全局审计接口支持的 action_type 过滤值（SPEC 第 9 条）。 */

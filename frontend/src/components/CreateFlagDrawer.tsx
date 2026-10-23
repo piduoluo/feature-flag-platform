@@ -46,7 +46,7 @@ export const CreateFlagDrawer: React.FC<CreateFlagDrawerProps> = ({
       };
 
       const created = await api.createFlag(payload);
-      message.success(`Feature Flag [${created.key}] 创建成功`);
+      message.success(`Feature Flag [${created.key}] 创建成功，当前处于停用状态`);
       onSuccess(created);
       onClose();
     } catch (err: unknown) {
@@ -97,6 +97,13 @@ export const CreateFlagDrawer: React.FC<CreateFlagDrawerProps> = ({
           onClose={() => setErrorMessage(null)}
         />
       )}
+
+      <Alert
+        type="info"
+        showIcon
+        message="新建 Flag 默认处于停用状态，需在详情页启用后才参与规则评估"
+        style={{ marginBottom: 16 }}
+      />
 
       <Form
         form={form}
@@ -153,8 +160,6 @@ export const CreateFlagDrawer: React.FC<CreateFlagDrawerProps> = ({
           <Input.TextArea
             rows={3}
             placeholder="描述此 Feature Flag 的业务场景及灰度放量目标"
-            maxLength={500}
-            showCount
           />
         </Form.Item>
 

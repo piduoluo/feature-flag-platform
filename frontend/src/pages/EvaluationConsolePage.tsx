@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Card,
   Row,
@@ -33,6 +33,7 @@ import {
 } from '@ant-design/icons';
 import { Environment, EvaluationResult, Flag } from '../types';
 import { api, ApiError } from '../api/client';
+import { parseJson, stringifyJson } from '../utils/json';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -148,7 +149,7 @@ function parseContextInput(source: string): ContextInputCheck {
     return { isValid: true, parsed: {}, reason: null, line: null, isEmpty: true };
   }
   try {
-    const parsed = JSON.parse(trimmed);
+    const parsed = parseJson(trimmed);
     if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
       return {
         isValid: false,
@@ -174,6 +175,7 @@ function parseContextInput(source: string): ContextInputCheck {
 export const EvaluationConsolePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [entry] = useState(() => resolveEntryQuery(searchParams));
 
   const [environment, setEnvironment] = useState<Environment>(entry.environment);
@@ -186,29 +188,37 @@ export const EvaluationConsolePage: React.FC = () => {
   const [evalResult, setEvalResult] = useState<EvaluationResult | null>(null);
   const [evalError, setEvalError] = useState<string | null>(null);
   const evaluatingRef = useRef(false);
+  const flagRequestRef = useRef(0);
 
-  // Prefer the id carried by the deep link, otherwise resolve it from the
-  // environment's flag list so the return link always points at the flag.
-  const resolvedFlagId =
-    entry.flagId ?? flags.find((flag) => flag.key === flagKey)?.id ?? null;
+  const selectedFlag = flags.find((flag) => flag.key === flagKey);
+  const unchangedEntry = environment === entry.environment && flagKey === entry.flagKey;
+  const resolvedFlagId = (unchangedEntry ? entry.flagId : null) ?? selectedFlag?.id ?? null;
   const backToFlagDetail = resolvedFlagId ? `/flags/${resolvedFlagId}` : '/flags';
 
-  // Load flags for the current environment to assist input
-  const loadFlags = useCallback(async (env: Environment) => {
+  // Query the existing list endpoint as the user types so every Flag remains reachable.
+  const loadFlags = useCallback(async (env: Environment, search: string) => {
+    const requestId = flagRequestRef.current + 1;
+    flagRequestRef.current = requestId;
     setLoadingFlags(true);
     try {
-      const res = await api.getFlags({ environment: env, page_size: 100 });
-      setFlags(res.items);
+      const res = await api.getFlags({
+        environment: env,
+        search: search || undefined,
+        page: 1,
+        page_size: 20,
+      });
+      if (requestId === flagRequestRef.current) setFlags(res.items);
     } catch {
       // Non-fatal assistance
     } finally {
-      setLoadingFlags(false);
+      if (requestId === flagRequestRef.current) setLoadingFlags(false);
     }
   }, []);
 
   useEffect(() => {
-    loadFlags(environment);
-  }, [environment, loadFlags]);
+    const timer = window.setTimeout(() => loadFlags(environment, flagKey.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [environment, flagKey, loadFlags]);
 
   // Real-time JSON validation
   const contextCheck = useMemo(() => parseContextInput(contextText), [contextText]);
@@ -216,7 +226,7 @@ export const EvaluationConsolePage: React.FC = () => {
   // Handle prettify
   const handleFormatJson = () => {
     if (contextCheck.isValid && contextCheck.parsed) {
-      setContextText(JSON.stringify(contextCheck.parsed, null, 2));
+      setContextText(stringifyJson(contextCheck.parsed, 2));
     }
   };
 
@@ -429,7 +439,7 @@ export const EvaluationConsolePage: React.FC = () => {
                   </div>
                 </div>
                 <Tag color={isPositive ? 'green' : 'red'} style={{ fontSize: 14, padding: '4px 12px' }}>
-                  {isPositive ? '功能放量开放 (true)' : '特定限制关闭 (false)'}
+                  {isPositive ? '返回 true' : '返回 false'}
                 </Tag>
               </div>
 
@@ -458,9 +468,7 @@ export const EvaluationConsolePage: React.FC = () => {
                   </Descriptions.Item>
                   <Descriptions.Item label="规则期望值 (Expected Value)" span={{ xs: 1, md: 2 }}>
                     <Text code style={{ wordBreak: 'break-all' }}>
-                      {typeof rule.expected_value === 'string'
-                        ? rule.expected_value
-                        : JSON.stringify(rule.expected_value)}
+                      {stringifyJson(rule.expected_value)}
                     </Text>
                   </Descriptions.Item>
                 </Descriptions>
@@ -495,7 +503,7 @@ export const EvaluationConsolePage: React.FC = () => {
               </div>
 
               <Paragraph style={{ margin: '8px 0 16px', color: '#595959' }}>
-                未命中任何规则，回退至 Flag 默认值。用户属性上下文未满足该 Flag 下配置的有序灰度规则，评估引擎按安全策略返回全局默认值。
+                未命中任何规则，回退至当前 Flag 的默认返回值。用户属性上下文未满足该 Flag 下配置的有序灰度规则。
               </Paragraph>
 
               <div
@@ -603,9 +611,14 @@ export const EvaluationConsolePage: React.FC = () => {
                 正在评估特性开关：<Text strong>{flagKey || '（未指定）'}</Text> [{environment}]
               </Text>
             </Space>
-            <Link to={backToFlagDetail}>
+            <Link
+              to={backToFlagDetail}
+              state={resolvedFlagId
+                ? { from: `${location.pathname}${location.search}`, fromLabel: '规则评估' }
+                : undefined}
+            >
               <ArrowLeftOutlined style={{ marginRight: 4 }} />
-              返回 Flag 详情
+              {resolvedFlagId ? '返回 Flag 详情' : '返回 Flag 列表'}
             </Link>
           </div>
         </Card>
@@ -652,7 +665,7 @@ export const EvaluationConsolePage: React.FC = () => {
                   </label>
                   {flags.length > 0 && (
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      已预载当前环境 {flags.length} 个 Flag
+                      当前匹配 {flags.length} 个 Flag
                     </Text>
                   )}
                 </div>
@@ -671,11 +684,7 @@ export const EvaluationConsolePage: React.FC = () => {
                     label: `${f.key} (${f.name}) [${f.enabled ? '已启用' : '已停用'}]`,
                     value: f.key,
                   }))}
-                  filterOption={(input, option) =>
-                    `${option?.value ?? ''} ${option?.label ?? ''}`
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
+                  filterOption={false}
                 />
                 {loadingFlags && (
                   <Text type="secondary" style={{ fontSize: 12 }}>

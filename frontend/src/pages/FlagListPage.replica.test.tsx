@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routeConfig } from '../router';
 import { api } from '../api/client';
@@ -49,6 +49,7 @@ describe('FlagListPage 1:1 Prototype Replica', () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: sampleFlags,
       total: 2,
+      stats: { all: 2, enabled: 1, disabled: 1 },
     });
     vi.mocked(api.getFlag).mockResolvedValue(sampleFlags[0]);
   });
@@ -80,35 +81,52 @@ describe('FlagListPage 1:1 Prototype Replica', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
 
-  it('filters flags by status using the status filter dropdown', async () => {
+  it('shows live status stats instead of a separate status filter button', async () => {
     renderWithRouter(['/flags']);
 
     await screen.findByText('ai_ride_assistant_enabled');
     expect(screen.getByText('safety_ai_upgrade_enabled')).toBeInTheDocument();
 
-    // Open status filter menu
-    const filterBtn = screen.getByRole('button', { name: /筛选启停状态/i });
-    fireEvent.click(filterBtn);
+    const stats = screen.getByRole('group', { name: 'Flag 状态统计' });
+    expect(stats).toHaveTextContent('2');
+    expect(screen.getByRole('button', { name: /已启用/ })).toHaveTextContent('1');
+    expect(screen.getByRole('button', { name: /已停用/ })).toHaveTextContent('1');
 
-    // Select "已启用"
-    const enabledOption = screen.getByRole('menuitemradio', { name: /已启用/i });
-    fireEvent.click(enabledOption);
+    // Status filtering is carried by the three stat buttons, never by a
+    // standalone filter control.
+    expect(screen.queryByRole('button', { name: /筛选启停状态/i })).not.toBeInTheDocument();
+  });
 
-    // Only enabled flag is visible
-    expect(screen.getByText('ai_ride_assistant_enabled')).toBeInTheDocument();
-    expect(screen.queryByText('safety_ai_upgrade_enabled')).not.toBeInTheDocument();
+  it('filters by status through the stat buttons while keeping the summary stable', async () => {
+    const { router } = renderWithRouter(['/flags']);
 
-    // Open filter menu and select "已停用"
-    fireEvent.click(filterBtn);
-    const disabledOption = screen.getByRole('menuitemradio', { name: /已停用/i });
-    fireEvent.click(disabledOption);
+    await screen.findByText('ai_ride_assistant_enabled');
 
-    // Only disabled flag is visible
-    expect(screen.queryByText('ai_ride_assistant_enabled')).not.toBeInTheDocument();
-    expect(screen.getByText('safety_ai_upgrade_enabled')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /已启用/ }));
+
+    await waitFor(() => {
+      expect(router.state.location.search).toContain('enabled=true');
+    });
+    await waitFor(() => {
+      expect(api.getFlags).toHaveBeenCalledWith(
+        expect.objectContaining({ enabled: true, page: 1 })
+      );
+    });
+    // The server summary ignores the status filter, so the stat stays at 2.
+    expect(screen.getByRole('button', { name: /全部 Flag/ })).toHaveTextContent('2');
+
+    fireEvent.click(screen.getByRole('button', { name: /全部 Flag/ }));
+    await waitFor(() => {
+      expect(router.state.location.search).not.toContain('enabled=');
+    });
   });
 
   it('copies Flag Key to clipboard and shows toast', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
     renderWithRouter(['/flags']);
 
     await screen.findByText('ai_ride_assistant_enabled');
@@ -117,6 +135,7 @@ describe('FlagListPage 1:1 Prototype Replica', () => {
     fireEvent.click(copyBtn);
 
     const toastRoot = document.getElementById('toastRoot');
-    expect(toastRoot).toHaveTextContent(/已复制/);
+    await waitFor(() => expect(toastRoot).toHaveTextContent(/已复制/));
+    expect(writeText).toHaveBeenCalledWith('ai_ride_assistant_enabled');
   });
 });

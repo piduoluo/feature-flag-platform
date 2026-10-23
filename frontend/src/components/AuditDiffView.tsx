@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Card, Descriptions, Space, Tag, Typography } from 'antd';
+import { Alert, Card, Space, Tag, Typography } from 'antd';
 import {
   FLAG_FIELD_LABELS,
   FlagCreatedDiff,
@@ -195,16 +195,29 @@ const FlagToggleView: React.FC<{ diff: FlagToggleDiff }> = ({ diff }) => (
 );
 
 const FlagCreatedView: React.FC<{ diff: FlagCreatedDiff }> = ({ diff }) => {
-  const items = [
-    diff.key === undefined ? null : { key: 'key', label: 'Flag Key', children: <Typography.Text code>{diff.key}</Typography.Text> },
-    diff.name === undefined ? null : { key: 'name', label: '名称', children: diff.name },
-    diff.description === undefined ? null : { key: 'description', label: '描述', children: formatFlagValue(diff.description) },
-    diff.environment === undefined ? null : { key: 'environment', label: '环境', children: diff.environment },
-    diff.default_value === undefined ? null : { key: 'default_value', label: '默认返回值', children: String(diff.default_value) },
-    diff.enabled === undefined ? null : { key: 'enabled', label: '启停状态', children: diff.enabled ? '已启用' : '已停用' },
-    diff.rule_count === undefined ? null : { key: 'rule_count', label: '初始规则数', children: String(diff.rule_count) },
+  // A plain description list keeps label and value in one grid row. Using
+  // <Descriptions column={1}> here made every label/value pair its own table
+  // row, so long keys wrapped inside a ~24px cell.
+  const rows = [
+    diff.key === undefined ? null : { key: 'key', label: 'Flag Key', content: <Typography.Text code>{diff.key}</Typography.Text> },
+    diff.name === undefined ? null : { key: 'name', label: '名称', content: diff.name },
+    diff.description === undefined ? null : { key: 'description', label: '描述', content: formatFlagValue(diff.description) },
+    diff.environment === undefined ? null : { key: 'environment', label: '环境', content: diff.environment },
+    diff.default_value === undefined ? null : { key: 'default_value', label: '默认返回值', content: String(diff.default_value) },
+    diff.enabled === undefined ? null : { key: 'enabled', label: '启停状态', content: diff.enabled ? '已启用' : '已停用' },
+    diff.rule_count === undefined ? null : { key: 'rule_count', label: '初始规则数', content: String(diff.rule_count) },
   ].filter((item): item is NonNullable<typeof item> => item !== null);
-  return <Descriptions size="small" column={1} items={items} className="diff-created" />;
+
+  return (
+    <dl className="diff-created">
+      {rows.map(row => (
+        <React.Fragment key={row.key}>
+          <dt>{row.label}</dt>
+          <dd>{row.content}</dd>
+        </React.Fragment>
+      ))}
+    </dl>
+  );
 };
 
 /** 无结构化明细时的可读摘要（如种子同步、未知动作）。 */
