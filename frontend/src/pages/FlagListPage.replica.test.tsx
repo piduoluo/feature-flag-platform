@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { routeConfig } from '../router';
 import { api } from '../api/client';
@@ -46,6 +46,7 @@ describe('FlagListPage 1:1 Prototype Replica', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.setItem('flag_list_view_mode', 'list');
     vi.mocked(api.getFlags).mockResolvedValue({
       items: sampleFlags,
       total: 2,
@@ -119,6 +120,50 @@ describe('FlagListPage 1:1 Prototype Replica', () => {
     await waitFor(() => {
       expect(router.state.location.search).not.toContain('enabled=');
     });
+  });
+
+  it('renders the reference index card: title, key row, rule and meta', async () => {
+    renderWithRouter(['/flags']);
+
+    await screen.findByText('ai_ride_assistant_enabled');
+    fireEvent.click(screen.getByRole('button', { name: /宫格视图/i }));
+
+    const card = screen.getAllByRole('article')[0];
+
+    // Layer 1: name + inline switch.
+    expect(within(card).getByText('AI 行程助手')).toBeInTheDocument();
+    expect(within(card).getByRole('switch')).toBeInTheDocument();
+    // Layer 2: key + copy affordance + default value pill.
+    expect(within(card).getByText('ai_ride_assistant_enabled')).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: /复制 Key/i })).toBeInTheDocument();
+    expect(card).toHaveTextContent('默认返回值：');
+    expect(within(card).getByText('false')).toBeInTheDocument();
+    // Layer 3: divider between the key row and the meta row.
+    expect(card.querySelector('.flag-card-rule')).not.toBeNull();
+    // Layer 4: environment · status · updated date.
+    expect(within(card).getByText('Production')).toBeInTheDocument();
+    expect(within(card).getByText('已启用')).toBeInTheDocument();
+    expect(within(card).getByText(/^更新于 \d{4}\/\d{2}\/\d{2}$/)).toBeInTheDocument();
+
+    // Still omitted from the reference card.
+    expect(within(card).queryByText(/仅对演示测试用户开放/)).not.toBeInTheDocument();
+    expect(within(card).queryByRole('button', { name: /在线评估/i })).not.toBeInTheDocument();
+  });
+
+  it('shows the skeleton grid instead of the empty state during the first fetch', async () => {
+    const previous = localStorage.getItem('flag_list_view_mode');
+    localStorage.setItem('flag_list_view_mode', 'grid');
+    vi.mocked(api.getFlags).mockReturnValue(new Promise(() => {}));
+
+    try {
+      renderWithRouter(['/flags']);
+
+      expect(screen.getByLabelText('Flag 宫格视图')).toHaveAttribute('aria-busy', 'true');
+      expect(screen.queryByText(/暂无 Feature Flag/)).not.toBeInTheDocument();
+    } finally {
+      if (previous === null) localStorage.removeItem('flag_list_view_mode');
+      else localStorage.setItem('flag_list_view_mode', previous);
+    }
   });
 
   it('copies Flag Key to clipboard and shows toast', async () => {

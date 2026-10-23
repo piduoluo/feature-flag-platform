@@ -463,3 +463,63 @@ func TestRuleService_SyncRules_AtomicRollback_OnAuditFailure(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, logsBefore, logsAfter)
 }
+
+func TestRuleService_SyncRules_RefreshesFlagUpdatedAt(t *testing.T) {
+	flagService, ruleService := setupRuleTestDB(t)
+	ctx := context.Background()
+
+	key := fmt.Sprintf("rules_touch_%d", time.Now().UnixNano())
+	flag, err := flagService.CreateFlag(ctx, &domain.CreateFlagRequest{
+		Key:         key,
+		Name:        "Rules Touch Flag",
+		Environment: domain.EnvDevelopment,
+	})
+	require.NoError(t, err)
+
+	before, err := flagService.GetFlagByID(ctx, flag.ID)
+	require.NoError(t, err)
+
+	time.Sleep(20 * time.Millisecond)
+
+	ruleList := []domain.RuleItemPayload{
+		{
+			AttributeName: "user_id",
+			Operator:      "equals",
+			ExpectedValue: json.RawMessage(`"u_1"`),
+			ReturnValue:   true,
+			Priority:      1,
+		},
+	}
+	_, err = ruleService.SyncRules(ctx, flag.ID, &domain.SyncRulesRequest{Rules: &ruleList})
+	require.NoError(t, err)
+
+	afterChange, err := flagService.GetFlagByID(ctx, flag.ID)
+	require.NoError(t, err)
+	assert.True(t, afterChange.UpdatedAt.After(before.UpdatedAt),
+		"a real rule change should refresh the flag's updated_at")
+
+	// Re-submitting the identical rule set is a no-op: the audit log is skipped
+	// and the flag timestamp must stay untouched as well.
+	rules, err := ruleService.GetRulesByFlagID(ctx, flag.ID)
+	require.NoError(t, err)
+	require.Len(t, rules, 1)
+
+	unchanged := []domain.RuleItemPayload{
+		{
+			ID:            &rules[0].ID,
+			AttributeName: rules[0].AttributeName,
+			Operator:      rules[0].Operator,
+			ExpectedValue: rules[0].ExpectedValue,
+			ReturnValue:   rules[0].ReturnValue,
+			Priority:      rules[0].Priority,
+		},
+	}
+	time.Sleep(20 * time.Millisecond)
+	_, err = ruleService.SyncRules(ctx, flag.ID, &domain.SyncRulesRequest{Rules: &unchanged})
+	require.NoError(t, err)
+
+	afterNoop, err := flagService.GetFlagByID(ctx, flag.ID)
+	require.NoError(t, err)
+	assert.True(t, afterChange.UpdatedAt.Equal(afterNoop.UpdatedAt),
+		"a no-op rule sync must not refresh the flag's updated_at")
+}

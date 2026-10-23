@@ -89,7 +89,7 @@ describe('FlagListPage (Ticket 02)', () => {
         expect.objectContaining({
           environment: undefined,
           page: 1,
-          page_size: 10,
+          page_size: 12,
         })
       );
     });
@@ -138,7 +138,7 @@ describe('FlagListPage (Ticket 02)', () => {
           environment: 'staging',
           search: 'demo',
           page: 1,
-          page_size: 10,
+          page_size: 12,
         })
       );
     });
@@ -450,8 +450,8 @@ describe('FlagListPage (Ticket 02)', () => {
   it('restores the original list URL, filters and page after returning from a detail', async () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [demoFlag],
-      total: 12,
-      stats: { all: 12, enabled: 1, disabled: 11 },
+      total: 30,
+      stats: { all: 30, enabled: 1, disabled: 29 },
     });
 
     const { router } = renderWithRouter(['/flags?environment=production&search=checkout&page=2']);
@@ -462,7 +462,7 @@ describe('FlagListPage (Ticket 02)', () => {
           environment: 'production',
           search: 'checkout',
           page: 2,
-          page_size: 10,
+          page_size: 12,
         })
       );
     });
@@ -483,8 +483,8 @@ describe('FlagListPage (Ticket 02)', () => {
   it('writes pagination into the list URL so the browser can restore it', async () => {
     vi.mocked(api.getFlags).mockResolvedValue({
       items: [demoFlag],
-      total: 12,
-      stats: { all: 12, enabled: 1, disabled: 11 },
+      total: 30,
+      stats: { all: 30, enabled: 1, disabled: 29 },
     });
 
     const { router } = renderWithRouter(['/flags']);
@@ -495,7 +495,7 @@ describe('FlagListPage (Ticket 02)', () => {
     await waitFor(() => expect(router.state.location.search).toContain('page=2'));
     await waitFor(() => {
       expect(api.getFlags).toHaveBeenCalledWith(
-        expect.objectContaining({ page: 2, page_size: 10 })
+        expect.objectContaining({ page: 2, page_size: 12 })
       );
     });
   });
