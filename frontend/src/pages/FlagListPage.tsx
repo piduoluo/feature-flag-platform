@@ -27,7 +27,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { Environment, Flag, FlagStats } from '../types';
 import { api, ApiError } from '../api/client';
 import { CreateFlagDrawer } from '../components/CreateFlagDrawer';
-import { BooleanValueTag, ENV_FILTER_OPTIONS, EnvironmentBadge, StatusBadge } from '../components/EnvironmentBadge';
+import { BooleanValueTag, ENV_FILTER_OPTIONS, EnvironmentBadge, StatusBadge, formatEnvironmentLabel } from '../components/EnvironmentBadge';
 import { toast } from '../utils/toast';
 
 const STATUS_FILTERS = [
@@ -356,30 +356,6 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
 
   return (
     <div className="flag-console">
-      <header className="flag-console-head">
-        <div className="flag-console-heading">
-          <h1 className="flag-console-title">功能开关管理</h1>
-          <p className="flag-console-subtitle">
-            管理各环境的功能开关，支持灰度发布与快速回滚。
-          </p>
-        </div>
-
-        <div className="flag-stats" role="group" aria-label="Flag 状态统计">
-          {STATUS_FILTERS.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`flag-stat${statusFilter === item.key ? ' active' : ''}`}
-              aria-pressed={statusFilter === item.key}
-              onClick={() => handleStatusChange(item.key)}
-            >
-              <span className="flag-stat-value">{stats[item.key]}</span>
-              <span className="flag-stat-label">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      </header>
-
       <section className="flag-console-panel" aria-label="功能开关列表">
         {fetchError && (
           <Alert
@@ -392,7 +368,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
           />
         )}
 
-        {/* Toolbar: environment on the left; search, view, refresh and create on the right. */}
+        {/* Environment first, followed by the full-width search and actions. */}
         <div className="toolbar flag-toolbar">
           <div className="toolbar-left flag-toolbar-env">
             <Segmented
@@ -451,6 +427,26 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
               新建 Flag
             </Button>
           </div>
+        </div>
+
+        <div className="flag-results-bar">
+          <div className="flag-stats" role="group" aria-label="Flag 状态统计">
+            {STATUS_FILTERS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={`flag-stat${statusFilter === item.key ? ' active' : ''}`}
+                aria-pressed={statusFilter === item.key}
+                onClick={() => handleStatusChange(item.key)}
+              >
+                <span className="flag-stat-label">{item.label}</span>
+                <span className="flag-stat-value">{stats[item.key]}</span>
+              </button>
+            ))}
+          </div>
+          <p className="flag-result-count" aria-live="polite">
+            {selectedEnv === 'all' ? '全部环境' : formatEnvironmentLabel(selectedEnv)} · 共 {total} 条记录
+          </p>
         </div>
 
         {/* Content: List (Table) vs Grid */}

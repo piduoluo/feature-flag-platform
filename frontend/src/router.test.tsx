@@ -49,7 +49,7 @@ describe('Router & AppShell Integration', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/flags');
     });
-    expect(screen.getByRole('heading', { name: '功能开关管理' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '功能开关列表' })).toBeInTheDocument();
   });
 
   it('renders sidebar navigation with correct active state for "/flags"', async () => {
@@ -67,19 +67,19 @@ describe('Router & AppShell Integration', () => {
     expect(screen.getByRole('menuitem', { name: /规则评估/i })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /全局操作历史/i })).toBeInTheDocument();
 
-    // The global breadcrumb is gone; the page owns its single title.
+    // Navigation opens the list content without a global breadcrumb.
     expect(screen.queryByTestId('app-breadcrumb')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '功能开关管理' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '功能开关列表' })).toBeInTheDocument();
   });
 
-  it('renders active sidebar state and page title for "/evaluations"', async () => {
+  it('renders active sidebar state and page content for "/evaluations"', async () => {
     renderRoute(['/evaluations']);
 
     const evalMenuItem = screen.getByRole('menuitem', { name: /规则评估/i });
     expect(evalMenuItem).toHaveClass('ant-menu-item-selected');
 
     expect(screen.queryByTestId('app-breadcrumb')).not.toBeInTheDocument();
-    expect(screen.getByText('确定性规则在线评估控制台')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Context JSON/)).toBeInTheDocument();
   });
 
   it('renders active sidebar state and page content for "/audit-logs"', async () => {
@@ -138,7 +138,7 @@ describe('Router & AppShell Integration', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/flags');
     });
-    expect(screen.getByRole('heading', { name: '功能开关管理' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '功能开关列表' })).toBeInTheDocument();
   });
 
   it('redirects unknown path to "/flags"', async () => {

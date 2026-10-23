@@ -103,6 +103,12 @@
   - Blocked by: 18
   - Scope: 删除规则评估页顶部管理 Flag 入口及其操作栏。
 
+- **[20-flag-controls-reference-layout.md](issues/20-flag-controls-reference-layout.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 17, 18, 19
+  - Scope: 删除功能开关页标题说明，按用户图例将环境、通栏搜索操作、状态统计及结果数排为三层。
+
 ## Decisions-so-far
 - 遵循 [docs/SPEC.md](../../docs/SPEC.md) 与 [docs/adr/](../../docs/adr/) 中的 ADR 0001~0006。
 - 架构采用 `Handler -> Service -> Repository -> Database` 单向流，纯内存 `Engine`。
@@ -124,3 +130,4 @@
 - [Ticket 17 完成](issues/17-flag-console-layout-typography.md)：标题与统计收紧，筛选操作按容器宽度重排，统一列表和宫格字体及分页节奏；相关测试、生产构建与多尺寸浏览器检查通过，localhost:3000 已更新。
 - [Ticket 18 完成](issues/18-remove-secondary-page-headings.md)：在线评估与全局操作历史首页顶部大标题已删除；27 项相关测试、构建及真实页面验证通过，localhost:3000 已更新。
 - [Ticket 19 完成](issues/19-remove-evaluation-flag-management-entry.md)：规则评估页的管理 Flag 入口及顶部操作栏已删除，生产构建通过，localhost:3000 已更新。
+- [Ticket 20 完成](issues/20-flag-controls-reference-layout.md)：功能开关页按新图例重排，删除标题说明，将状态统计移到搜索下方并在右侧显示当前环境及筛选记录数；36 项相关测试、构建及桌面/手机浏览器检查通过，localhost:3000 已更新。

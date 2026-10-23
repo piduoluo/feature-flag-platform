@@ -183,7 +183,7 @@
   .page-sub { font-size: 12px; color: #8a8580; }
 
   /* ============================================================
-     Flag console heading, live stats and unified toolbar
+     Flag console filters, live stats and toolbar
      ============================================================ */
   main.app-shell-content:has(> .flag-console) { max-width: none; margin: 0; padding: 0; }
   .flag-console {
@@ -204,44 +204,47 @@
     line-height: 1.5;
     container: flag-console / inline-size;
   }
-  .flag-console-head {
+  .flag-results-bar {
     display: flex; align-items: center; justify-content: space-between;
-    gap: var(--flag-section-space); max-width: 1600px; margin: 0 auto;
-    padding: var(--flag-page-space) var(--flag-page-space) var(--flag-section-space);
-    border-bottom: 1px solid var(--flag-line);
+    gap: var(--flag-section-space); margin-bottom: var(--flag-section-space);
   }
-  .flag-console-heading { min-width: 0; }
-  .flag-console-title {
-    margin: 0; color: var(--flag-ink);
-    font-size: 1.75rem; line-height: 1.3; font-weight: 650; letter-spacing: -.025em;
+  .flag-stats {
+    display: flex; align-items: stretch; flex: 0 0 auto;
+    padding-bottom: 8px; border-bottom: 1px solid var(--flag-line);
   }
-  .flag-console-subtitle {
-    margin: 8px 0 0; color: var(--flag-muted);
-    font-size: .875rem; line-height: 1.6;
-  }
-  .flag-stats { display: flex; align-items: stretch; flex: 0 0 auto; gap: 4px; }
   .flag-stat {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 4px; min-width: 92px; padding: 8px 16px; border-radius: 8px;
+    position: relative; display: flex; align-items: center; justify-content: center;
+    gap: 8px; min-height: 40px; padding: 8px 16px; border-radius: 8px;
     color: var(--flag-ink); text-align: center;
     transition: background-color .16s ease, color .16s ease;
   }
   .flag-stat:hover { background: var(--flag-soft); }
   .flag-stat.active { background: var(--flag-accent-soft); }
-  .flag-stat-value { font-size: 1.5rem; line-height: 1.2; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .flag-stat-label { color: var(--flag-muted); font-size: .8125rem; line-height: 1.4; white-space: nowrap; }
+  .flag-stat.active::after {
+    content: ""; position: absolute; right: 0; bottom: -9px; left: 0;
+    height: 2px; background: var(--flag-accent);
+  }
+  .flag-stat-value {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 24px; height: 24px; padding: 0 6px; border-radius: 6px;
+    background: #eef0f3; color: var(--flag-muted);
+    font-size: .8125rem; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  .flag-stat-label { color: var(--flag-muted); font-size: .875rem; line-height: 1.4; white-space: nowrap; }
   .flag-stat.active .flag-stat-value, .flag-stat.active .flag-stat-label { color: var(--flag-accent-ink); }
+  .flag-stat.active .flag-stat-value { background: #ffe0cf; }
+  .flag-result-count { margin: 0; color: var(--flag-muted); font-size: .8125rem; white-space: nowrap; }
   .flag-console-panel { max-width: 1600px; margin: 0 auto; padding: var(--flag-section-space) var(--flag-page-space) 40px; }
 
   .flag-console .toolbar.flag-toolbar {
-    display: grid; grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center; gap: var(--flag-section-space); margin-bottom: var(--flag-section-space);
+    display: grid; grid-template-columns: minmax(0, 1fr);
+    align-items: center; gap: 16px; margin-bottom: var(--flag-section-space);
   }
   .flag-console .flag-toolbar-env { min-width: 0; overflow-x: auto; scrollbar-width: none; }
   .flag-toolbar-env::-webkit-scrollbar { display: none; }
   .flag-console .flag-toolbar-actions {
-    display: grid; grid-template-columns: minmax(190px, 280px) auto 40px auto;
-    align-items: center; gap: 8px; margin-left: 0; width: auto;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto 40px auto;
+    align-items: center; gap: 16px; margin-left: 0; width: 100%;
   }
   .flag-toolbar .flag-search { width: 100%; min-width: 0; }
   .flag-toolbar .ant-input-affix-wrapper {
@@ -257,22 +260,25 @@
     height: var(--flag-control-height); border-radius: 6px;
     font-size: .875rem; font-weight: 500; box-shadow: none;
   }
-  .flag-toolbar .ant-btn-default { width: 40px; border-color: #d9dfe7; color: var(--flag-muted); }
+  .flag-toolbar .ant-btn-default { width: 40px; border-color: transparent; background: transparent; color: var(--flag-muted); }
+  .flag-toolbar .ant-btn-default:hover { background: var(--flag-soft); }
   .flag-toolbar .ant-btn-default .anticon { font-size: 18px; }
   .flag-toolbar .flag-create-btn.ant-btn-primary {
     padding: 0 16px; color: #fff; background: var(--flag-accent); border-color: var(--flag-accent);
   }
   .flag-toolbar .flag-create-btn.ant-btn-primary:hover { background: #b54117; border-color: #b54117; }
   .flag-toolbar .view-toggle-group {
-    height: var(--flag-control-height); gap: 2px; padding: 3px;
-    border: 1px solid #d9dfe7; border-radius: 6px; background: #fff;
+    height: var(--flag-control-height); gap: 8px; padding: 0;
+    border: 0; background: transparent;
   }
   .flag-toolbar .view-toggle-group .icon-btn {
-    width: 32px; height: 32px; border: 0; border-radius: 4px;
+    width: 40px; height: 40px; border: 1px solid transparent; border-radius: 6px;
     background: transparent; color: var(--flag-muted); font-size: 17px;
   }
   .flag-toolbar .view-toggle-group .icon-btn:hover { background: var(--flag-soft); color: var(--flag-ink); }
-  .flag-toolbar .view-toggle-group .icon-btn[aria-pressed="true"] { background: var(--flag-accent-soft); color: var(--flag-accent-ink); }
+  .flag-toolbar .view-toggle-group .icon-btn[aria-pressed="true"] {
+    border-color: #f1b49a; background: var(--flag-accent-soft); color: var(--flag-accent-ink);
+  }
   .flag-toolbar-env .ant-segmented { padding: 0; background: transparent; border-radius: 0; }
   .flag-toolbar-env .ant-segmented-thumb { background: transparent; box-shadow: none; }
   .flag-toolbar-env .ant-segmented-item { color: var(--flag-muted); font-size: .875rem; }
@@ -345,25 +351,15 @@
   .flag-console input { caret-color: var(--flag-accent); }
   .flag-console ::selection { color: #60250c; background: #ffe5d7; }
 
-  @container flag-console (max-width: 1040px) {
-    .flag-console-head { align-items: flex-start; }
-    .flag-stat { min-width: 80px; padding: 8px 12px; }
-    .flag-console .toolbar.flag-toolbar { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-    .flag-console .flag-toolbar-actions { grid-template-columns: minmax(0, 1fr) auto 40px auto; width: 100%; }
-  }
-  @container flag-console (max-width: 760px) {
-    .flag-console-head { flex-direction: column; gap: 20px; }
-    .flag-stats { width: 100%; }
-    .flag-stat { flex: 1; flex-direction: row; gap: 8px; }
-    .flag-stat-value { font-size: 1.25rem; }
-  }
   @container flag-console (max-width: 560px) {
-    .flag-console-head, .flag-console-panel { --flag-page-space: 20px; }
-    .flag-console-head { padding-top: 24px; }
-    .flag-console-title { font-size: 1.5rem; }
-    .flag-console-subtitle { max-width: 28em; }
-    .flag-stat { min-width: 0; padding: 10px 4px; gap: 6px; }
-    .flag-console .flag-toolbar-actions { grid-template-columns: minmax(0, 1fr) 40px auto; }
+    .flag-console-panel { --flag-page-space: 20px; }
+    .flag-results-bar { flex-direction: column; align-items: stretch; gap: 12px; }
+    .flag-stats { width: 100%; }
+    .flag-stat { flex: 1; min-width: 0; padding: 8px 6px; gap: 6px; }
+    .flag-stat-label { font-size: .8125rem; }
+    .flag-stat-value { min-width: 20px; height: 20px; padding: 0 4px; }
+    .flag-result-count { align-self: flex-end; }
+    .flag-console .flag-toolbar-actions { grid-template-columns: minmax(0, 1fr) 40px auto; gap: 12px; }
     .flag-toolbar .flag-search { grid-column: 1 / -1; }
     .flag-toolbar .view-toggle-group { justify-self: start; }
     .flag-toolbar-env .ant-segmented-item-label { padding-inline: 8px; font-size: .8125rem; }

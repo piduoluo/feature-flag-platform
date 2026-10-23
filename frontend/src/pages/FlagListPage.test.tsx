@@ -81,7 +81,8 @@ describe('FlagListPage (Ticket 02)', () => {
 
     renderWithRouter(['/flags']);
 
-    expect(screen.getByText('功能开关管理')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '功能开关管理' })).not.toBeInTheDocument();
+    expect(screen.queryByText('管理各环境的功能开关，支持灰度发布与快速回滚。')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /新建 Flag/i })).toBeInTheDocument();
 
     await waitFor(() => {
@@ -146,6 +147,7 @@ describe('FlagListPage (Ticket 02)', () => {
     // Verify search input displays the search text from query
     const searchInput = screen.getByPlaceholderText('搜索 Flag Key 或名称...') as HTMLInputElement;
     expect(searchInput.value).toBe('demo');
+    expect(await screen.findByText('Staging · 共 1 条记录')).toBeInTheDocument();
 
     // Verify URL location keeps query params intact
     expect(router.state.location.search).toContain('environment=staging');

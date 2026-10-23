@@ -58,7 +58,7 @@ describe('AppShell 1:1 Design & Interactions', () => {
     // The hamburger only exists for the narrow layout; CSS hides it on desktop.
     expect(screen.getByRole('button', { name: '打开导航菜单' })).toBeInTheDocument();
     expect(container.querySelector('.app-shell-mobile-bar')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '功能开关管理' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '功能开关列表' })).toBeInTheDocument();
   });
 
   it('triggers toast notifications and limits stack size to 3', () => {

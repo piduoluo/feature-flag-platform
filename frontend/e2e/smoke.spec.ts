@@ -50,14 +50,14 @@ test('SPEC-US 35: the seeded demo flag is visible on a cold start', async ({ pag
   await expect(page.getByText('ai_ride_assistant_enabled').first()).toBeVisible();
 });
 
-test('Ticket 10: the console uses one title, live stats and no global breadcrumb', async ({ page, request }) => {
+test('Ticket 20: the console shows live stats without a page heading or global breadcrumb', async ({ page, request }) => {
   const response = await request.get(`${API_BASE}/flags?page_size=1`);
   const stats = (await response.json()).data.stats;
 
   await page.goto('/flags');
   await expect(page.getByTestId('app-breadcrumb')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: '功能开关管理' })).toBeVisible();
-  await expect(page.getByText('管理各环境的功能开关，支持灰度发布与快速回滚。')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '功能开关管理' })).toHaveCount(0);
+  await expect(page.getByText('管理各环境的功能开关，支持灰度发布与快速回滚。')).toHaveCount(0);
   await expect(page.locator('.app-shell-header')).toHaveCount(0);
 
   const statsGroup = page.getByRole('group', { name: 'Flag 状态统计' });
