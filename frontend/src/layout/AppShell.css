@@ -1,0 +1,41 @@
+.app-shell-main {
+  margin-left: 220px;
+  min-width: 0;
+}
+
+.app-shell-header {
+  padding: 0 24px;
+}
+
+.app-shell-content {
+  padding: 24px;
+  min-width: 0;
+}
+
+.app-shell-menu-button {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .app-shell-sidebar {
+    display: none;
+  }
+
+  .app-shell-main {
+    margin-left: 0;
+  }
+
+  .app-shell-header {
+    justify-content: flex-start !important;
+    gap: 8px;
+    padding: 0 16px;
+  }
+
+  .app-shell-menu-button {
+    display: inline-flex;
+  }
+
+  .app-shell-content {
+    padding: 16px;
+  }
+}

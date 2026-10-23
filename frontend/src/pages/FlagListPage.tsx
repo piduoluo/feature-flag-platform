@@ -147,7 +147,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: 'Flag Key',
       dataIndex: 'key',
       key: 'key',
-      width: 220,
+      width: 175,
       render: (key: string) => (
         <Space size="small">
           <Text code strong copyable>
@@ -159,6 +159,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     {
       title: '名称与描述',
       key: 'name_desc',
+      width: 160,
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 600, fontSize: 14 }}>{record.name}</div>
@@ -182,7 +183,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '运行环境',
       dataIndex: 'environment',
       key: 'environment',
-      width: 140,
+      width: 110,
       render: (env: Environment) => (
         <Tag color={ENV_TAG_COLORS[env]} style={{ fontWeight: 500 }}>
           {ENV_LABELS[env] || env}
@@ -193,7 +194,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '启停状态',
       dataIndex: 'enabled',
       key: 'enabled',
-      width: 120,
+      width: 100,
       render: (enabled: boolean) => (
         <Badge
           status={enabled ? 'success' : 'default'}
@@ -209,7 +210,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '默认返回值',
       dataIndex: 'default_value',
       key: 'default_value',
-      width: 120,
+      width: 110,
       render: (val: boolean) => (
         <Tag color={val ? 'cyan' : 'default'}>
           {val ? 'true' : 'false'}
@@ -220,7 +221,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      width: 170,
+      width: 125,
       render: (timeStr: string) => {
         try {
           return new Date(timeStr).toLocaleString('zh-CN', {
@@ -235,7 +236,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '更新时间',
       dataIndex: 'updated_at',
       key: 'updated_at',
-      width: 170,
+      width: 125,
       render: (timeStr: string) => {
         try {
           return new Date(timeStr).toLocaleString('zh-CN', {
@@ -249,9 +250,9 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     {
       title: '操作',
       key: 'actions',
-      width: 240,
+      width: 220,
       render: (_, record) => (
-        <Space size="middle">
+        <Space size={4}>
           <Button
             type="link"
             size="small"
@@ -291,7 +292,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
   ];
 
   return (
-    <div style={{ padding: '24px', maxWidth: 1400, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
       <Card
         variant="borderless"
         style={{
@@ -314,9 +315,6 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             <Typography.Title level={4} style={{ margin: 0 }}>
               Feature Flag 特性开关管理
             </Typography.Title>
-            <Typography.Text type="secondary">
-              在特定运行环境下定义并管控功能发布开关，同一环境下保持 Key 唯一。
-            </Typography.Text>
           </div>
 
           <Button
@@ -351,11 +349,13 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             gap: 12,
           }}
         >
-          <Segmented
-            value={selectedEnv}
-            onChange={(val) => handleEnvChange(val as string)}
-            options={ENV_OPTIONS}
-          />
+          <div style={{ maxWidth: '100%', overflowX: 'auto' }}>
+            <Segmented
+              value={selectedEnv}
+              onChange={(val) => handleEnvChange(val as string)}
+              options={ENV_OPTIONS}
+            />
+          </div>
 
           <Space>
             <Input.Search
@@ -381,6 +381,8 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
         <Table<Flag>
           rowKey="id"
           columns={columns}
+          tableLayout="fixed"
+          scroll={{ x: 1125 }}
           dataSource={flags}
           loading={loading}
           onRow={(record) => ({

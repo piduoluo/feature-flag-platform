@@ -122,14 +122,11 @@ export const GlobalAuditLogsPage: React.FC = () => {
   ];
 
   return (
-    <div data-testid="global-audit-logs-page" style={{ padding: '24px', maxWidth: 1400, margin: '0 auto' }}>
+    <div data-testid="global-audit-logs-page" style={{ maxWidth: 1400, margin: '0 auto' }}>
       <Card variant="borderless" style={{ borderRadius: 8 }}>
         <Title level={4} style={{ marginTop: 0, marginBottom: 4 }}>
           全局操作历史
         </Title>
-        <Text type="secondary">
-          跨 Flag 追踪创建、修改、启停与规则同步操作，按时间倒序展示。
-        </Text>
 
         <Space wrap size={[12, 12]} style={{ marginTop: 20, marginBottom: 16 }}>
           <Select<Environment>
@@ -183,6 +180,8 @@ export const GlobalAuditLogsPage: React.FC = () => {
             <Table<AuditLog>
               rowKey="id"
               columns={columns}
+              tableLayout="fixed"
+              scroll={{ x: 900 }}
               dataSource={logs}
               loading={loading}
               expandable={{

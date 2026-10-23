@@ -94,11 +94,23 @@ const FlagWorkspace: React.FC<{ id: number }> = ({ id }) => {
   return <div data-testid="flag-detail-page">
     {error && <Alert type="error" showIcon message={error} />}
     <Card>
-      <Space><Typography.Title level={3}>{savedFlag.name}</Typography.Title><Tag>{savedFlag.environment}</Tag></Space>
-      <Space><Typography.Text code copyable={{ onCopy: () => message.success('Key 已复制') }}>{savedFlag.key}</Typography.Text><Typography.Text type="secondary">最后更新：{new Date(savedFlag.updated_at).toLocaleString('zh-CN')}</Typography.Text></Space>
-      <Space><span>启停控制</span><Switch aria-label="启停控制" checked={savedFlag.enabled} loading={busy} disabled={busy} onChange={enabled => run(async () => { setSavedFlag(await api.toggleFlag(id, enabled)); message.success('启停状态已更新'); })} /></Space>
-      <Button disabled={busy} onClick={() => hasUnsavedChanges ? setEvaluationPrompt(true) : goEvaluate()}>前往在线评估</Button>
-      <p>规则总数：{savedFlag.rules?.length ?? 0} · 已生效默认返回值：<Tag color="blue">{String(savedFlag.default_value)}</Tag> · 最后修改：{new Date(savedFlag.updated_at).toLocaleString('zh-CN')}</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <Typography.Title level={3} style={{ margin: 0 }}>{savedFlag.name}</Typography.Title>
+            <Tag>{savedFlag.environment}</Tag>
+          </div>
+          <Space wrap size={8} style={{ marginTop: 8 }}>
+            <Typography.Text code copyable={{ onCopy: () => message.success('Key 已复制') }}>{savedFlag.key}</Typography.Text>
+            <Typography.Text type="secondary">最后更新：{new Date(savedFlag.updated_at).toLocaleString('zh-CN')}</Typography.Text>
+          </Space>
+        </div>
+        <Space wrap size={12}>
+          <Space><span>启停控制</span><Switch aria-label="启停控制" checked={savedFlag.enabled} loading={busy} disabled={busy} onChange={enabled => run(async () => { setSavedFlag(await api.toggleFlag(id, enabled)); message.success('启停状态已更新'); })} /></Space>
+          <Button disabled={busy} onClick={() => hasUnsavedChanges ? setEvaluationPrompt(true) : goEvaluate()}>前往在线评估</Button>
+        </Space>
+      </div>
+      <p style={{ margin: '16px 0 0' }}>规则总数：{savedFlag.rules?.length ?? 0} · 已生效默认返回值：<Tag color="blue">{String(savedFlag.default_value)}</Tag> · 最后修改：{new Date(savedFlag.updated_at).toLocaleString('zh-CN')}</p>
     </Card>
     <Tabs activeKey={tab} onChange={changeTab} items={[
       { key: 'rules', label: `规则配置${isRulesDirty ? ' *' : ''}`, children: <RuleWorkspace rules={rules} onChange={setRulesDraft} defaultValue={savedFlag.default_value} defaultDirty={basic?.default_value !== savedFlag.default_value} disabled={busy} /> },

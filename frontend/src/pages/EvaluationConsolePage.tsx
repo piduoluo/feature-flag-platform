@@ -49,7 +49,7 @@ function isEnvironment(value: string | null): value is Environment {
 
 /**
  * Seeds the console from a deep link such as
- * `/evaluations?flag_key=checkout_v2&environment=production&flag_id=1`.
+ * `/evaluations?flag_key=ai_ride_assistant_enabled&environment=production&flag_id=1`.
  * Unknown or malformed parameters are ignored instead of failing the page.
  */
 function resolveEntryQuery(searchParams: URLSearchParams) {
@@ -328,8 +328,8 @@ export const EvaluationConsolePage: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
             <StopOutlined style={{ fontSize: 32, color: '#fa8c16', marginTop: 4 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                 <Title level={4} style={{ margin: 0, color: '#d46b08' }}>
                   特性开关已停用 (FLAG_DISABLED)
                 </Title>
@@ -351,6 +351,8 @@ export const EvaluationConsolePage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 8,
                 }}
               >
                 <div>
@@ -385,8 +387,8 @@ export const EvaluationConsolePage: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
             <CheckCircleFilled style={{ fontSize: 32, color: '#52c41a', marginTop: 4 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                 <Title level={4} style={{ margin: 0, color: '#389e0d' }}>
                   命中灰度规则 (RULE_MATCH)
                 </Title>
@@ -410,6 +412,8 @@ export const EvaluationConsolePage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 8,
                 }}
               >
                 <div>
@@ -435,7 +439,7 @@ export const EvaluationConsolePage: React.FC = () => {
                 title={<span style={{ color: '#237804', fontWeight: 600 }}>命中规则明细</span>}
                 style={{ background: '#ffffff', borderColor: '#d9f7be' }}
               >
-                <Descriptions column={2} size="small" bordered>
+                <Descriptions column={{ xs: 1, md: 2 }} size="small" bordered>
                   <Descriptions.Item label="规则优先级 (Priority)">
                     <Tag color="blue" style={{ fontWeight: 'bold' }}>
                       #{rule.priority}
@@ -452,7 +456,7 @@ export const EvaluationConsolePage: React.FC = () => {
                   <Descriptions.Item label="操作符 (Operator)">
                     <Tag color="geekblue">{rule.operator}</Tag>
                   </Descriptions.Item>
-                  <Descriptions.Item label="规则期望值 (Expected Value)" span={2}>
+                  <Descriptions.Item label="规则期望值 (Expected Value)" span={{ xs: 1, md: 2 }}>
                     <Text code style={{ wordBreak: 'break-all' }}>
                       {typeof rule.expected_value === 'string'
                         ? rule.expected_value
@@ -480,8 +484,8 @@ export const EvaluationConsolePage: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
             <InfoCircleFilled style={{ fontSize: 32, color: '#2f54eb', marginTop: 4 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                 <Title level={4} style={{ margin: 0, color: '#1d39c4' }}>
                   回退至默认返回值 (DEFAULT_FALLBACK)
                 </Title>
@@ -503,6 +507,8 @@ export const EvaluationConsolePage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 8,
                 }}
               >
                 <div>
@@ -548,23 +554,22 @@ export const EvaluationConsolePage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: 1400, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
       <div
         style={{
           marginBottom: 20,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start',
+          flexWrap: 'wrap',
+          gap: 16,
         }}
       >
-        <div>
+        <div style={{ flex: '1 1 320px', minWidth: 0 }}>
           <Title level={3} style={{ margin: 0 }}>
             <ThunderboltOutlined style={{ marginRight: 8, color: '#fa8c16' }} />
             确定性规则在线评估控制台
           </Title>
-          <Text type="secondary">
-            基于纯内存评估引擎，模拟调用方传入用户属性上下文，实时观测优先级匹配短路、类型隔离判定及三态评估结果。
-          </Text>
         </div>
         <Button icon={<FlagOutlined />} onClick={() => navigate('/flags')}>
           管理 Feature Flags
@@ -607,7 +612,7 @@ export const EvaluationConsolePage: React.FC = () => {
       )}
       <Row gutter={[24, 24]}>
         {/* Left Form: Inputs */}
-        <Col xs={24} lg={12}>
+        <Col xs={24} xl={12}>
           <Card
             title="评估输入配置"
             variant="borderless"
@@ -641,7 +646,7 @@ export const EvaluationConsolePage: React.FC = () => {
 
               {/* Flag Key Input / Select */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
                   <label htmlFor="flag-key-input">
                     <Text strong>特性开关标识 (Flag Key) *</Text>
                   </label>
@@ -654,7 +659,7 @@ export const EvaluationConsolePage: React.FC = () => {
                 <AutoComplete
                   id="flag-key-input"
                   style={{ width: '100%', marginTop: 6 }}
-                  placeholder="选择或输入 Flag Key (例如 checkout_v2)"
+                  placeholder="选择或输入 Flag Key (例如 ai_ride_assistant_enabled)"
                   value={flagKey}
                   onChange={(val: string) => {
                     setFlagKey(val);
@@ -689,9 +694,11 @@ export const EvaluationConsolePage: React.FC = () => {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     marginBottom: 6,
+                    flexWrap: 'wrap',
+                    gap: 8,
                   }}
                 >
-                  <Space align="center">
+                  <Space align="center" wrap style={{ maxWidth: '100%' }}>
                     <Text strong>用户属性上下文 (Context JSON) *</Text>
                     {contextCheck.isEmpty ? (
                       <Tag>空上下文 · 将按 {} 提交</Tag>
@@ -705,7 +712,7 @@ export const EvaluationConsolePage: React.FC = () => {
                       </Tag>
                     )}
                   </Space>
-                  <Space size="small">
+                  <Space size="small" wrap style={{ maxWidth: '100%' }}>
                     <Tooltip title="自动美化排版 JSON">
                       <Button
                         size="small"
@@ -777,7 +784,7 @@ export const EvaluationConsolePage: React.FC = () => {
         </Col>
 
         {/* Right Output: Result View */}
-        <Col xs={24} lg={12}>
+        <Col xs={24} xl={12}>
           <Card
             title="评估结果与链路决策"
             variant="borderless"
