@@ -248,7 +248,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
     {
       title: 'Flag 信息',
       key: 'flag_info',
-      width: '32%',
+      width: '34%',
       render: (_, record) => (
         <div className="flag-info">
           <div className="flag-info-name" title={record.name}>{record.name}</div>
@@ -271,7 +271,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '运行环境',
       dataIndex: 'environment',
       key: 'environment',
-      width: '12%',
+      width: '13%',
       render: (env: Environment) => <EnvironmentBadge environment={env} />,
     },
     {
@@ -285,7 +285,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       title: '默认返回值',
       dataIndex: 'default_value',
       key: 'default_value',
-      width: '13%',
+      width: '12%',
       render: (val: boolean) => <BooleanValueTag value={val} />,
     },
     {
@@ -299,9 +299,11 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       },
     },
     {
-      title: '',
+      title: <span className="sr-only">启停控制</span>,
       key: 'toggle',
-      width: '8%',
+      className: 'flag-toggle-cell',
+      align: 'center',
+      width: '7%',
       render: (_, record) => (
         <Tooltip title={record.enabled ? '点击停用' : '点击启用'}>
           <Switch
@@ -314,9 +316,11 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
       ),
     },
     {
-      title: '',
+      title: <span className="sr-only">更多操作</span>,
       key: 'more',
-      width: '6%',
+      className: 'flag-more-cell',
+      align: 'right',
+      width: '5%',
       render: (_, record) => (
         <Dropdown
           trigger={['click']}
@@ -516,10 +520,6 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                         >
                           <CopyOutlined />
                         </button>
-                        <span className="flag-card-sep" aria-hidden="true" />
-                        <span className="flag-card-default">
-                          默认返回值： <code>{flag.default_value ? 'true' : 'false'}</code>
-                        </span>
                       </div>
 
                       <div className="flag-card-rule" aria-hidden="true" />
@@ -527,6 +527,9 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                       <div className="flag-card-meta">
                         <EnvironmentBadge environment={flag.environment} />
                         <StatusBadge enabled={flag.enabled} />
+                        <span className="flag-card-default">
+                          默认返回值： <code>{flag.default_value ? 'true' : 'false'}</code>
+                        </span>
                         <span className="flag-card-updated">
                           更新于 {formatDateTime(flag.updated_at).datePart}
                         </span>
@@ -534,31 +537,6 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                     </article>
                   ))}
                 </div>
-              {flags.length > 0 && (
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginTop: 16,
-                    padding: '12px 16px',
-                    borderTop: '1px solid #f2f0ed',
-                  }}
-                >
-                  <div style={{ fontSize: 13, color: '#8a8580' }}>
-                    共 {total} 条记录
-                  </div>
-                  <Pagination
-                    current={currentPage}
-                    pageSize={pageSize}
-                    total={total}
-                    showSizeChanger
-                    pageSizeOptions={['12', '24', '48']}
-                    onChange={handlePageChange}
-                    size="small"
-                  />
-                </div>
-              )}
             </>
             ) : (
               <Empty
@@ -577,7 +555,7 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
             rowKey="id"
             columns={columns}
             tableLayout="fixed"
-            scroll={{ x: 1120 }}
+            scroll={{ x: 1040 }}
             dataSource={flags}
             loading={loading}
             onRow={(record) => ({
@@ -608,15 +586,20 @@ export const FlagListPage: React.FC<FlagListPageProps> = ({ onNavigateToEval }) 
                 />
               ),
             }}
-            pagination={{
-              current: currentPage,
-              pageSize: pageSize,
-              total: total,
-              showSizeChanger: true,
-              pageSizeOptions: ['12', '24', '48'],
-              showTotal: (totalCount) => `共 ${totalCount} 条记录`,
-              onChange: handlePageChange,
-            }}
+            pagination={false}
+          />
+        )}
+
+        {total > 0 && (
+          <Pagination
+            className="flag-pagination"
+            current={currentPage}
+            pageSize={pageSize}
+            total={total}
+            showSizeChanger
+            pageSizeOptions={['12', '24', '48']}
+            showTotal={(totalCount) => `共 ${totalCount} 条记录`}
+            onChange={handlePageChange}
           />
         )}
       </section>

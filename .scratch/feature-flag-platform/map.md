@@ -85,6 +85,12 @@
   - Blocked by: 13, 14
   - Scope: 将 melody/flagshow 合入 main，并验证列表、宫格和规则更新时间行为。
 
+- **[17-flag-console-layout-typography.md](issues/17-flag-console-layout-typography.md)**
+  - Type: task
+  - Status: resolved
+  - Blocked by: 14, 15, 16
+  - Scope: 自主优化功能开关页整体信息层级、布局比例、字体与两种视图的视觉节奏。
+
 ## Decisions-so-far
 - 遵循 [docs/SPEC.md](../../docs/SPEC.md) 与 [docs/adr/](../../docs/adr/) 中的 ADR 0001~0006。
 - 架构采用 `Handler -> Service -> Repository -> Database` 单向流，纯内存 `Engine`。
@@ -103,3 +109,4 @@
 - [Ticket 14 完成](issues/14-flag-list-reference-layout.md)：功能开关内容区参照截图呈现标题统计、工具栏、表头与行；三点菜单直达详情、基本设置、在线评估及变更历史，保留真实数据和原有列表交互。
 - [Ticket 15 完成](issues/15-flag-index-card-redesign.md)：melody/flagshow 的宫格索引卡、加载骨架与键盘操作已合入；列表与宫格共用 12 / 24 / 48 分页，规则实质修改会在同一事务内刷新 Flag 更新时间。
 - [Ticket 16 完成](issues/16-merge-flagshow.md)：主分支列表复刻与 melody/flagshow 宫格改动已完成整合，前后端全量测试、生产构建和真实浏览器检查通过。
+- [Ticket 17 完成](issues/17-flag-console-layout-typography.md)：标题与统计收紧，筛选操作按容器宽度重排，统一列表和宫格字体及分页节奏；相关测试、生产构建与多尺寸浏览器检查通过，localhost:3000 已更新。
