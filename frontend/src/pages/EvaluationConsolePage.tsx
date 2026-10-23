@@ -745,6 +745,14 @@ export const EvaluationConsolePage: React.FC = () => {
                     setEvalResult(null);
                     setEvalError(null);
                   }}
+                  onKeyDown={(e) => {
+                    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                      e.preventDefault();
+                      if (flagKey.trim() && contextCheck.isValid && !evaluating) {
+                        handleEvaluate();
+                      }
+                    }
+                  }}
                   status={contextCheck.isValid ? '' : 'error'}
                   style={{
                     fontFamily: 'SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace',
