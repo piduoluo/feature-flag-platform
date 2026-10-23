@@ -56,7 +56,7 @@
   - Scope: 原 8 项关键测试迁移完整度核查、安全删除 `FlagDetailDrawer.tsx` 及其旧测试文件、清理死代码与旧引用、验证全套测试 100% 绿灯。
 - **[09-real-browser-e2e-smoke-verification.md](issues/09-real-browser-e2e-smoke-verification.md)**
   - Type: task
-  - Status: ready-for-agent
+  - Status: resolved
   - Blocked by: 02, 07, 08B, 10
   - Scope: 本地启动与 Docker Compose 验证、首次启动演示数据就绪验证、Playwright 真实浏览器端到端冒烟测试（动态随机 Flag、深层链接直达 `?tab=audit`、Nginx SPA 刷新 try_files 回退、历史栈前进后退、beforeunload 防误关）。
 
@@ -79,3 +79,4 @@
 - [08a-flag-audit-history-and-structured-diff.md](issues/08a-flag-audit-history-and-structured-diff.md): 新建共享契约 `frontend/src/utils/diffParser.ts` 的 `parseAuditDiff`（输入 `unknown`、永不抛错、畸形降级为可读摘要），`FlagAuditHistoryTab` 消费 `GET /flags/:id/audit-logs` 渲染垂直时间轴；兼容真实 `rules_synced` 三向 Diff、种子 `rules_seed_synced`、`before/after` 与 `old/new` 多种历史形状；`diffParser.test.ts` 19 项 + 组件 7 项 + 路由深链 3 项。
 - [08b-global-audit-api-and-operations-console.md](issues/08b-global-audit-api-and-operations-console.md): 后端 `GET /api/v1/audit-logs` 交付分页/环境/Key 模糊/`action_type` 过滤并显式返回 `flag_id`（`page_size` 上限 100，非法参数 `VALIDATION_ERROR`）；前端 `GlobalAuditLogsPage` 三筛选 + 服务端分页 + 行展开，`AuditDiffView` 与 08A 共用同一 Diff 渲染入口（仅当 `ruleDiff` 存在才渲染三向 Diff，种子记录走 `summary`，畸形走 `fallbackText`），Flag Key 直达 `/flags/:id?tab=audit`；页面测试 12 项。
 - [10-legacy-flag-detail-drawer-cleanup.md](issues/10-legacy-flag-detail-drawer-cleanup.md): 逐条核对原 8 项抽屉用例均已由 `FlagDetailPage` / `FlagAuditHistoryTab` / `ruleDraft` 套件承接，删除 1097 行 `FlagDetailDrawer.tsx` 与 347 行旧测试，`frontend/src` 零引用残留；`npm run build` 通过，全量 9 文件 / 91 项全绿。
+- [09-real-browser-e2e-smoke-verification.md](issues/09-real-browser-e2e-smoke-verification.md): Playwright + 系统 Chrome 的 7 项真实浏览器冒烟全绿（深链 `?tab=audit`、Nginx `try_files` 刷新、前进后退、`beforeunload`、全局审计台），动态 `smoke_*` Flag 无硬编码 id；实测修掉 3 个部署缺陷：Dockerfile Go 版本落后 `go.mod`、缺 `.dockerignore`、中文目录导致 Compose 项目名为空。

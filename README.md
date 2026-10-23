@@ -94,6 +94,17 @@ cd backend && go test -v -count=1 ./...
 cd frontend && npm test
 ```
 
+真实浏览器端到端冒烟（Playwright + 系统 Chrome，需先拉起 Compose 全栈）：
+
+```bash
+# 若本机 5432 已被占用，用 e2e 覆盖文件把容器库改映射到 15432
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build
+
+cd frontend && npx playwright test
+```
+
+冒烟用例动态创建 `smoke_*` Flag（不硬编码 id），覆盖深链直达、Nginx `try_files` 刷新回退、浏览器前进后退、`beforeunload` 防误关与全局审计台。
+
 ---
 
 ## 二、核心业务语义与规则设计
